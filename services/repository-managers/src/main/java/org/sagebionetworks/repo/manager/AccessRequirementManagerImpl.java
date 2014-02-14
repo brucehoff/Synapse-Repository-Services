@@ -28,6 +28,8 @@ import org.sagebionetworks.repo.model.UnauthorizedException;
 import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.file.S3FileHandle;
 import org.sagebionetworks.repo.model.message.MessageToUser;
+import org.sagebionetworks.repo.model.UserProfile;
+import org.sagebionetworks.repo.model.UserProfileDAO;
 import org.sagebionetworks.repo.util.jrjc.JRJCHelper;
 import org.sagebionetworks.repo.util.jrjc.JiraClient;
 import org.sagebionetworks.repo.web.NotFoundException;
@@ -59,6 +61,9 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 	@Autowired
 	private JiraClient jiraClient;
 	
+	@Autowired
+	private UserProfileDAO userProfileDAO;
+	
 	public AccessRequirementManagerImpl() {}
 	
 	// for testing 
@@ -67,13 +72,15 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 			AuthorizationManager authorizationManager,
 			JiraClient jiraClient,
 			MessageManager messageManager,
-			FileHandleManager fileHandleManager
+			FileHandleManager fileHandleManager,
+			UserProfileDAO userProfileDAO
 	) {
 		this.accessRequirementDAO=accessRequirementDAO;
 		this.authorizationManager=authorizationManager;
 		this.jiraClient=jiraClient;
 		this.messageManager=messageManager;
 		this.fileHandleManager=fileHandleManager;
+		this.userProfileDAO=userProfileDAO;
 	}
 	
 	public static void validateAccessRequirement(AccessRequirement a) throws InvalidModelException {
@@ -187,10 +194,15 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 		MessageToUser message = newMessageToUser(userInfo, entityId);
 		messageManager.createMessage(userInfo, message);
 		
+		UserProfile creatorUserProfile = userProfileDAO.get(userInfo.getId().toString());
+		String emailString = "";
+		List<String> emails = creatorUserProfile.getEmails();
+		if (emails!=null && emails.size()>0) emailString = emails.get(0);
+		
 		// now create the Jira issue
 		JRJCHelper.createRestrictIssue(jiraClient, 
 				userInfo.getId().toString(), 
-				userInfo.getId().toString(), 
+				emailString, 
 				entityId);
 
 		return result;

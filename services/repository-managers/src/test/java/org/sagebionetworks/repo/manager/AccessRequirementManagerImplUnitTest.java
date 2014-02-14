@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.fileupload.FileItemStream;
@@ -26,6 +27,8 @@ import org.sagebionetworks.repo.model.RestrictableObjectDescriptor;
 import org.sagebionetworks.repo.model.RestrictableObjectType;
 import org.sagebionetworks.repo.model.UnauthorizedException;
 import org.sagebionetworks.repo.model.UserInfo;
+import org.sagebionetworks.repo.model.UserProfile;
+import org.sagebionetworks.repo.model.UserProfileDAO;
 import org.sagebionetworks.repo.model.file.S3FileHandle;
 import org.sagebionetworks.repo.util.jrjc.JiraClient;
 
@@ -49,6 +52,7 @@ public class AccessRequirementManagerImplUnitTest {
 	private FileHandleManager fileHandleManager;
 	private AccessRequirementManagerImpl arm;
 	private UserInfo userInfo;
+	private UserProfileDAO userProfileDAO;
 
 	
 	@Before
@@ -56,13 +60,17 @@ public class AccessRequirementManagerImplUnitTest {
 		accessRequirementDAO = Mockito.mock(AccessRequirementDAO.class);
 		when(accessRequirementDAO.create((AccessRequirement)any())).thenReturn(null);
 		authorizationManager = Mockito.mock(AuthorizationManager.class);
+		userProfileDAO = Mockito.mock(UserProfileDAO.class);
+		UserProfile up = new UserProfile();
+		up.setEmails(Collections.singletonList("foo@bar.com"));
+		when(userProfileDAO.get(anyString())).thenReturn(up);
 		jiraClient = Mockito.mock(JiraClient.class);
 		messageManager = Mockito.mock(MessageManager.class);
 		fileHandleManager = Mockito.mock(FileHandleManager.class);
 		S3FileHandle s3FileHandle = new S3FileHandle();
 		s3FileHandle.setId("101");
 		when(fileHandleManager.uploadFile(anyString(), (FileItemStream)any())).thenReturn(s3FileHandle);
-		arm = new AccessRequirementManagerImpl(accessRequirementDAO, authorizationManager, jiraClient, messageManager, fileHandleManager);
+		arm = new AccessRequirementManagerImpl(accessRequirementDAO, authorizationManager, jiraClient, messageManager, fileHandleManager, userProfileDAO);
 		userInfo = new UserInfo(false, TEST_PRINCIPAL_ID);
 		Project sgProject;
 		sgProject = Mockito.mock(Project.class);
