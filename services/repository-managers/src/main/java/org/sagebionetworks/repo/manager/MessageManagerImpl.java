@@ -624,7 +624,7 @@ public class MessageManagerImpl implements MessageManager {
 		UserInfo recipient = userManager.getUserInfo(recipientId);
 		String domain = WordUtils.capitalizeFully(originClient.name());
 		String subject = "Set " + domain + " Password";
-		String messageBody = readMailTemplate("message/PasswordResetTemplate.txt");
+		String messageBody = ReadResourceUtil.readMailTemplate("message/PasswordResetTemplate.txt");
 		messageBody = messageBody.replaceAll(TEMPLATE_KEY_ORIGIN_CLIENT, domain);
 		
 		UserProfile profile = this.userProfileDAO.get(recipientId.toString());
@@ -660,7 +660,7 @@ public class MessageManagerImpl implements MessageManager {
 		UserInfo recipient = userManager.getUserInfo(recipientId);
 		String domain = WordUtils.capitalizeFully(originClient.name());
 		String subject = "Welcome to " + domain + "!";
-		String messageBody = readMailTemplate("message/WelcomeTemplate.txt");
+		String messageBody = ReadResourceUtil.readMailTemplate("message/WelcomeTemplate.txt");
 		messageBody = messageBody.replaceAll(TEMPLATE_KEY_ORIGIN_CLIENT, domain);
 		
 		//TODO use the Alias here
@@ -683,7 +683,7 @@ public class MessageManagerImpl implements MessageManager {
 		MessageToUser dto = messageDAO.getMessage(messageId);
 		UserInfo sender = userManager.getUserInfo(Long.parseLong(dto.getCreatedBy()));
 		String subject = "Message " + messageId + " Delivery Failure(s)";
-		String messageBody = readMailTemplate("message/DeliveryFailureTemplate.txt");
+		String messageBody = ReadResourceUtil.readMailTemplate("message/DeliveryFailureTemplate.txt");
 		
 		//TODO use the Alias here
 		UserProfile profile = this.userProfileDAO.get(sender.getId().toString());
@@ -705,30 +705,5 @@ public class MessageManagerImpl implements MessageManager {
 		if(profile.getEmails() == null) throw new IllegalArgumentException("UserProfile.getEmails() was null");
 		if(profile.getEmails().size() < 1) throw new IllegalArgumentException("UserProfile.getEmails() was empty");
 		return profile.getEmails().get(0);
-	}
-	/**
-	 * Helper for sending templated emails
-	 * 
-	 * Reads a resource into a string
-	 */
-	private String readMailTemplate(String filename) {
-		try {
-			InputStream is = MessageManagerImpl.class.getClassLoader().getResourceAsStream(filename);
-			BufferedReader br = new BufferedReader(new InputStreamReader(is));
-			StringBuilder sb = new StringBuilder();
-			try {
-				String s = br.readLine();
-				while (s != null) {
-					sb.append(s + "\r\n");
-					s = br.readLine();
-				}
-				return sb.toString();
-			} finally {
-				br.close();
-				is.close();
-			}
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
 	}
 }

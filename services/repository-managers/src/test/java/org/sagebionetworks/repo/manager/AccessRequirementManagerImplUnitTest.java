@@ -11,10 +11,12 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.fileupload.FileItemStream;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.sagebionetworks.repo.manager.file.FileHandleManager;
 import org.sagebionetworks.repo.model.ACCESS_TYPE;
 import org.sagebionetworks.repo.model.ACTAccessRequirement;
 import org.sagebionetworks.repo.model.AccessRequirement;
@@ -24,6 +26,7 @@ import org.sagebionetworks.repo.model.RestrictableObjectDescriptor;
 import org.sagebionetworks.repo.model.RestrictableObjectType;
 import org.sagebionetworks.repo.model.UnauthorizedException;
 import org.sagebionetworks.repo.model.UserInfo;
+import org.sagebionetworks.repo.model.file.S3FileHandle;
 import org.sagebionetworks.repo.util.jrjc.JiraClient;
 
 import com.atlassian.jira.rest.client.api.OptionalIterable;
@@ -42,6 +45,8 @@ public class AccessRequirementManagerImplUnitTest {
 	
 	private AccessRequirementDAO accessRequirementDAO;
 	private AuthorizationManager authorizationManager;
+	private MessageManager messageManager;
+	private FileHandleManager fileHandleManager;
 	private AccessRequirementManagerImpl arm;
 	private UserInfo userInfo;
 
@@ -52,7 +57,12 @@ public class AccessRequirementManagerImplUnitTest {
 		when(accessRequirementDAO.create((AccessRequirement)any())).thenReturn(null);
 		authorizationManager = Mockito.mock(AuthorizationManager.class);
 		jiraClient = Mockito.mock(JiraClient.class);
-		arm = new AccessRequirementManagerImpl(accessRequirementDAO, authorizationManager, jiraClient);
+		messageManager = Mockito.mock(MessageManager.class);
+		fileHandleManager = Mockito.mock(FileHandleManager.class);
+		S3FileHandle s3FileHandle = new S3FileHandle();
+		s3FileHandle.setId("101");
+		when(fileHandleManager.uploadFile(anyString(), (FileItemStream)any())).thenReturn(s3FileHandle);
+		arm = new AccessRequirementManagerImpl(accessRequirementDAO, authorizationManager, jiraClient, messageManager, fileHandleManager);
 		userInfo = new UserInfo(false, TEST_PRINCIPAL_ID);
 		Project sgProject;
 		sgProject = Mockito.mock(Project.class);

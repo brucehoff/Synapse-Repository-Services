@@ -76,7 +76,11 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 					return true;
 				}
 				AccessRequirement accessRequirement = accessRequirementDAO.get(objectId);
-				return canAdminAccessRequirement(userInfo, accessRequirement);
+				if (accessType.equals(ACCESS_TYPE.DELETE)) {
+					return canDeleteAccessRequirement(userInfo, accessRequirement);
+				} else {
+					return canAdminAccessRequirement(userInfo, accessRequirement);
+				}
 			case ACCESS_APPROVAL:
 				if (userInfo.isAdmin()) {
 					return true;
@@ -191,6 +195,17 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 	 */
 	private boolean canAdminAccessRequirement(UserInfo userInfo, AccessRequirement accessRequirement) throws NotFoundException {
 		return isACTTeamMemberOrAdmin(userInfo);
+	}
+	
+	/**
+	 * Check that user is an administrator, ACT member, or the creator of the access requirement
+	 * @param userInfo
+	 * @param accessRequirement
+	 * @throws NotFoundException
+	 */
+	private boolean canDeleteAccessRequirement(UserInfo userInfo, AccessRequirement accessRequirement) throws NotFoundException {
+		return userInfo.getId()==Long.parseLong(accessRequirement.getCreatedBy()) ||
+				isACTTeamMemberOrAdmin(userInfo);
 	}
 	
 	/**

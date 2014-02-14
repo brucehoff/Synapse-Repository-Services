@@ -237,6 +237,7 @@ public class AuthorizationManagerImplUnitTest {
 
 	private AccessRequirement createEntityAccessRequirement() throws Exception {
 		TermsOfUseAccessRequirement ar = new TermsOfUseAccessRequirement();
+		ar.setCreatedBy(""+userInfo.getId());
 		ar.setSubjectIds(Arrays.asList(new RestrictableObjectDescriptor[]{createEntitySubjectId()}));
 		ar.setId(1234L);
 		when(mockAccessRequirementDAO.get(ar.getId().toString())).thenReturn(ar);
@@ -326,6 +327,13 @@ public class AuthorizationManagerImplUnitTest {
 		assertFalse(authorizationManager.canCreateAccessRequirement(userInfo, ar));
 	}
 
+	@Test
+	public void testCanDeleteEntityAccessRequirement() throws Exception {
+		AccessRequirement ar = createEntityAccessRequirement();
+		assertTrue(authorizationManager.canAccess(userInfo, ""+ar.getId(), 
+				ObjectType.ACCESS_REQUIREMENT, ACCESS_TYPE.DELETE));
+	}
+	
 	@Test
 	public void testCanAccessEntityAccessApprovalsForSubject() throws Exception {
 		assertFalse(authorizationManager.canAccessAccessApprovalsForSubject(userInfo, createEntitySubjectId(), ACCESS_TYPE.READ));

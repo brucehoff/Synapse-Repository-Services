@@ -1,0 +1,6 @@
+Hello,
+You have indicated that you wish to apply a data use restriction to #entityId#. Data use restrictions are typically applied to data whose use is regulated by law or contractual obligations. Such data may be shared only following user agreement to comply with additional data-specific terms. Please confirm the data restriction you wish to apply to these dataset(s) by sending an e-mail to the Synapse Access and Compliance Team (ACT - act@sagebase.org)
+Please note that restricted data can only be accessed by the file creator until the ACT have added the appropriate data use terms.
+If the data use restriction was applied in error, the ACT will help you reverse it.
+Sincerely,
+The Synapse Access and Compliance Team

@@ -1,12 +1,17 @@
 package org.sagebionetworks.repo.manager;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.commons.fileupload.FileItemStream;
 import org.sagebionetworks.evaluation.dao.EvaluationDAO;
+import org.sagebionetworks.repo.manager.file.FileHandleManager;
 import org.sagebionetworks.repo.model.ACCESS_TYPE;
 import org.sagebionetworks.repo.model.ACTAccessRequirement;
 import org.sagebionetworks.repo.model.AccessRequirement;
@@ -21,9 +26,12 @@ import org.sagebionetworks.repo.model.RestrictableObjectDescriptor;
 import org.sagebionetworks.repo.model.RestrictableObjectType;
 import org.sagebionetworks.repo.model.UnauthorizedException;
 import org.sagebionetworks.repo.model.UserInfo;
+import org.sagebionetworks.repo.model.file.S3FileHandle;
+import org.sagebionetworks.repo.model.message.MessageToUser;
 import org.sagebionetworks.repo.util.jrjc.JRJCHelper;
 import org.sagebionetworks.repo.util.jrjc.JiraClient;
 import org.sagebionetworks.repo.web.NotFoundException;
+import org.sagebionetworks.repo.web.ServiceUnavailableException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +43,12 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 
 	@Autowired
 	private AuthorizationManager authorizationManager;
+	
+	@Autowired
+	private MessageManager messageManager;
+	
+	@Autowired
+	private FileHandleManager fileHandleManager;
 	
 	@Autowired
 	NodeDAO nodeDao;
@@ -51,11 +65,15 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 	public AccessRequirementManagerImpl(
 			AccessRequirementDAO accessRequirementDAO,
 			AuthorizationManager authorizationManager,
-			JiraClient jiraClient
+			JiraClient jiraClient,
+			MessageManager messageManager,
+			FileHandleManager fileHandleManager
 	) {
 		this.accessRequirementDAO=accessRequirementDAO;
 		this.authorizationManager=authorizationManager;
 		this.jiraClient=jiraClient;
+		this.messageManager=messageManager;
+		this.fileHandleManager=fileHandleManager;
 	}
 	
 	public static void validateAccessRequirement(AccessRequirement a) throws InvalidModelException {
@@ -107,6 +125,45 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 		return accessRequirement;
 	}
 	
+	private S3FileHandle uploadStringToFileHandle(final String userId, final byte[] content) throws IOException, ServiceUnavailableException {
+		FileItemStream fis = new FileItemStream() {
+			@Override
+			public InputStream openStream() throws IOException {return new ByteArrayInputStream(content);}
+			@Override
+			public String getContentType() {return "text/plain";}
+			@Override
+			public String getName() {return "body.txt";}
+			@Override
+			public String getFieldName() {return "none";}
+			@Override
+			public boolean isFormField() {return false;}
+		};
+		return fileHandleManager.uploadFile(userId, fis);
+	}
+	
+	private static final String LOCKDOWN_EMAIL_FILE_PATH = "message/lockdownMessage.txt";
+	private static final String ENTITY_ID_KEY = "#entityId#";
+	
+	public MessageToUser newMessageToUser(UserInfo userInfo, String entityId) {
+		MessageToUser message = new MessageToUser();
+		message.setRecipients(Collections.singleton(userInfo.getId().toString()));
+		message.setSubject("Data access restriction");
+		// customize message
+		String template = ReadResourceUtil.readMailTemplate(LOCKDOWN_EMAIL_FILE_PATH);
+		String messageBody = template.replaceAll(ENTITY_ID_KEY, entityId);
+
+		// upload to file handle id
+		try {
+			S3FileHandle fileHandle = uploadStringToFileHandle(userInfo.getId().toString(), messageBody.getBytes());
+			message.setFileHandleId(fileHandle.getId());
+		} catch (IOException ioe) {
+			throw new RuntimeException(ioe);
+		} catch (ServiceUnavailableException sue) {
+			throw new RuntimeException(sue);
+		}
+		return message;
+	}
+	
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
 	@Override
 	public ACTAccessRequirement createLockAccessRequirement(UserInfo userInfo, String entityId) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException {
@@ -125,6 +182,10 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 		
 		ACTAccessRequirement accessRequirement = newLockAccessRequirement(userInfo, entityId);
 		ACTAccessRequirement result  = accessRequirementDAO.create(accessRequirement);
+		
+		// send email to user
+		MessageToUser message = newMessageToUser(userInfo, entityId);
+		messageManager.createMessage(userInfo, message);
 		
 		// now create the Jira issue
 		JRJCHelper.createRestrictIssue(jiraClient, 
