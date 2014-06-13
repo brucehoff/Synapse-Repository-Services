@@ -146,7 +146,25 @@ public class PrincipalManagerImplUnitTest {
 	}
 	
 	@Test
+	public void testCreateTokenForNewAccountNoName() {
+		// just check that it returns some signature
+		user.setFirstName("");
+		user.setLastName("");
+		assertTrue(PrincipalManagerImpl.
+				createTokenForNewAccount(user, domain, now).length()>0);
+	}
+	
+	@Test
 	public void testValidateNewAccountToken() {
+		String token = PrincipalManagerImpl.createTokenForNewAccount(user, domain, now);
+		String extractedEmail = PrincipalManagerImpl.validateNewAccountToken(token, now);
+		assertEquals(EMAIL, extractedEmail);
+	}
+	
+	@Test
+	public void testValidateNewAccountTokenNoName() {
+		user.setFirstName("");
+		user.setLastName("");
 		String token = PrincipalManagerImpl.createTokenForNewAccount(user, domain, now);
 		String extractedEmail = PrincipalManagerImpl.validateNewAccountToken(token, now);
 		assertEquals(EMAIL, extractedEmail);
