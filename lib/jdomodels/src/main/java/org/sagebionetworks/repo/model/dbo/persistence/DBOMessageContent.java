@@ -9,6 +9,7 @@ import org.sagebionetworks.repo.model.dbo.FieldColumn;
 import org.sagebionetworks.repo.model.dbo.MigratableDatabaseObject;
 import org.sagebionetworks.repo.model.dbo.TableMapping;
 import org.sagebionetworks.repo.model.dbo.migration.MigratableTableTranslation;
+import org.sagebionetworks.repo.model.message.MessageType;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 import org.sagebionetworks.repo.model.query.jdo.SqlConstants;
 
@@ -21,6 +22,8 @@ public class DBOMessageContent implements MigratableDatabaseObject<DBOMessageCon
 		new FieldColumn("messageId", SqlConstants.COL_MESSAGE_CONTENT_ID, true).withIsBackupId(true),
 		new FieldColumn("createdBy", SqlConstants.COL_MESSAGE_CONTENT_CREATED_BY),
 		new FieldColumn("fileHandleId", SqlConstants.COL_MESSAGE_CONTENT_FILE_HANDLE_ID),
+		new FieldColumn("messageBody", SqlConstants.COL_MESSAGE_CONTENT_MESSAGE_BODY),
+		new FieldColumn("messageType", SqlConstants.COL_MESSAGE_CONTENT_MESSAGE_TYPE),
 		new FieldColumn("createdOn", SqlConstants.COL_MESSAGE_CONTENT_CREATED_ON),
 		new FieldColumn("etag", SqlConstants.COL_MESSAGE_CONTENT_ETAG).withIsEtag(true)
 	};
@@ -30,6 +33,8 @@ public class DBOMessageContent implements MigratableDatabaseObject<DBOMessageCon
 	private Long fileHandleId;
 	private Long createdOn;
 	private String etag;
+	private String messageBody;
+	private MessageType messageType;
 
 	@Override
 	public TableMapping<DBOMessageContent> getTableMapping() {
@@ -43,6 +48,8 @@ public class DBOMessageContent implements MigratableDatabaseObject<DBOMessageCon
 				result.setFileHandleId(rs.getLong(SqlConstants.COL_MESSAGE_CONTENT_FILE_HANDLE_ID));
 				result.setCreatedOn(rs.getLong(SqlConstants.COL_MESSAGE_CONTENT_CREATED_ON));
 				result.setEtag(rs.getString(SqlConstants.COL_MESSAGE_CONTENT_ETAG));
+				result.setMessageBody(rs.getString(SqlConstants.COL_MESSAGE_CONTENT_MESSAGE_BODY));
+				result.setMessageType(MessageType.valueOf(rs.getString(SqlConstants.COL_MESSAGE_CONTENT_MESSAGE_TYPE)));
 				return result;
 			}
 			
@@ -118,6 +125,26 @@ public class DBOMessageContent implements MigratableDatabaseObject<DBOMessageCon
 	}
 
 
+	public String getMessageBody() {
+		return messageBody;
+	}
+
+
+	public void setMessageBody(String messageBody) {
+		this.messageBody = messageBody;
+	}
+
+
+	public MessageType getMessageType() {
+		return messageType;
+	}
+
+
+	public void setMessageType(MessageType messageType) {
+		this.messageType = messageType;
+	}
+
+
 	@Override
 	public MigrationType getMigratableTableType() {
 		return MigrationType.MESSAGE_CONTENT;
@@ -173,7 +200,11 @@ public class DBOMessageContent implements MigratableDatabaseObject<DBOMessageCon
 		result = prime * result
 				+ ((fileHandleId == null) ? 0 : fileHandleId.hashCode());
 		result = prime * result
+				+ ((messageBody == null) ? 0 : messageBody.hashCode());
+		result = prime * result
 				+ ((messageId == null) ? 0 : messageId.hashCode());
+		result = prime * result
+				+ ((messageType == null) ? 0 : messageType.hashCode());
 		return result;
 	}
 
@@ -207,10 +238,17 @@ public class DBOMessageContent implements MigratableDatabaseObject<DBOMessageCon
 				return false;
 		} else if (!fileHandleId.equals(other.fileHandleId))
 			return false;
+		if (messageBody == null) {
+			if (other.messageBody != null)
+				return false;
+		} else if (!messageBody.equals(other.messageBody))
+			return false;
 		if (messageId == null) {
 			if (other.messageId != null)
 				return false;
 		} else if (!messageId.equals(other.messageId))
+			return false;
+		if (messageType != other.messageType)
 			return false;
 		return true;
 	}
@@ -219,7 +257,8 @@ public class DBOMessageContent implements MigratableDatabaseObject<DBOMessageCon
 	public String toString() {
 		return "DBOMessageContent [messageId=" + messageId + ", createdBy="
 				+ createdBy + ", fileHandleId=" + fileHandleId + ", createdOn="
-				+ createdOn + ", etag=" + etag + "]";
+				+ createdOn + ", etag=" + etag + ", messageBody=" + messageBody
+				+ ", messageType=" + messageType + "]";
 	}
 
 }

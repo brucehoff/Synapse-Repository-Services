@@ -12,8 +12,17 @@
 		},
 		"fileHandleId": {
 			"type": "string",
-			"description":"The S3 file handle storing the body of this message.  Note: The file's mime type should be 'text/plain' or 'text/html'.  If no character encoding is specified, then UTF-8 is assumed."
+			"description":"The S3 file handle storing the body of this message.  Either 'messageBody' or 'fileHandleId' may be used, not both.  Note: The file's mime type should be 'text/plain' or 'text/html'.  If no character encoding is specified, then UTF-8 is assumed."
 		}, 
+		"messageBody": {
+			"type": "string",
+			"description":"The body of this message.  Either 'messageBody' or 'fileHandleId' may be used, not both."
+			
+		},
+		"messageType": {
+			"$ref": "org.sagebionetworks.repo.model.message.MessageType",
+			"description":"The type of message in the message body or referenced file."
+		},
 		"createdOn": {
 			"type": "string",
 			"format":"date-time",

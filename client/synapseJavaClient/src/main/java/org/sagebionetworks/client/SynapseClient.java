@@ -803,34 +803,11 @@ public interface SynapseClient extends BaseClient {
 			throws SynapseException;
 	
 	/**
-	 * Convenience function to upload message body, then send message using resultant fileHandleId
-	 * For an example of the message content being retrieved for email delivery, see MessageManagerImpl.downloadEmailContent().
-	 * @param message
-	 * @param messageBody
-	 * @return
-	 * @throws SynapseException
-	 */
-	public MessageToUser sendStringMessage(MessageToUser message, String messageBody)
-			throws SynapseException;
-	
-	/**
 	 * Sends a message to another user and the owner of the given entity
 	 */
 	public MessageToUser sendMessage(MessageToUser message, String entityId) 
 			throws SynapseException;
 
-	/**
-	 * Convenience function to upload message body, then send message to entity owner using resultant fileHandleId.
-	 * For an example of the message content being retrieved for email delivery, see MessageManagerImpl.downloadEmailContent().
-	 * @param message
-	 * @param entityId
-	 * @param messageBody
-	 * @return
-	 * @throws SynapseException
-	 */
-	public MessageToUser sendStringMessage(MessageToUser message, String entityId, String messageBody)
-			throws SynapseException;
-	
 	/**
 	 * Gets the current authenticated user's received messages
 	 */

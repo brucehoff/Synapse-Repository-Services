@@ -23,12 +23,12 @@ import org.sagebionetworks.repo.manager.team.TeamConstants;
 import org.sagebionetworks.repo.model.ACCESS_TYPE;
 import org.sagebionetworks.repo.model.ACLInheritanceException;
 import org.sagebionetworks.repo.model.AccessControlList;
-import org.sagebionetworks.repo.model.AuthorizationConstants;
 import org.sagebionetworks.repo.model.AuthorizationConstants.BOOTSTRAP_PRINCIPAL;
 import org.sagebionetworks.repo.model.AuthorizationUtils;
 import org.sagebionetworks.repo.model.DatastoreException;
 import org.sagebionetworks.repo.model.DomainType;
 import org.sagebionetworks.repo.model.GroupMembersDAO;
+import org.sagebionetworks.repo.model.InvalidModelException;
 import org.sagebionetworks.repo.model.MessageDAO;
 import org.sagebionetworks.repo.model.Node;
 import org.sagebionetworks.repo.model.NodeDAO;
@@ -51,14 +51,12 @@ import org.sagebionetworks.repo.model.message.MessageSortBy;
 import org.sagebionetworks.repo.model.message.MessageStatus;
 import org.sagebionetworks.repo.model.message.MessageStatusType;
 import org.sagebionetworks.repo.model.message.MessageToUser;
+import org.sagebionetworks.repo.model.message.MessageType;
 import org.sagebionetworks.repo.model.message.Settings;
-import org.sagebionetworks.repo.model.principal.AliasType;
-import org.sagebionetworks.repo.model.principal.PrincipalAlias;
 import org.sagebionetworks.repo.model.principal.PrincipalAliasDAO;
+import org.sagebionetworks.repo.transactions.WriteTransaction;
 import org.sagebionetworks.repo.web.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import org.sagebionetworks.repo.transactions.WriteTransaction;
 
 import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
 import com.amazonaws.services.simpleemail.model.SendEmailRequest;
@@ -208,12 +206,27 @@ public class MessageManagerImpl implements MessageManager {
 		// If the user can get the message metadata (permission checking by the manager)
 		// then the user can download the file
 		MessageToUser dto = getMessage(userInfo, messageId);
+		if (dto.getFileHandleId()==null) throw new IllegalArgumentException("The message body is not hosted as a file.");
 		return fileHandleManager.getRedirectURLForFileHandle(dto.getFileHandleId());
+	}
+	
+	// 50KB  Note this is also defined in MessageToUser-ddl.sql
+	public static final int MAXIMUM_MESSAGE_BODY_SIZE_BYTES = 50*1024; 
+	
+	public static void validateMessage(MessageToUser dto) {
+		// must specify exactly one of file handle id or message body
+		if ((dto.getMessageBody()==null && dto.getFileHandleId()==null) ||
+				(dto.getMessageBody()!=null && dto.getFileHandleId()!=null))
+			throw new InvalidModelException("Must specify either message body or ID of file containing message body (not both).");
+		if (dto.getMessageBody().getBytes().length>MAXIMUM_MESSAGE_BODY_SIZE_BYTES)
+			throw new InvalidModelException("To send messages longer than "+MAXIMUM_MESSAGE_BODY_SIZE_BYTES+
+					" please upload the message body to Synapse, then submit the file ID.");
 	}
 
 	@Override
 	@WriteTransaction
 	public MessageToUser createMessage(UserInfo userInfo, MessageToUser dto) throws NotFoundException {
+		validateMessage(dto);
 		// Make sure the sender is correct
 		dto.setCreatedBy(userInfo.getId().toString());
 		
@@ -242,8 +255,9 @@ public class MessageManagerImpl implements MessageManager {
 			}
 		}
 		
-		if (!authorizationManager.canAccessRawFileHandleById(userInfo, dto.getFileHandleId()).getAuthorized()
-				&& !messageDAO.canSeeMessagesUsingFileHandle(userInfo.getGroups(), dto.getFileHandleId())) {
+		if (dto.getFileHandleId()!=null && 
+				!authorizationManager.canAccessRawFileHandleById(userInfo, dto.getFileHandleId()).getAuthorized() &&
+				!messageDAO.canSeeMessagesUsingFileHandle(userInfo.getGroups(), dto.getFileHandleId())) {
 			throw new UnauthorizedException("Invalid file handle given");
 		}
 		
@@ -396,14 +410,26 @@ public class MessageManagerImpl implements MessageManager {
 	 */
 	private List<String> processMessage(String messageId, boolean singleTransaction) throws NotFoundException {
 		MessageToUser dto = messageDAO.getMessage(messageId);
-		FileHandle fileHandle = fileHandleDao.get(dto.getFileHandleId());
-		ContentType contentType = ContentType.parse(fileHandle.getContentType());
-		Charset charset = contentType.getCharset();
-		if (charset==null) charset=DEFAULT_MESSAGE_FILE_CHARSET;
-		String mimeType = contentType.getMimeType().trim().toLowerCase();
-		boolean isHtml="text/html".equals(mimeType);
+		
+		boolean isHtml = false;
+		if (dto.getMessageType()!=null) {
+			isHtml = (dto.getMessageType()==MessageType.HTML);
+		}
+		
+		String messageBody = null;
+		if (dto.getFileHandleId()==null) {
+			messageBody = dto.getMessageBody();
+		} else {
+			FileHandle fileHandle = fileHandleDao.get(dto.getFileHandleId());
+			ContentType contentType = ContentType.parse(fileHandle.getContentType());
+			Charset charset = contentType.getCharset();
+			if (charset==null) charset=DEFAULT_MESSAGE_FILE_CHARSET;
+			String mimeType = contentType.getMimeType().trim().toLowerCase();
+			// if can't determine message type from 'messageType', then check the file's mime-type
+			if (dto.getMessageType()==null) isHtml="text/html".equals(mimeType);
+			messageBody = downloadEmailContentToString(dto.getFileHandleId(), charset);
+		}
 
-		String messageBody = downloadEmailContentToString(dto.getFileHandleId(), charset);
 		return processMessage(dto, singleTransaction, messageBody, isHtml);
 	}
 	

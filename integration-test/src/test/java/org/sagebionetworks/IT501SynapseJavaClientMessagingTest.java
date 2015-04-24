@@ -3,16 +3,20 @@ package org.sagebionetworks;
 import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.sagebionetworks.repo.model.message.MessageType;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
+import org.apache.http.entity.ContentType;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -289,14 +293,20 @@ public class IT501SynapseJavaClientMessagingTest {
 		new URL(url);
 	}
 	
+	private static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
+	private static final ContentType STRING_MESSAGE_CONTENT_TYPE = ContentType
+			.create("text/plain", MESSAGE_CHARSET);
+
 	@Test
 	public void testDownloadExtendedCharacterMessage() throws Exception {
+		this.fileHandleIdWithExtendedChars = synapseOne.uploadToFileHandle(MESSAGE_BODY_WITH_EXTENDED_CHARS.getBytes(), STRING_MESSAGE_CONTENT_TYPE);
 		MessageToUser mtu = new MessageToUser();
 		mtu.setSubject("a test");
 		mtu.setRecipients(new HashSet<String>(Arrays.asList(new String[]{twoId})));
-		mtu = synapseOne.sendStringMessage(mtu, MESSAGE_BODY_WITH_EXTENDED_CHARS);
+		mtu.setFileHandleId(fileHandleIdWithExtendedChars);
+		mtu.setMessageType(MessageType.TEXT);
+		mtu = synapseOne.sendMessage(mtu);
 		cleanup.add(mtu.getId());
-		this.fileHandleIdWithExtendedChars = mtu.getFileHandleId();
 
 		// this inspects the content-type to determine the character encoding
 		String message = synapseTwo.downloadMessage(mtu.getId());

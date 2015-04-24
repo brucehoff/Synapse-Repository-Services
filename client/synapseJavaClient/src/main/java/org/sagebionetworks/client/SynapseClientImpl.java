@@ -401,7 +401,6 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	 * The character encoding to use with strings which are the body of email
 	 * messages
 	 */
-	private static final Charset MESSAGE_CHARSET = Charset.forName("UTF-8");
 
 	private static final String LIMIT_1_OFFSET_1 = "' limit 1 offset 1";
 	private static final String SELECT_ID_FROM_ENTITY_WHERE_PARENT_ID = "select id from entity where parentId == '";
@@ -4021,56 +4020,6 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 					+ status.getErrorMessage());
 
 		return status.getFileHandleId();
-	}
-
-	private static final ContentType STRING_MESSAGE_CONTENT_TYPE = ContentType
-			.create("text/plain", MESSAGE_CHARSET);
-
-	/**
-	 * Convenience function to upload a simple string message body, then send
-	 * message using resultant fileHandleId
-	 * 
-	 * @param message
-	 * @param messageBody
-	 * @return the created message
-	 * @throws SynapseException
-	 */
-	@Override
-	public MessageToUser sendStringMessage(MessageToUser message,
-			String messageBody) throws SynapseException {
-		if (message.getFileHandleId() != null)
-			throw new IllegalArgumentException(
-					"Expected null fileHandleId but found "
-							+ message.getFileHandleId());
-		String fileHandleId = uploadToFileHandle(
-				messageBody.getBytes(MESSAGE_CHARSET),
-				STRING_MESSAGE_CONTENT_TYPE);
-		message.setFileHandleId(fileHandleId);
-		return sendMessage(message);
-	}
-
-	/**
-	 * Convenience function to upload a simple string message body, then send
-	 * message to entity owner using resultant fileHandleId
-	 * 
-	 * @param message
-	 * @param entityId
-	 * @param messageBody
-	 * @return the created message
-	 * @throws SynapseException
-	 */
-	@Override
-	public MessageToUser sendStringMessage(MessageToUser message,
-			String entityId, String messageBody) throws SynapseException {
-		if (message.getFileHandleId() != null)
-			throw new IllegalArgumentException(
-					"Expected null fileHandleId but found "
-							+ message.getFileHandleId());
-		String fileHandleId = uploadToFileHandle(
-				messageBody.getBytes(MESSAGE_CHARSET),
-				STRING_MESSAGE_CONTENT_TYPE);
-		message.setFileHandleId(fileHandleId);
-		return sendMessage(message, entityId);
 	}
 
 	@Override

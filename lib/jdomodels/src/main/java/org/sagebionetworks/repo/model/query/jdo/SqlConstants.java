@@ -175,6 +175,8 @@ public class SqlConstants {
  	public static final String COL_MESSAGE_CONTENT_ID               = "ID";
  	public static final String COL_MESSAGE_CONTENT_CREATED_BY       = "CREATED_BY";
  	public static final String COL_MESSAGE_CONTENT_FILE_HANDLE_ID   = "FILE_HANDLE_ID";
+ 	public static final String COL_MESSAGE_CONTENT_MESSAGE_BODY   = "MESSAGE_BODY";
+ 	public static final String COL_MESSAGE_CONTENT_MESSAGE_TYPE   = "MESSAGE_TYPE";
  	public static final String COL_MESSAGE_CONTENT_CREATED_ON       = "CREATED_ON";
  	public static final String COL_MESSAGE_CONTENT_ETAG             = "ETAG";
  	public static final String DDL_MESSAGE_CONTENT                  = "schema/MessageContent-ddl.sql";

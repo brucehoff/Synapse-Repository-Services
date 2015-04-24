@@ -1,0 +1,11 @@
+{
+    "description":"The enumeration of possible message types.  This is used by the mail sending system to choose how to handle the content.",
+    "name": "MessageType",
+    "type":"string",
+    "enum":[
+		"TEXT",
+		"HTML",
+		"RAW"
+	]
+}
+    
