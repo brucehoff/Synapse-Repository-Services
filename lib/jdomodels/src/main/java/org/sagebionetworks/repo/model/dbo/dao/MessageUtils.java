@@ -71,7 +71,6 @@ public class MessageUtils {
 		if (content.getCreatedOn() != null) {
 			bundle.setCreatedOn(new Date(content.getCreatedOn()));
 		}
-		bundle.setMessageBody(content.getMessageBody());
 		bundle.setMessageType(content.getMessageType());
 	}
 	
@@ -198,7 +197,6 @@ public class MessageUtils {
 		if (dto.getCreatedOn() != null) {
 			content.setCreatedOn(dto.getCreatedOn().getTime());
 		}
-		content.setMessageBody(dto.getMessageBody());
 		content.setMessageType(dto.getMessageType());
 	}
 	

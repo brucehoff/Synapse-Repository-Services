@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.fileupload.FileItemStream;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.WordUtils;
 import org.apache.http.entity.ContentType;
@@ -56,6 +57,7 @@ import org.sagebionetworks.repo.model.message.Settings;
 import org.sagebionetworks.repo.model.principal.PrincipalAliasDAO;
 import org.sagebionetworks.repo.transactions.WriteTransaction;
 import org.sagebionetworks.repo.web.NotFoundException;
+import org.sagebionetworks.repo.web.ServiceUnavailableException;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
@@ -95,6 +97,8 @@ public class MessageManagerImpl implements MessageManager {
 	 * i.e. FROM: Synapse Admin <notifications@sagebase.org> 
 	 */
 	private static final String DEFAULT_NOTIFICATION_DISPLAY_NAME = null;
+	
+	private static final Charset DEFAULT_CHARSET = Charset.defaultCharset();
 	
 	@Autowired
 	private MessageDAO messageDAO;
@@ -206,21 +210,14 @@ public class MessageManagerImpl implements MessageManager {
 		// If the user can get the message metadata (permission checking by the manager)
 		// then the user can download the file
 		MessageToUser dto = getMessage(userInfo, messageId);
-		if (dto.getFileHandleId()==null) throw new IllegalArgumentException("The message body is not hosted as a file.");
 		return fileHandleManager.getRedirectURLForFileHandle(dto.getFileHandleId());
-	}
-	
-	// 50KB  Note this is also defined in MessageToUser-ddl.sql
-	public static final int MAXIMUM_MESSAGE_BODY_SIZE_BYTES = 50*1024; 
+	} 
 	
 	public static void validateMessage(MessageToUser dto) {
 		// must specify exactly one of file handle id or message body
 		if ((dto.getMessageBody()==null && dto.getFileHandleId()==null) ||
 				(dto.getMessageBody()!=null && dto.getFileHandleId()!=null))
 			throw new InvalidModelException("Must specify either message body or ID of file containing message body (not both).");
-		if (dto.getMessageBody().getBytes().length>MAXIMUM_MESSAGE_BODY_SIZE_BYTES)
-			throw new InvalidModelException("To send messages longer than "+MAXIMUM_MESSAGE_BODY_SIZE_BYTES+
-					" please upload the message body to Synapse, then submit the file ID.");
 	}
 
 	@Override
@@ -269,6 +266,20 @@ public class MessageManagerImpl implements MessageManager {
 			}
 		}
 		
+		// upload to S3 and put the ID in the dto
+		if (dto.getMessageBody()!=null) {
+			ContentType contentType = ContentType.create("text/plain", DEFAULT_CHARSET);
+			FileItemStream fileItemStream = new ByteArrayFileItemStream(
+				dto.getMessageBody().getBytes(DEFAULT_CHARSET), contentType.toString(), "");
+			try {
+				FileHandle fileHandle = fileHandleManager.uploadFile(userInfo.getId().toString(), fileItemStream);
+				dto.setFileHandleId(fileHandle.getId());
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			} catch (ServiceUnavailableException e) {
+				throw new RuntimeException(e);
+			}
+		}
 		dto = messageDAO.createMessage(dto);
 		
 		// If the recipient list is only one element long, 
@@ -416,19 +427,16 @@ public class MessageManagerImpl implements MessageManager {
 			isHtml = (dto.getMessageType()==MessageType.HTML);
 		}
 		
-		String messageBody = null;
-		if (dto.getFileHandleId()==null) {
-			messageBody = dto.getMessageBody();
-		} else {
-			FileHandle fileHandle = fileHandleDao.get(dto.getFileHandleId());
-			ContentType contentType = ContentType.parse(fileHandle.getContentType());
-			Charset charset = contentType.getCharset();
-			if (charset==null) charset=DEFAULT_MESSAGE_FILE_CHARSET;
+		FileHandle fileHandle = fileHandleDao.get(dto.getFileHandleId());
+		ContentType contentType = ContentType.parse(fileHandle.getContentType());
+		Charset charset = contentType.getCharset();
+		if (charset==null) charset=DEFAULT_MESSAGE_FILE_CHARSET;
+		// if can't determine message type from 'messageType', then check the file's mime-type
+		if (dto.getMessageType()==null) {
 			String mimeType = contentType.getMimeType().trim().toLowerCase();
-			// if can't determine message type from 'messageType', then check the file's mime-type
-			if (dto.getMessageType()==null) isHtml="text/html".equals(mimeType);
-			messageBody = downloadEmailContentToString(dto.getFileHandleId(), charset);
+			isHtml="text/html".equals(mimeType);
 		}
+		String messageBody = downloadEmailContentToString(dto.getFileHandleId(), charset);
 
 		return processMessage(dto, singleTransaction, messageBody, isHtml);
 	}
