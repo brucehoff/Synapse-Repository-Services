@@ -46,7 +46,8 @@ public class DBOMessageContent implements MigratableDatabaseObject<DBOMessageCon
 				result.setFileHandleId(rs.getLong(SqlConstants.COL_MESSAGE_CONTENT_FILE_HANDLE_ID));
 				result.setCreatedOn(rs.getLong(SqlConstants.COL_MESSAGE_CONTENT_CREATED_ON));
 				result.setEtag(rs.getString(SqlConstants.COL_MESSAGE_CONTENT_ETAG));
-				result.setMessageType(MessageType.valueOf(rs.getString(SqlConstants.COL_MESSAGE_CONTENT_MESSAGE_TYPE)));
+				String typeString = rs.getString(SqlConstants.COL_MESSAGE_CONTENT_MESSAGE_TYPE);
+				result.setMessageType(typeString==null?null:MessageType.valueOf(typeString));
 				return result;
 			}
 			
