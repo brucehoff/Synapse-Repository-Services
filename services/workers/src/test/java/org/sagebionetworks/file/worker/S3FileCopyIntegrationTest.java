@@ -369,7 +369,7 @@ public class S3FileCopyIntegrationTest {
 	}
 
 	private void testCopyFile(long size) throws IOException, ServiceUnavailableException {
-		S3FileHandle fileHandle = uploadFile(testFileNames[0], TestStreams.randomStream(size, 123L));
+		S3FileHandle fileHandle = uploadFile(testFileNames[0], TestStreams.randomByteArray(size, 123L));
 		ObjectMetadata originalFileMeta = s3Client.getObjectMetadata(fileHandle.getBucketName(), fileHandle.getKey());
 		String originalContentDisp = originalFileMeta.getContentDisposition();
 		String originalEtag = originalFileMeta.getETag();
@@ -391,8 +391,8 @@ public class S3FileCopyIntegrationTest {
 		String copyContentDisp = copyMeta.getContentDisposition();
 		String copyEtag = copyMeta.getETag();
 		
-		assertEquals(originalContentDisp, copyContentDisp);
 		assertEquals(originalEtag, copyEtag);
+		assertEquals(originalContentDisp, copyContentDisp);
 		
 	}
 
@@ -401,14 +401,5 @@ public class S3FileCopyIntegrationTest {
 		return fileUploadManager.createFileFromByteArray(
 				adminUserInfo.getId().toString(), new Date(), fileContents, fileName, contentType, null);
 
-	}
-	
-	private S3FileHandle uploadFile(String fileHandleName, InputStream in) throws IOException, ServiceUnavailableException {
-		FileItemStream mockFiz = Mockito.mock(FileItemStream.class);
-		when(mockFiz.openStream()).thenReturn(in);
-		when(mockFiz.getContentType()).thenReturn("unknown/content");
-		when(mockFiz.getName()).thenReturn(fileHandleName);
-		// Now upload the file.
-		return fileUploadManager.uploadFile(adminUserInfo.getId().toString(), mockFiz);
 	}
 }

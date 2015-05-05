@@ -298,7 +298,6 @@ public class FileHandleManagerImpl implements FileHandleManager {
 	 * @throws IOException
 	 * @throws ServiceUnavailableException
 	 */
-	@Override
 	@WriteTransaction
 	public S3FileHandle uploadFile(String userId, FileItemStream fis)
 			throws IOException, ServiceUnavailableException {
