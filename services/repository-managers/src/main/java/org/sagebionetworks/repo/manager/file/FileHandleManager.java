@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.fileupload.FileItemIterator;
+import org.apache.commons.fileupload.FileItemStream;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.http.entity.ContentType;
 import org.sagebionetworks.repo.model.DatastoreException;
@@ -345,5 +346,16 @@ public interface FileHandleManager {
 	 */
 	S3FileHandle createNeverUploadedPlaceHolderFileHandle(String createdBy,
 			Date modifiedOn, String name) throws UnsupportedEncodingException, IOException;
+
+	/**
+	 * 
+	 * @param userId
+	 * @param fis
+	 * @return
+	 * @throws IOException
+	 * @throws ServiceUnavailableException
+	 */
+	S3FileHandle uploadFile(String userId, FileItemStream fis)
+			throws IOException, ServiceUnavailableException;
 	
 }
