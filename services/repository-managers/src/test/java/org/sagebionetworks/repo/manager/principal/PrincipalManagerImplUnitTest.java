@@ -29,10 +29,13 @@ import org.sagebionetworks.repo.model.auth.NewUser;
 import org.sagebionetworks.repo.model.auth.Username;
 import org.sagebionetworks.repo.model.dao.NotificationEmailDAO;
 import org.sagebionetworks.repo.model.principal.AccountSetupInfo;
+import org.sagebionetworks.repo.model.principal.AccountSetupInfoV2;
 import org.sagebionetworks.repo.model.principal.AddEmailInfo;
 import org.sagebionetworks.repo.model.principal.AliasType;
+import org.sagebionetworks.repo.model.principal.NewUserSignedToken;
 import org.sagebionetworks.repo.model.principal.PrincipalAlias;
 import org.sagebionetworks.repo.model.principal.PrincipalAliasDAO;
+import org.sagebionetworks.repo.util.SignedTokenUtil;
 import org.sagebionetworks.repo.web.NotFoundException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -298,6 +301,69 @@ public class PrincipalManagerImplUnitTest {
 	public void testValidateNewAccountTokenInvalidToken() {
 		testReplacedParamValidateNewAccountToken("mac", "invalid-mac");
 	}
+	
+	private AccountSetupInfoV2 createAccountSetUpInfo(Date timestamp) {
+		AccountSetupInfoV2 result = new AccountSetupInfoV2();
+		NewUserSignedToken nust = new NewUserSignedToken();
+		nust.setCreatedOn(timestamp);
+		nust.setEmail(EMAIL);
+		nust.setFirstName("foo");
+		nust.setFirstName("bar");
+		SignedTokenUtil.signToken(nust);
+		result.setEmailValidationToken(nust);
+		result.setFirstName(FIRST_NAME);
+		result.setLastName(LAST_NAME);
+		result.setPassword(PASSWORD);
+		result.setUsername(USER_NAME);
+		return result;
+	}
+	
+	@Test
+	public void testValidateNewAccountToken2() {
+		AccountSetupInfoV2 accountSetupInfoV2 = createAccountSetUpInfo(now);
+		String extractedEmail = PrincipalManagerImpl.validateNewAccountToken2(accountSetupInfoV2, now);
+		assertEquals(EMAIL, extractedEmail);
+	}
+	
+	@Test
+	public void testValidateNewAccountTokenNoNameV2() {
+		AccountSetupInfoV2 accountSetupInfoV2 = createAccountSetUpInfo(now);
+		accountSetupInfoV2.setFirstName("");
+		accountSetupInfoV2.setLastName("");
+		String extractedEmail = PrincipalManagerImpl.validateNewAccountToken2(accountSetupInfoV2, now);
+		assertEquals(EMAIL, extractedEmail);
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void testValidateNewAccountTokenMissingFirstNameV2() {
+		AccountSetupInfoV2 accountSetupInfoV2 = createAccountSetUpInfo(now);
+		accountSetupInfoV2.setFirstName(null);
+		PrincipalManagerImpl.validateNewAccountToken2(accountSetupInfoV2, now);
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void testValidateNewAccountTokenMissingLastNameV2() {
+		AccountSetupInfoV2 accountSetupInfoV2 = createAccountSetUpInfo(now);
+		accountSetupInfoV2.setLastName(null);
+		PrincipalManagerImpl.validateNewAccountToken2(accountSetupInfoV2, now);
+	}
+	
+	// token is OK 23 hours from now
+	@Test
+	public void testValidateNOTtooOLDTimestampV2() {
+		Date notOutOfDate = new Date(System.currentTimeMillis()+23*3600*1000L);
+		AccountSetupInfoV2 accountSetupInfoV2 = createAccountSetUpInfo(now);
+		PrincipalManagerImpl.validateNewAccountToken2(accountSetupInfoV2, notOutOfDate);
+	}
+	
+	// token is not OK 25 hours from now
+	@Test(expected=IllegalArgumentException.class)
+	public void testValidateOLDTimestampV2() {
+		Date outOfDate = new Date(System.currentTimeMillis()+25*3600*1000L);
+		AccountSetupInfoV2 accountSetupInfoV2 = createAccountSetUpInfo(now);
+		PrincipalManagerImpl.validateNewAccountToken2(accountSetupInfoV2, outOfDate);
+	}
+	
 	@Test
 	public void testNewAccountEmailValidationHappyPath() throws Exception {
 		when(mockPrincipalAliasDAO.isAliasAvailable(EMAIL)).thenReturn(true);
@@ -347,6 +413,57 @@ public class PrincipalManagerImplUnitTest {
 		when(mockPrincipalAliasDAO.isAliasAvailable(EMAIL)).thenReturn(false);
 		manager.newAccountEmailValidation(user, "https://www.synapse.org?", DomainType.SYNAPSE);
 	}
+	
+	@Test
+	public void testNewAccountEmailValidationHappyPathV2() throws Exception {
+		when(mockPrincipalAliasDAO.isAliasAvailable(EMAIL)).thenReturn(true);
+		manager.newAccountEmailValidationV2(user, "https://www.synapse.org?");
+		ArgumentCaptor<SendEmailRequest> argument = ArgumentCaptor.forClass(SendEmailRequest.class);
+		verify(mockSynapseEmailService).sendEmail(argument.capture());
+		SendEmailRequest emailRequest =  argument.getValue();
+		assertEquals(Collections.singletonList(EMAIL), emailRequest.getDestination().getToAddresses());
+		Message message = emailRequest.getMessage();
+		assertEquals("Welcome to Synapse!", message.getSubject().getData());
+		String body = message.getBody().getHtml().getData();
+		// check that all template fields have been replaced
+		assertTrue(body.indexOf("#")<0);
+		assertTrue(body.indexOf(FIRST_NAME)>=0); 
+		// check that user's name appears
+		assertTrue(body.indexOf(LAST_NAME)>=0); 
+		// check that token appears
+		// TODO VALIDATE TOKEN 
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void testNewAccountEmailValidationMissingFNameV2() throws Exception {
+		user.setFirstName(null);
+		manager.newAccountEmailValidationV2(user, "https://www.synapse.org?");
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void testNewAccountEmailValidationMissingLNameV2() throws Exception {
+		user.setLastName(null);
+		manager.newAccountEmailValidationV2(user, "https://www.synapse.org?");
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void testNewAccountEmailValidationBogusEmailV2() throws Exception {
+		user.setEmail("invalid-email");
+		manager.newAccountEmailValidationV2(user, "https://www.synapse.org?");
+	}
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void testNewAccountEmailValidationInvalidEndpointV2() throws Exception {
+		manager.newAccountEmailValidationV2(user, "www.synapse.org");
+	}
+
+	@Test(expected=IllegalArgumentException.class)
+	public void testNewAccountEmailValidationEmailTakenV2() throws Exception {
+		when(mockPrincipalAliasDAO.isAliasAvailable(EMAIL)).thenReturn(false);
+		manager.newAccountEmailValidationV2(user, "https://www.synapse.org?");
+	}
+	
+	// ---- LEFT OFF HERE ----
 	
 	@Test
 	public void testCreateNewAccount() throws Exception {

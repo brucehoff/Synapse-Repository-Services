@@ -411,7 +411,7 @@ public class PrincipalManagerImpl implements PrincipalManager {
 	
 	// returns the validated email address
 	// note, we pass the current time as a parameter to facilitate testing
-	public static void validateAdditionalEmailToken(AddEmailSignedToken token, Date now) {
+	public static void validateAdditionalEmailTokenV2(AddEmailSignedToken token, Date now) {
 		if (token.getUserId()==null) throw new IllegalArgumentException("userId is missing.");
 		if (token.getEmail()==null) throw new IllegalArgumentException("email is missing.");
 		if (token.getCreatedOn()==null) throw new IllegalArgumentException("time stamp is missing.");
@@ -527,7 +527,7 @@ public class PrincipalManagerImpl implements PrincipalManager {
 	@WriteTransaction
 	@Override
 	public void addEmailV2(UserInfo userInfo, AddEmailSignedToken addEmailSignedToken, Boolean setAsNotificationEmail) throws NotFoundException {
-		validateAdditionalEmailToken(addEmailSignedToken, new Date());
+		validateAdditionalEmailTokenV2(addEmailSignedToken, new Date());
 		String validatedEmail = addEmailSignedToken.getEmail();
 		String originalUserId = addEmailSignedToken.getUserId();
 		if (!originalUserId.equals(userInfo.getId().toString()))
