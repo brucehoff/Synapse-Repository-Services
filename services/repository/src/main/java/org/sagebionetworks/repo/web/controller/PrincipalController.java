@@ -93,7 +93,6 @@ public class PrincipalController extends BaseController {
 	 * complete the account creation process.
 	 * 
 	 * @param user the first name, last name and email address for the user
-	 * @param client Synapse
 	 * @param portalEndpoint the beginning of the URL included in the email verification message. When concatenated with
 	 *        a list of ampersand (&) separated request parameters, must become a well formed URL. The concatenated
 	 *        string must be included with the <a href="${POST.account}">POST /account</a> request.
@@ -126,7 +125,6 @@ public class PrincipalController extends BaseController {
 	 * and a session token returned to the client.
 	 * 
 	 * @param accountSetupInfo user's first name, last name, requested user name, password, and validation token
-	 * @param client Synapse
 	 * @return a session token, allowing the client to begin making authenticated requests
 	 * @throws NotFoundException
 	 */
@@ -162,7 +160,6 @@ public class PrincipalController extends BaseController {
 	 *        making the request.
 	 * @param userId
 	 * @param email the email address to be added to the account
-	 * @param client Synapse
 	 * @param portalEndpoint the beginning of the URL included in the email verification message. When concatenated with
 	 *        a list of ampersand (&) separated request parameters, must become a well formed URL. The concatenated
 	 *        string must be included with the <a href="${POST.email}">POST /email</a> request.
@@ -202,7 +199,7 @@ public class PrincipalController extends BaseController {
 	 * @param userId
 	 * @param setAsNotificationEmail if true then the newly added email address becomes the address
 	 * used by the system for sending messages to the user.
-	 * @param addEmailInfo the validation token sent by email
+	 * @param addEmailSignedToken the validation token sent by email
 	 * @throws NotFoundException
 	 */
 	@ResponseStatus(HttpStatus.CREATED)
