@@ -104,10 +104,11 @@ import org.sagebionetworks.repo.model.oauth.OAuthUrlRequest;
 import org.sagebionetworks.repo.model.oauth.OAuthUrlResponse;
 import org.sagebionetworks.repo.model.oauth.OAuthValidationRequest;
 import org.sagebionetworks.repo.model.principal.AccountSetupInfo;
+import org.sagebionetworks.repo.model.principal.AccountSetupInfoV2;
 import org.sagebionetworks.repo.model.principal.AddEmailInfo;
+import org.sagebionetworks.repo.model.principal.AddEmailSignedToken;
 import org.sagebionetworks.repo.model.principal.AliasCheckRequest;
 import org.sagebionetworks.repo.model.principal.AliasCheckResponse;
-import org.sagebionetworks.repo.model.project.ExternalS3StorageLocationSetting;
 import org.sagebionetworks.repo.model.project.ProjectSetting;
 import org.sagebionetworks.repo.model.project.ProjectSettingsType;
 import org.sagebionetworks.repo.model.project.StorageLocationSetting;
@@ -170,6 +171,9 @@ public interface SynapseClient extends BaseClient {
 	 */
 	public AliasCheckResponse checkAliasAvailable(AliasCheckRequest request) throws SynapseException;
 	
+	@Deprecated
+	void newAccountEmailValidation(NewUser user, String portalEndpoint) throws SynapseException;
+	
 	/**
 	 * Send an email validation message as a precursor to creating a new user account.
 	 * 
@@ -177,7 +181,10 @@ public interface SynapseClient extends BaseClient {
 	 * @param portalEndpoint the GUI endpoint (is the basis for the link in the email message)
 	 * Must generate a valid email when a set of request parameters is appended to the end.
 	 */
-	void newAccountEmailValidation(NewUser user, String portalEndpoint) throws SynapseException;
+	void newAccountEmailValidationV2(NewUser user, String portalEndpoint) throws SynapseException;
+	
+	@Deprecated
+	Session createNewAccount(AccountSetupInfo accountSetupInfo) throws SynapseException;
 	
 	/**
 	 * Create a new account, following email validation.  Sets the password and logs the user in, returning a valid session token
@@ -185,7 +192,10 @@ public interface SynapseClient extends BaseClient {
 	 * @return session
 	 * @throws NotFoundException 
 	 */
-	Session createNewAccount(AccountSetupInfo accountSetupInfo) throws SynapseException;
+	Session createNewAccountV2(AccountSetupInfoV2 accountSetupInfo) throws SynapseException;
+	
+	@Deprecated
+	void additionalEmailValidation(Long userId, String email, String portalEndpoint) throws SynapseException;
 	
 	/**
 	 * Send an email validation as a precursor to adding a new email address to an existing account.
@@ -196,16 +206,19 @@ public interface SynapseClient extends BaseClient {
 	 * Must generate a valid email when a set of request parameters is appended to the end.
 	 * @throws NotFoundException 
 	 */
-	void additionalEmailValidation(Long userId, String email, String portalEndpoint) throws SynapseException;
+	void additionalEmailValidationV2(Long userId, String email, String portalEndpoint) throws SynapseException;
+	
+	@Deprecated
+	void addEmail(AddEmailInfo addEmailInfo, Boolean setAsNotificationEmail) throws SynapseException;
 	
 	/**
 	 * Add a new email address to an existing account.
 	 * 
-	 * @param addEmailInfo the token sent to the user via email
+	 * @param addEmailSignedToken the token sent to the user via email
 	 * @param setAsNotificationEmail if true then set the new email address to be the user's notification address
 	 * @throws NotFoundException
 	 */
-	void addEmail(AddEmailInfo addEmailInfo, Boolean setAsNotificationEmail) throws SynapseException;
+	void addEmailV2(AddEmailSignedToken addEmailSignedToken, Boolean setAsNotificationEmail) throws SynapseException;
 	
 	/**
 	 * Remove an email address from an existing account.

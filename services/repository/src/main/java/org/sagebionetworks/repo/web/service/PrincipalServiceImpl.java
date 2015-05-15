@@ -8,7 +8,9 @@ import org.sagebionetworks.repo.model.auth.NewUser;
 import org.sagebionetworks.repo.model.auth.Session;
 import org.sagebionetworks.repo.model.auth.Username;
 import org.sagebionetworks.repo.model.principal.AccountSetupInfo;
+import org.sagebionetworks.repo.model.principal.AccountSetupInfoV2;
 import org.sagebionetworks.repo.model.principal.AddEmailInfo;
+import org.sagebionetworks.repo.model.principal.AddEmailSignedToken;
 import org.sagebionetworks.repo.model.principal.AliasCheckRequest;
 import org.sagebionetworks.repo.model.principal.AliasCheckResponse;
 import org.sagebionetworks.repo.web.NotFoundException;
@@ -52,10 +54,16 @@ public class PrincipalServiceImpl implements PrincipalService {
 	 * @param portalEndpoint the GUI endpoint (is the basis for the link in the email message)
 	 * @param domain Synapse
 	 */
+	@Override
 	public void newAccountEmailValidation(NewUser user, String portalEndpoint, DomainType domain) {
 		principalManager.newAccountEmailValidation(user, portalEndpoint, domain);
 	}
 	
+	@Override
+	public void newAccountEmailValidationV2(NewUser user, String portalEndpoint) {
+		principalManager.newAccountEmailValidationV2(user, portalEndpoint);
+	}
+
 	/**
 	 * Create a new account, following email validation
 	 * @param accountSetupInfo
@@ -63,10 +71,17 @@ public class PrincipalServiceImpl implements PrincipalService {
 	 * @return session
 	 * @throws NotFoundException 
 	 */
+	@Override
 	public Session createNewAccount(AccountSetupInfo accountSetupInfo, DomainType domain) throws NotFoundException {
 		return principalManager.createNewAccount(accountSetupInfo, domain);
 	}
 	
+	@Override
+	public Session createNewAccountV2(AccountSetupInfoV2 accountSetupInfo)
+			throws NotFoundException {
+		return principalManager.createNewAccountV2(accountSetupInfo);
+	}
+
 	/**
 	 * Send an email validation as a precursor to adding a new email address to an existing account.
 	 * 
@@ -76,11 +91,19 @@ public class PrincipalServiceImpl implements PrincipalService {
 	 * @param domain Synapse
 	 * @throws NotFoundException
 	 */
+	@Override
 	public void additionalEmailValidation(Long userId, Username email, String portalEndpoint, DomainType domain) throws NotFoundException {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		principalManager.additionalEmailValidation(userInfo, email, portalEndpoint, domain);
 	}
 	
+	@Override
+	public void additionalEmailValidationV2(Long userId, Username email,
+			String portalEndpoint) throws NotFoundException {
+		UserInfo userInfo = userManager.getUserInfo(userId);
+		principalManager.additionalEmailValidationV2(userInfo, email, portalEndpoint);
+	}
+
 	/**
 	 * Add a new email address to an existing account.
 	 * 
@@ -89,11 +112,19 @@ public class PrincipalServiceImpl implements PrincipalService {
 	 * @param setAsNotificationEmail
 	 * @throws NotFoundException
 	 */
+	@Override
 	public void addEmail(Long userId, AddEmailInfo addEmailInfo, Boolean setAsNotificationEmail) throws NotFoundException {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		principalManager.addEmail(userInfo, addEmailInfo, setAsNotificationEmail);
 	}
 	
+	@Override
+	public void addEmailV2(Long userId, AddEmailSignedToken addEmailSignedToken,
+			Boolean setAsNotificationEmail) throws NotFoundException {
+		UserInfo userInfo = userManager.getUserInfo(userId);
+		principalManager.addEmailV2(userInfo, addEmailSignedToken, setAsNotificationEmail);
+	}
+
 	/**
 	 * Remove an email address from an existing account.
 	 * 
@@ -101,6 +132,7 @@ public class PrincipalServiceImpl implements PrincipalService {
 	 * @param email
 	 * @throws NotFoundException
 	 */
+	@Override
 	public void removeEmail(Long userId, String email) throws NotFoundException {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		principalManager.removeEmail(userInfo, email);
@@ -113,6 +145,7 @@ public class PrincipalServiceImpl implements PrincipalService {
 	 * @param userId
 	 * @param email
 	 */
+	@Override
 	public void setNotificationEmail(Long userId, String email) throws NotFoundException {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		principalManager.setNotificationEmail(userInfo, email);
@@ -123,6 +156,7 @@ public class PrincipalServiceImpl implements PrincipalService {
 	 * 
 	 * @param userId
 	 */
+	@Override
 	public Username getNotificationEmail(Long userId) throws NotFoundException {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		return principalManager.getNotificationEmail(userInfo);

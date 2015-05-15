@@ -7,7 +7,9 @@ import org.sagebionetworks.repo.model.auth.NewUser;
 import org.sagebionetworks.repo.model.auth.Session;
 import org.sagebionetworks.repo.model.auth.Username;
 import org.sagebionetworks.repo.model.principal.AccountSetupInfo;
+import org.sagebionetworks.repo.model.principal.AccountSetupInfoV2;
 import org.sagebionetworks.repo.model.principal.AddEmailInfo;
+import org.sagebionetworks.repo.model.principal.AddEmailSignedToken;
 import org.sagebionetworks.repo.model.principal.AliasCheckRequest;
 import org.sagebionetworks.repo.model.principal.AliasCheckResponse;
 import org.sagebionetworks.repo.web.NotFoundException;
@@ -73,6 +75,18 @@ public class PrincipalController extends BaseController {
 		return serviceProvider.getPrincipalService().checkAlias(check);
 	}
 	
+	@Deprecated
+	@ResponseStatus(HttpStatus.CREATED)
+	@RequestMapping(value = { UrlHelpers.ACCOUNT_EMAIL_VALIDATION }, method = RequestMethod.POST)
+	public void newAccountEmailValidationDeprecated(
+			@RequestBody NewUser user,
+			@RequestParam(value = AuthorizationConstants.DOMAIN_PARAM, required = false) String client,
+			@RequestParam(value = AuthorizationConstants.PORTAL_ENDPOINT_PARAM, required = true) String portalEndpoint
+			) {
+		DomainType domain = DomainTypeUtils.valueOf(client);
+		serviceProvider.getPrincipalService().newAccountEmailValidation(user, portalEndpoint, domain);
+	}
+	
 	/**
 	 * This service starts the process of creating a new account by sending a 'validation email' message to the provided
 	 * email address. The email contains a link back to the application calling the service which the user follows to
@@ -85,14 +99,24 @@ public class PrincipalController extends BaseController {
 	 *        string must be included with the <a href="${POST.account}">POST /account</a> request.
 	 */
 	@ResponseStatus(HttpStatus.CREATED)
-	@RequestMapping(value = { UrlHelpers.ACCOUNT_EMAIL_VALIDATION }, method = RequestMethod.POST)
+	@RequestMapping(value = { UrlHelpers.ACCOUNT_EMAIL_VALIDATION_V2 }, method = RequestMethod.POST)
 	public void newAccountEmailValidation(
 			@RequestBody NewUser user,
-			@RequestParam(value = AuthorizationConstants.DOMAIN_PARAM, required = false) String client,
 			@RequestParam(value = AuthorizationConstants.PORTAL_ENDPOINT_PARAM, required = true) String portalEndpoint
 			) {
+		serviceProvider.getPrincipalService().newAccountEmailValidationV2(user, portalEndpoint);
+	}
+	
+	@Deprecated
+	@ResponseStatus(HttpStatus.CREATED)
+	@RequestMapping(value = { UrlHelpers.ACCOUNT }, method = RequestMethod.POST)
+	@ResponseBody
+	public Session createNewAccountDeprecated(
+			@RequestBody AccountSetupInfo accountSetupInfo,
+			@RequestParam(value = AuthorizationConstants.DOMAIN_PARAM, required = false) String client
+			) throws NotFoundException {
 		DomainType domain = DomainTypeUtils.valueOf(client);
-		serviceProvider.getPrincipalService().newAccountEmailValidation(user, portalEndpoint, domain);
+		return serviceProvider.getPrincipalService().createNewAccount(accountSetupInfo, domain);
 	}
 	
 	/**
@@ -107,14 +131,26 @@ public class PrincipalController extends BaseController {
 	 * @throws NotFoundException
 	 */
 	@ResponseStatus(HttpStatus.CREATED)
-	@RequestMapping(value = { UrlHelpers.ACCOUNT }, method = RequestMethod.POST)
+	@RequestMapping(value = { UrlHelpers.ACCOUNT_V2 }, method = RequestMethod.POST)
 	@ResponseBody
-	public Session createNewAccount(
-			@RequestBody AccountSetupInfo accountSetupInfo,
-			@RequestParam(value = AuthorizationConstants.DOMAIN_PARAM, required = false) String client
+	public Session createNewAccount(@RequestBody AccountSetupInfoV2 accountSetupInfo) throws NotFoundException {
+
+		return serviceProvider.getPrincipalService().createNewAccountV2(accountSetupInfo);
+	}
+	
+	@Deprecated
+	@ResponseStatus(HttpStatus.CREATED)
+	@RequestMapping(value = { UrlHelpers.ACCOUNT_ID_EMAIL_VALIDATION }, method = RequestMethod.POST)
+	public void additionalEmailValidationDeprecated(
+			@PathVariable(value = UrlHelpers.ID_PATH_VARIABLE) String id,
+			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
+			@RequestBody Username email,
+			@RequestParam(value = AuthorizationConstants.DOMAIN_PARAM, required = false) String client,
+			@RequestParam(value = AuthorizationConstants.PORTAL_ENDPOINT_PARAM, required = true) String portalEndpoint
 			) throws NotFoundException {
+		if (userId==null || !id.equals(userId.toString())) throw new IllegalArgumentException("user id in URL must match that of the authenticated user.");
 		DomainType domain = DomainTypeUtils.valueOf(client);
-		return serviceProvider.getPrincipalService().createNewAccount(accountSetupInfo, domain);
+		serviceProvider.getPrincipalService().additionalEmailValidation(userId, email, portalEndpoint, domain);
 	}
 	
 	/**
@@ -133,17 +169,27 @@ public class PrincipalController extends BaseController {
 	 * @throws NotFoundException
 	 */
 	@ResponseStatus(HttpStatus.CREATED)
-	@RequestMapping(value = { UrlHelpers.ACCOUNT_ID_EMAIL_VALIDATION }, method = RequestMethod.POST)
+	@RequestMapping(value = { UrlHelpers.ACCOUNT_ID_EMAIL_VALIDATION_V2 }, method = RequestMethod.POST)
 	public void additionalEmailValidation(
 			@PathVariable(value = UrlHelpers.ID_PATH_VARIABLE) String id,
 			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
 			@RequestBody Username email,
-			@RequestParam(value = AuthorizationConstants.DOMAIN_PARAM, required = false) String client,
 			@RequestParam(value = AuthorizationConstants.PORTAL_ENDPOINT_PARAM, required = true) String portalEndpoint
 			) throws NotFoundException {
 		if (userId==null || !id.equals(userId.toString())) throw new IllegalArgumentException("user id in URL must match that of the authenticated user.");
-		DomainType domain = DomainTypeUtils.valueOf(client);
-		serviceProvider.getPrincipalService().additionalEmailValidation(userId, email, portalEndpoint, domain);
+		serviceProvider.getPrincipalService().additionalEmailValidationV2(userId, email, portalEndpoint);
+	}
+	
+	@Deprecated
+	@ResponseStatus(HttpStatus.CREATED)
+	@RequestMapping(value = { UrlHelpers.EMAIL }, method = RequestMethod.POST)
+	public void addEmailDeprecated(
+			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
+			@RequestParam(value = AuthorizationConstants.SET_AS_NOTIFICATION_EMAIL_PARM) Boolean setAsNotificationEmail,
+			@RequestBody AddEmailInfo addEmailInfo
+
+			) throws NotFoundException {
+		serviceProvider.getPrincipalService().addEmail(userId, addEmailInfo, setAsNotificationEmail);
 	}
 	
 	/**
@@ -160,14 +206,13 @@ public class PrincipalController extends BaseController {
 	 * @throws NotFoundException
 	 */
 	@ResponseStatus(HttpStatus.CREATED)
-	@RequestMapping(value = { UrlHelpers.EMAIL }, method = RequestMethod.POST)
+	@RequestMapping(value = { UrlHelpers.EMAIL_V2 }, method = RequestMethod.POST)
 	public void addEmail(
 			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
 			@RequestParam(value = AuthorizationConstants.SET_AS_NOTIFICATION_EMAIL_PARM) Boolean setAsNotificationEmail,
-			@RequestBody AddEmailInfo addEmailInfo
-
+			@RequestBody AddEmailSignedToken addEmailSignedToken
 			) throws NotFoundException {
-		serviceProvider.getPrincipalService().addEmail(userId, addEmailInfo, setAsNotificationEmail);
+		serviceProvider.getPrincipalService().addEmailV2(userId, addEmailSignedToken, setAsNotificationEmail);
 	}
 	
 	/**

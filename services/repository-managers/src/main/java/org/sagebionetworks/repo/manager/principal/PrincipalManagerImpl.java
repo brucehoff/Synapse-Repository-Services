@@ -30,7 +30,7 @@ import org.sagebionetworks.repo.model.auth.Session;
 import org.sagebionetworks.repo.model.auth.Username;
 import org.sagebionetworks.repo.model.dao.NotificationEmailDAO;
 import org.sagebionetworks.repo.model.principal.AccountSetupInfo;
-import org.sagebionetworks.repo.model.principal.AccountSetupInfov2;
+import org.sagebionetworks.repo.model.principal.AccountSetupInfoV2;
 import org.sagebionetworks.repo.model.principal.AddEmailInfo;
 import org.sagebionetworks.repo.model.principal.AddEmailSignedToken;
 import org.sagebionetworks.repo.model.principal.AliasEnum;
@@ -213,7 +213,7 @@ public class PrincipalManagerImpl implements PrincipalManager {
 	
 	// returns the validated email address
 	// note, we pass the current time as a parameter to facilitate testing
-	public static String validateNewAccountToken2(AccountSetupInfov2 accountSetupInfo, Date now) {
+	public static String validateNewAccountToken2(AccountSetupInfoV2 accountSetupInfo, Date now) {
 		NewUserSignedToken newUserSignedToken = accountSetupInfo.getEmailValidationToken();
 		SignedTokenUtil.validateToken(newUserSignedToken);
 
@@ -264,7 +264,7 @@ public class PrincipalManagerImpl implements PrincipalManager {
 	
 	// will throw exception for invalid email, invalid endpoint, or an email which is already taken
 	@Override
-	public void newAccountEmailValidation2(NewUser user, String portalEndpoint) {
+	public void newAccountEmailValidationV2(NewUser user, String portalEndpoint) {
 		if (user.getFirstName()==null) user.setFirstName("");
 		if (user.getLastName()==null) user.setLastName("");
 		AliasEnum.USER_EMAIL.validateAlias(user.getEmail());
@@ -315,7 +315,7 @@ public class PrincipalManagerImpl implements PrincipalManager {
 
 	@WriteTransaction
 	@Override
-	public Session createNewAccount2(AccountSetupInfov2 accountSetupInfo) throws NotFoundException {
+	public Session createNewAccountV2(AccountSetupInfoV2 accountSetupInfo) throws NotFoundException {
 		String validatedEmail = validateNewAccountToken2(accountSetupInfo, new Date());
 		
 		NewUser newUser = new NewUser();
@@ -456,7 +456,7 @@ public class PrincipalManagerImpl implements PrincipalManager {
 	}
 
 	@Override
-	public void additionalEmailValidation2(UserInfo userInfo, Username email, String portalEndpoint) throws NotFoundException {
+	public void additionalEmailValidationV2(UserInfo userInfo, Username email, String portalEndpoint) throws NotFoundException {
 		if (AuthorizationUtils.isUserAnonymous(userInfo.getId()))
 			throw new UnauthorizedException("Anonymous user may not add email address.");
 		AliasEnum.USER_EMAIL.validateAlias(email.getEmail());
@@ -526,7 +526,7 @@ public class PrincipalManagerImpl implements PrincipalManager {
 	
 	@WriteTransaction
 	@Override
-	public void addEmail2(UserInfo userInfo, AddEmailSignedToken addEmailSignedToken, Boolean setAsNotificationEmail) throws NotFoundException {
+	public void addEmailV2(UserInfo userInfo, AddEmailSignedToken addEmailSignedToken, Boolean setAsNotificationEmail) throws NotFoundException {
 		validateAdditionalEmailToken(addEmailSignedToken, new Date());
 		String validatedEmail = addEmailSignedToken.getEmail();
 		String originalUserId = addEmailSignedToken.getUserId();

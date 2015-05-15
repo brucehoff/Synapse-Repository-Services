@@ -6,7 +6,7 @@ import org.sagebionetworks.repo.model.auth.NewUser;
 import org.sagebionetworks.repo.model.auth.Session;
 import org.sagebionetworks.repo.model.auth.Username;
 import org.sagebionetworks.repo.model.principal.AccountSetupInfo;
-import org.sagebionetworks.repo.model.principal.AccountSetupInfov2;
+import org.sagebionetworks.repo.model.principal.AccountSetupInfoV2;
 import org.sagebionetworks.repo.model.principal.AddEmailInfo;
 import org.sagebionetworks.repo.model.principal.AddEmailSignedToken;
 import org.sagebionetworks.repo.model.principal.AliasType;
@@ -47,7 +47,7 @@ public interface PrincipalManager {
 	 * @param user the info for the new user
 	 * @param portalEndpoint the GUI endpoint (is the basis for the link in the email message)
 	 */
-	void newAccountEmailValidation2(NewUser user, String portalEndpoint);
+	void newAccountEmailValidationV2(NewUser user, String portalEndpoint);
 	
 	/**
 	 * Create a new account, following email validation
@@ -64,7 +64,7 @@ public interface PrincipalManager {
 	 * @return session
 	 * @throws NotFoundException 
 	 */
-	Session createNewAccount2(AccountSetupInfov2 accountSetupInfo) throws NotFoundException;
+	Session createNewAccountV2(AccountSetupInfoV2 accountSetupInfo) throws NotFoundException;
 	
 	/**
 	 * Send an email validation as a precursor to adding a new email address to an existing account.
@@ -85,7 +85,7 @@ public interface PrincipalManager {
 	 * @param portalEndpoint the GUI endpoint (is the basis for the link in the email message)
 	 * @throws NotFoundException
 	 */
-	void additionalEmailValidation2(UserInfo userInfo, Username email, String portalEndpoint) throws NotFoundException;
+	void additionalEmailValidationV2(UserInfo userInfo, Username email, String portalEndpoint) throws NotFoundException;
 	
 	/**
 	 * Add a new email address to an existing account.
@@ -105,7 +105,7 @@ public interface PrincipalManager {
 	 * @param setAsNotificationEmail
 	 * @throws NotFoundException
 	 */
-	void addEmail2(UserInfo userInfo, AddEmailSignedToken addEmailSignedToken, Boolean setAsNotificationEmail) throws NotFoundException;
+	void addEmailV2(UserInfo userInfo, AddEmailSignedToken addEmailSignedToken, Boolean setAsNotificationEmail) throws NotFoundException;
 	
 	/**
 	 * Remove an email address from an existing account.

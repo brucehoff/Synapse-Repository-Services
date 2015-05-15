@@ -147,7 +147,9 @@ import org.sagebionetworks.repo.model.oauth.OAuthUrlRequest;
 import org.sagebionetworks.repo.model.oauth.OAuthUrlResponse;
 import org.sagebionetworks.repo.model.oauth.OAuthValidationRequest;
 import org.sagebionetworks.repo.model.principal.AccountSetupInfo;
+import org.sagebionetworks.repo.model.principal.AccountSetupInfoV2;
 import org.sagebionetworks.repo.model.principal.AddEmailInfo;
+import org.sagebionetworks.repo.model.principal.AddEmailSignedToken;
 import org.sagebionetworks.repo.model.principal.AliasCheckRequest;
 import org.sagebionetworks.repo.model.principal.AliasCheckResponse;
 import org.sagebionetworks.repo.model.project.ProjectSetting;
@@ -229,6 +231,10 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	private static final String PORTAL_ENDPOINT_PARAM = "portalEndpoint";
 	private static final String SET_AS_NOTIFICATION_EMAIL_PARAM = "setAsNotificationEmail";
 	private static final String EMAIL_PARAM = "email";
+	public static final String ACCOUNT_V2 = "/accountV2";
+	public static final String ACCOUNT_EMAIL_VALIDATION_V2 = ACCOUNT_V2+EMAIL_VALIDATION;
+	public static final String EMAIL_V2 = "/emailV2";
+
 
 	private static final String PARAM_GENERATED_BY = "generatedBy";
 
@@ -707,17 +713,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 				AliasCheckResponse.class, null);
 	}
 
-	/**
-	 * Send an email validation message as a precursor to creating a new user
-	 * account.
-	 * 
-	 * @param user
-	 *            the first name, last name and email address for the new user
-	 * @param portalEndpoint
-	 *            the GUI endpoint (is the basis for the link in the email
-	 *            message) Must generate a valid email when a set of request
-	 *            parameters is appended to the end.
-	 */
+	@Deprecated
 	@Override
 	public void newAccountEmailValidation(NewUser user, String portalEndpoint)
 			throws SynapseException {
@@ -745,15 +741,43 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	}
 
 	/**
-	 * Create a new account, following email validation. Sets the password and
-	 * logs the user in, returning a valid session token
+	 * Send an email validation message as a precursor to creating a new user
+	 * account.
 	 * 
-	 * @param accountSetupInfo
-	 *            Note: Caller may override the first/last name, but not the
-	 *            email, given in 'newAccountEmailValidation'
-	 * @return session
-	 * @throws NotFoundException
+	 * @param user
+	 *            the first name, last name and email address for the new user
+	 * @param portalEndpoint
+	 *            the GUI endpoint (is the basis for the link in the email
+	 *            message) Must generate a valid email when a set of request
+	 *            parameters is appended to the end.
 	 */
+	@Override
+	public void newAccountEmailValidationV2(NewUser user, String portalEndpoint)
+			throws SynapseException {
+		if (user == null)
+			throw new IllegalArgumentException("email can not be null.");
+		if (portalEndpoint == null)
+			throw new IllegalArgumentException(
+					"portalEndpoint can not be null.");
+
+		String uri = ACCOUNT_EMAIL_VALIDATION_V2;
+		Map<String, String> paramMap = new HashMap<String, String>();
+		paramMap.put(PORTAL_ENDPOINT_PARAM, portalEndpoint);
+
+		JSONObjectAdapter toUpdateAdapter = new JSONObjectAdapterImpl();
+		try {
+			JSONObject obj = new JSONObject(user.writeToJSONObject(
+					toUpdateAdapter).toJSONString());
+			getSharedClientConnection().postJson(repoEndpoint, uri,
+					obj.toString(), getUserAgent(), paramMap);
+		} catch (JSONException e) {
+			throw new SynapseClientException(e);
+		} catch (JSONObjectAdapterException e) {
+			throw new SynapseClientException(e);
+		}
+	}
+
+	@Deprecated
 	@Override
 	public Session createNewAccount(AccountSetupInfo accountSetupInfo)
 			throws SynapseException {
@@ -779,17 +803,40 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	}
 
 	/**
-	 * Send an email validation as a precursor to adding a new email address to
-	 * an existing account.
+	 * Create a new account, following email validation. Sets the password and
+	 * logs the user in, returning a valid session token
 	 * 
-	 * @param email
-	 *            the email which is claimed by the user
-	 * @param portalEndpoint
-	 *            the GUI endpoint (is the basis for the link in the email
-	 *            message) Must generate a valid email when a set of request
-	 *            parameters is appended to the end.
+	 * @param accountSetupInfo
+	 *            Note: Caller may override the first/last name, but not the
+	 *            email, given in 'newAccountEmailValidation'
+	 * @return session
 	 * @throws NotFoundException
 	 */
+	@Override
+	public Session createNewAccountV2(AccountSetupInfoV2 accountSetupInfo)
+			throws SynapseException {
+		if (accountSetupInfo == null)
+			throw new IllegalArgumentException(
+					"accountSetupInfo can not be null.");
+
+		String uri = ACCOUNT_V2;
+
+		JSONObjectAdapter toUpdateAdapter = new JSONObjectAdapterImpl();
+		try {
+			JSONObject obj = new JSONObject(accountSetupInfo.writeToJSONObject(
+					toUpdateAdapter).toJSONString());
+			JSONObject result = getSharedClientConnection().postJson(
+					repoEndpoint, uri, obj.toString(), getUserAgent(), null);
+			return EntityFactory.createEntityFromJSONObject(result,
+					Session.class);
+		} catch (JSONException e) {
+			throw new SynapseClientException(e);
+		} catch (JSONObjectAdapterException e) {
+			throw new SynapseClientException(e);
+		}
+	}
+
+	@Deprecated
 	@Override
 	public void additionalEmailValidation(Long userId, String email,
 			String portalEndpoint) throws SynapseException {
@@ -821,15 +868,48 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	}
 
 	/**
-	 * Add a new email address to an existing account.
+	 * Send an email validation as a precursor to adding a new email address to
+	 * an existing account.
 	 * 
-	 * @param addEmailInfo
-	 *            the token sent to the user via email
-	 * @param setAsNotificationEmail
-	 *            if true then set the new email address to be the user's
-	 *            notification address
+	 * @param email
+	 *            the email which is claimed by the user
+	 * @param portalEndpoint
+	 *            the GUI endpoint (is the basis for the link in the email
+	 *            message) Must generate a valid email when a set of request
+	 *            parameters is appended to the end.
 	 * @throws NotFoundException
 	 */
+	@Override
+	public void additionalEmailValidationV2(Long userId, String email,
+			String portalEndpoint) throws SynapseException {
+		if (userId == null)
+			throw new IllegalArgumentException("userId can not be null.");
+		if (email == null)
+			throw new IllegalArgumentException("email can not be null.");
+		if (portalEndpoint == null)
+			throw new IllegalArgumentException(
+					"portalEndpoint can not be null.");
+
+		String uri = ACCOUNT_V2 + "/" + userId + EMAIL_VALIDATION;
+		Map<String, String> paramMap = new HashMap<String, String>();
+		paramMap.put(PORTAL_ENDPOINT_PARAM, portalEndpoint);
+
+		JSONObjectAdapter toUpdateAdapter = new JSONObjectAdapterImpl();
+		try {
+			Username emailRequestBody = new Username();
+			emailRequestBody.setEmail(email);
+			JSONObject obj = new JSONObject(emailRequestBody.writeToJSONObject(
+					toUpdateAdapter).toJSONString());
+			getSharedClientConnection().postJson(repoEndpoint, uri,
+					obj.toString(), getUserAgent(), paramMap);
+		} catch (JSONException e) {
+			throw new SynapseClientException(e);
+		} catch (JSONObjectAdapterException e) {
+			throw new SynapseClientException(e);
+		}
+	}
+
+	@Deprecated
 	@Override
 	public void addEmail(AddEmailInfo addEmailInfo,
 			Boolean setAsNotificationEmail) throws SynapseException {
@@ -845,6 +925,41 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 		JSONObjectAdapter toUpdateAdapter = new JSONObjectAdapterImpl();
 		try {
 			JSONObject obj = new JSONObject(addEmailInfo.writeToJSONObject(
+					toUpdateAdapter).toJSONString());
+			getSharedClientConnection().postJson(repoEndpoint, uri,
+					obj.toString(), getUserAgent(), paramMap);
+		} catch (JSONException e) {
+			throw new SynapseClientException(e);
+		} catch (JSONObjectAdapterException e) {
+			throw new SynapseClientException(e);
+		}
+	}
+
+	/**
+	 * Add a new email address to an existing account.
+	 * 
+	 * @param addEmailInfo
+	 *            the token sent to the user via email
+	 * @param setAsNotificationEmail
+	 *            if true then set the new email address to be the user's
+	 *            notification address
+	 * @throws NotFoundException
+	 */
+	@Override
+	public void addEmailV2(AddEmailSignedToken addEmailSignedToken,
+			Boolean setAsNotificationEmail) throws SynapseException {
+		if (addEmailSignedToken == null)
+			throw new IllegalArgumentException("addEmailSignedToken can not be null.");
+
+		String uri = EMAIL_V2;
+		Map<String, String> paramMap = new HashMap<String, String>();
+		if (setAsNotificationEmail != null)
+			paramMap.put(SET_AS_NOTIFICATION_EMAIL_PARAM,
+					setAsNotificationEmail.toString());
+
+		JSONObjectAdapter toUpdateAdapter = new JSONObjectAdapterImpl();
+		try {
+			JSONObject obj = new JSONObject(addEmailSignedToken.writeToJSONObject(
 					toUpdateAdapter).toJSONString());
 			getSharedClientConnection().postJson(repoEndpoint, uri,
 					obj.toString(), getUserAgent(), paramMap);
