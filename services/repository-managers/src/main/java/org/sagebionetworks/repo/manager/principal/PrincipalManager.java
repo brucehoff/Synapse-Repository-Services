@@ -6,7 +6,9 @@ import org.sagebionetworks.repo.model.auth.NewUser;
 import org.sagebionetworks.repo.model.auth.Session;
 import org.sagebionetworks.repo.model.auth.Username;
 import org.sagebionetworks.repo.model.principal.AccountSetupInfo;
+import org.sagebionetworks.repo.model.principal.AccountSetupInfov2;
 import org.sagebionetworks.repo.model.principal.AddEmailInfo;
+import org.sagebionetworks.repo.model.principal.AddEmailSignedToken;
 import org.sagebionetworks.repo.model.principal.AliasType;
 import org.sagebionetworks.repo.web.NotFoundException;
 
@@ -40,6 +42,14 @@ public interface PrincipalManager {
 	void newAccountEmailValidation(NewUser user, String portalEndpoint, DomainType domain);
 	
 	/**
+	 * VERSION 2: Send an email validation message as a precursor to creating a new user account.
+	 * 
+	 * @param user the info for the new user
+	 * @param portalEndpoint the GUI endpoint (is the basis for the link in the email message)
+	 */
+	void newAccountEmailValidation2(NewUser user, String portalEndpoint);
+	
+	/**
 	 * Create a new account, following email validation
 	 * @param accountSetupInfo
 	 * @param domain
@@ -47,6 +57,14 @@ public interface PrincipalManager {
 	 * @throws NotFoundException 
 	 */
 	Session createNewAccount(AccountSetupInfo accountSetupInfo, DomainType domain) throws NotFoundException;
+	
+	/**
+	 * Create a new account, following email validation
+	 * @param accountSetupInfo
+	 * @return session
+	 * @throws NotFoundException 
+	 */
+	Session createNewAccount2(AccountSetupInfov2 accountSetupInfo) throws NotFoundException;
 	
 	/**
 	 * Send an email validation as a precursor to adding a new email address to an existing account.
@@ -60,6 +78,16 @@ public interface PrincipalManager {
 	void additionalEmailValidation(UserInfo userInfo, Username email, String portalEndpoint, DomainType domain) throws NotFoundException;
 	
 	/**
+	 * VERSION 2: Send an email validation as a precursor to adding a new email address to an existing account.
+	 * 
+	 * @param userInfo the authenticated user making the request
+	 * @param email the email which is claimed by the user
+	 * @param portalEndpoint the GUI endpoint (is the basis for the link in the email message)
+	 * @throws NotFoundException
+	 */
+	void additionalEmailValidation2(UserInfo userInfo, Username email, String portalEndpoint) throws NotFoundException;
+	
+	/**
 	 * Add a new email address to an existing account.
 	 * 
 	 * @param userInfo
@@ -68,6 +96,16 @@ public interface PrincipalManager {
 	 * @throws NotFoundException
 	 */
 	void addEmail(UserInfo userInfo, AddEmailInfo addEmailInfo, Boolean setAsNotificationEmail) throws NotFoundException;
+	
+	/**
+	 * VERSION 2: Add a new email address to an existing account.
+	 * 
+	 * @param userInfo
+	 * @param addEmailInfo
+	 * @param setAsNotificationEmail
+	 * @throws NotFoundException
+	 */
+	void addEmail2(UserInfo userInfo, AddEmailSignedToken addEmailSignedToken, Boolean setAsNotificationEmail) throws NotFoundException;
 	
 	/**
 	 * Remove an email address from an existing account.

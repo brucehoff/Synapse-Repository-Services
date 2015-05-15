@@ -1,0 +1,17 @@
+{
+	"title": "AddEmailSignedToken",
+	"description": "Signed token containing the information for a new user.",
+	"implements": [
+		{"$ref": "org.sagebionetworks.repo.model.SignedTokenInterface"}
+	],
+	"properties": {
+		"userId": {
+			"type": "string",
+			"description": "User's Synapse ID"
+		},
+		"email": {
+			"type": "string",
+			"description": "new email to be added to the account"
+		}
+	}
+}
