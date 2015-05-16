@@ -75,7 +75,7 @@ public class PrincipalController extends BaseController {
 		return serviceProvider.getPrincipalService().checkAlias(check);
 	}
 	
-	@Deprecated
+	
 	@ResponseStatus(HttpStatus.CREATED)
 	@RequestMapping(value = { UrlHelpers.ACCOUNT_EMAIL_VALIDATION }, method = RequestMethod.POST)
 	public void newAccountEmailValidationDeprecated(
@@ -106,7 +106,6 @@ public class PrincipalController extends BaseController {
 		serviceProvider.getPrincipalService().newAccountEmailValidationV2(user, portalEndpoint);
 	}
 	
-	@Deprecated
 	@ResponseStatus(HttpStatus.CREATED)
 	@RequestMapping(value = { UrlHelpers.ACCOUNT }, method = RequestMethod.POST)
 	@ResponseBody
@@ -136,7 +135,7 @@ public class PrincipalController extends BaseController {
 		return serviceProvider.getPrincipalService().createNewAccountV2(accountSetupInfo);
 	}
 	
-	@Deprecated
+	
 	@ResponseStatus(HttpStatus.CREATED)
 	@RequestMapping(value = { UrlHelpers.ACCOUNT_ID_EMAIL_VALIDATION }, method = RequestMethod.POST)
 	public void additionalEmailValidationDeprecated(
@@ -177,7 +176,7 @@ public class PrincipalController extends BaseController {
 		serviceProvider.getPrincipalService().additionalEmailValidationV2(userId, email, portalEndpoint);
 	}
 	
-	@Deprecated
+	
 	@ResponseStatus(HttpStatus.CREATED)
 	@RequestMapping(value = { UrlHelpers.EMAIL }, method = RequestMethod.POST)
 	public void addEmailDeprecated(
