@@ -125,6 +125,10 @@ public class AuthorizationConstants {
 	 */
 	public static final String REASON_TOO_MANY_CONCURRENT_REQUESTS = "{\"reason\": \"Too many concurrent requests\"}";
 	/**
+	 * Response message for 503.
+	 */
+	public static final String REASON_UNEXPECTED_ERROR = "{\"reason\": \"Unexpected error encountered, please retry later.\"}";
+	/**
 	 * Response message for 500.
 	 */
 	public static final String REASON_SERVER_ERROR = "{\"reason\": \"Server Error. Error logged.\"}";

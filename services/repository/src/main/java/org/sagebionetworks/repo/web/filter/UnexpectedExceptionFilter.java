@@ -61,7 +61,7 @@ public class UnexpectedExceptionFilter implements Filter {
 			 */
 			HttpServletResponse res = (HttpServletResponse) response;
 			res.setStatus(HttpStatus.SC_SERVICE_UNAVAILABLE);
-			res.getWriter().println(AuthorizationConstants.REASON_TOO_MANY_CONCURRENT_REQUESTS);
+			res.getWriter().println(AuthorizationConstants.REASON_UNEXPECTED_ERROR);
 		}catch(Error e){
 			/*
 			 * Errors are far worse than exceptions.
