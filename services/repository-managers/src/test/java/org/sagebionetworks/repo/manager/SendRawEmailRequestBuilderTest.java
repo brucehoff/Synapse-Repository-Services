@@ -62,7 +62,7 @@ public class SendRawEmailRequestBuilderTest {
 	@Test
 	public void testCreateRawEmailRequestWithOneTextAttachment() throws Exception {
 		String body = "{\"html\":\"<div>text</div>\",\"attachments\":[{\"content\":\"MjAwCg==\",\"file_name\":\"in.txt\",\"content_type\":\"text/plain\",\"disposition\":\"attachment\",\"size\":\"4\"}]}";
-		SendRawEmailRequest request = (new SendRawEmailRequestBuilder())
+		new SendRawEmailRequestBuilder()
 				.withRecipientEmail("foo@bar.com")
 				.withSubject("subject")
 				.withBody(body)
