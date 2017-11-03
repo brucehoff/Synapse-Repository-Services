@@ -205,11 +205,12 @@ public interface AuthorizationManager {
 	 * 
 	 * @param userInfo
 	 * @param service
+	 * @param type
 	 * @param repositoryPath
 	 * @param actionTypes
 	 * @return the permitted actions for the given user on the given repository
 	 */
-	public Set<RegistryEventAction> getPermittedDockerRepositoryActions(UserInfo userInfo, String service, String repositoryPath, String actionTypes);
+	public Set<String> getPermittedDockerActions(UserInfo userInfo, String service, String type, String name, String actionTypes);
 
 	/**
 	 * Validate and throw exception for HasAccessorRequirement

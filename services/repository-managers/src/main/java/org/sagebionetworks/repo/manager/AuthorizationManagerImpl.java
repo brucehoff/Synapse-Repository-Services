@@ -36,6 +36,11 @@ import com.google.common.collect.Sets;
 
 public class AuthorizationManagerImpl implements AuthorizationManager {
 	
+	private static final String ALL_REGISTRY_ACTIONS = "*";
+	private static final String REPOSITORY_TYPE = "repository";
+	private static final String REGISTRY_TYPE = "registry";
+	private static final String REGISTRY_CATALOG = "catalog";
+	
 	public static final Long TRASH_FOLDER_ID = Long.parseLong(
 			StackConfiguration.getTrashFolderEntityIdStatic());
 
@@ -506,14 +511,45 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 
 		return parentId;
 	}
-
+	
 	@Override
-	public Set<RegistryEventAction> getPermittedDockerRepositoryActions(UserInfo userInfo, String service, String repositoryPath, String actionTypes) {
+	public Set<String> getPermittedDockerActions(UserInfo userInfo, String service, String type, String name, String actionTypes) {
 		ValidateArgument.required(userInfo, "userInfo");
 		ValidateArgument.required(service, "service");
-		ValidateArgument.required(repositoryPath, "repositoryPath");
+		ValidateArgument.required(type, "type");
+		ValidateArgument.required(name, "name");
 		ValidateArgument.required(actionTypes, "actionTypes");
 
+		String[] actionArray = actionTypes.split(",");
+		if (REGISTRY_TYPE.equalsIgnoreCase(type)) {
+			return getPermittedDockerRegistryActions(userInfo, service, name, actionArray);
+		} else if (REPOSITORY_TYPE.equalsIgnoreCase(type)) {
+			Set<RegistryEventAction> approvedActions = getPermittedDockerRepositoryActions(userInfo, service, name, actionArray);
+			Set<String> result = new HashSet<String>();
+			for (RegistryEventAction a : approvedActions) result.add(a.name());
+			return result;
+		} else {
+			throw new IllegalArgumentException("Unexpected type "+type);
+		}
+	}
+
+	private Set<String> getPermittedDockerRegistryActions(UserInfo userInfo, String service, String name, String[] actionTypes) {
+		if (name.equalsIgnoreCase(REGISTRY_CATALOG)) {
+			// OK, it's a request to list the catalog
+			if (userInfo.isAdmin()) { 
+				// an admin can do *anything*
+				return new HashSet<String>(Arrays.asList(actionTypes));
+			} else {
+				// non-admins cannot do 'registry' operations
+				return Collections.EMPTY_SET;
+			}
+		} else {
+			throw new IllegalArgumentException("Unexpected name for 'registry' type, "+name);
+		}
+	}
+
+	private Set<RegistryEventAction> getPermittedDockerRepositoryActions(UserInfo userInfo, String service, String repositoryPath, String[] actionTypes) {
+		
 		Set<RegistryEventAction> permittedActions = new HashSet<RegistryEventAction>();
 
 		String repositoryName = service+DockerNameUtil.REPO_NAME_PATH_SEP+repositoryPath;
@@ -525,7 +561,9 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 			String benefactor = nodeDao.getBenefactor(existingDockerRepoId);
 			isInTrash = TRASH_FOLDER_ID.equals(KeyFactory.stringToKey(benefactor));
 		}
-		for (String requestedActionString : actionTypes.split(",")) {
+
+		for (String requestedActionString : actionTypes) {
+
 			RegistryEventAction requestedAction = RegistryEventAction.valueOf(requestedActionString);
 			switch (requestedAction) {
 			case push:
