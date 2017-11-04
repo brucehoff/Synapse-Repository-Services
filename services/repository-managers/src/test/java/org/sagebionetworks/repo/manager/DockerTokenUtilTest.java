@@ -72,7 +72,7 @@ public class DockerTokenUtilTest {
 		expectedClaimSetStringBuilder.append(repository1);
 		expectedClaimSetStringBuilder.append("\",\"type\":\"");
 		expectedClaimSetStringBuilder.append(type);
-		expectedClaimSetStringBuilder.append("\",\"actions\":[\"push\",\"pull\"]},{\"name\":\"");
+		expectedClaimSetStringBuilder.append("\",\"actions\":[\"pull\",\"push\"]},{\"name\":\"");
 		expectedClaimSetStringBuilder.append(repository2);
 		expectedClaimSetStringBuilder.append("\",\"type\":\"");
 		expectedClaimSetStringBuilder.append(type);
