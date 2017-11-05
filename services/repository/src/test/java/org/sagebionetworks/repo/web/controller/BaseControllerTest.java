@@ -62,6 +62,8 @@ public class BaseControllerTest {
 		Set<Method> handlers = reflections.getMethodsAnnotatedWith(ExceptionHandler.class);
 		Map<String, Integer> exceptions = Maps.newHashMap();
 		for (Method handler : handlers) {
+			// The next line is required to ensure that the set of handlers are only those in BaseController
+			if (!handler.getDeclaringClass().equals(BaseController.class)) continue;
 			Class<? extends Throwable>[] exceptionsThrown = handler.getAnnotation(ExceptionHandler.class).value();
 			int statusCode = handler.getAnnotation(ResponseStatus.class).value().value();
 			for (Class<? extends Throwable> exceptionThrown : exceptionsThrown) {

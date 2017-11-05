@@ -44,7 +44,7 @@ public class DockerAuthorizationController {
 
 	
 	@Autowired
-	ServiceProvider serviceProvider;
+	private ServiceProvider serviceProvider;
 	
 	/**
 	 * Authorize Docker operation.  This service is called by the Docker client only and is not for general use.
