@@ -1,0 +1,15 @@
+{
+	"title": "DockerErrorResponse",
+	"name": "DockerErrorResponse",
+	"properties": {
+		"code": {
+			"type":"object",
+          	"$ref": "org.sagebionetworks.repo.model.docker.DockerErrorCode",
+          	"description": "Error category, selected from the DockerErrorCode enumeration."
+		},
+		"message": {
+			"type": "string",
+         	"description": "Human readable description of the error."
+		}
+	}
+}

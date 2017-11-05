@@ -1,0 +1,14 @@
+{
+	"title": "DockerErrorResponseList",
+	"description": "List of errors returned to the Docker client",
+	"name": "DockerErrorResponseList",
+	"properties": {
+		"errors": {
+			"type": "array",
+           	"description":"A list of errors to return to the Docker client",
+			"items": {
+           		"$ref": "org.sagebionetworks.repo.model.docker.DockerErrorResponse"
+  			}
+		}
+	}
+}

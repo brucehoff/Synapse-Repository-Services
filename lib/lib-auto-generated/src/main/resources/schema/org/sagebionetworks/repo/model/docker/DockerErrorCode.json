@@ -1,0 +1,9 @@
+{
+    "type":"string",
+    "enum":[
+    	"DENIED",
+		"UNAUTHORIZED",
+		"NAME_INVALID",
+		"NAME_UNKNOWN"
+    ]
+}
