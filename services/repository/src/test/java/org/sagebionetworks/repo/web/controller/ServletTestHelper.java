@@ -71,6 +71,7 @@ import org.sagebionetworks.repo.model.discussion.UpdateThreadTitle;
 import org.sagebionetworks.repo.model.docker.DockerAuthorizationToken;
 import org.sagebionetworks.repo.model.docker.DockerCommit;
 import org.sagebionetworks.repo.model.docker.DockerCommitSortBy;
+import org.sagebionetworks.repo.model.docker.DockerErrorResponseList;
 import org.sagebionetworks.repo.model.doi.Doi;
 import org.sagebionetworks.repo.model.file.ExternalFileHandle;
 import org.sagebionetworks.repo.model.file.FileHandleAssociation;
@@ -2150,6 +2151,19 @@ public class ServletTestHelper {
 		MockHttpServletResponse response = ServletTestHelperUtils.dispatchRequest(dispatchServlet, request,
 				HttpStatus.OK);
 		return objectMapper.readValue(response.getContentAsString(), DockerAuthorizationToken.class);
+	}
+	
+	public DockerErrorResponseList authorizeDockerAccessExpectingError(DispatcherServlet dispatchServlet, Long userId,
+			String service, String[] scope, HttpStatus httpStatus) throws Exception {
+		MockHttpServletRequest request = ServletTestHelperUtils.initRequest(
+				HTTPMODE.GET, UrlHelpers.DOCKER_PATH, UrlHelpers.DOCKER_AUTHORIZATION, userId, null);
+		request.addParameter(AuthorizationConstants.DOCKER_SERVICE_PARAM, service);
+		if (scope != null) {
+			request.addParameter(AuthorizationConstants.DOCKER_SCOPE_PARAM, scope);
+		}
+		MockHttpServletResponse response = ServletTestHelperUtils.dispatchRequest(dispatchServlet, request,
+				httpStatus);
+		return objectMapper.readValue(response.getContentAsString(), DockerErrorResponseList.class);
 	}
 	
 	public void createDockerCommit(DispatcherServlet dispatchServlet,

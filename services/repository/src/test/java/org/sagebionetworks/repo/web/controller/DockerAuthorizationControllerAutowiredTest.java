@@ -20,7 +20,11 @@ import org.sagebionetworks.repo.model.AuthorizationConstants.BOOTSTRAP_PRINCIPAL
 import org.sagebionetworks.repo.model.Project;
 import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.docker.DockerAuthorizationToken;
+import org.sagebionetworks.repo.model.docker.DockerErrorCode;
+import org.sagebionetworks.repo.model.docker.DockerErrorResponse;
+import org.sagebionetworks.repo.model.docker.DockerErrorResponseList;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 
 public class DockerAuthorizationControllerAutowiredTest extends AbstractAutowiredControllerTestBase {
 
@@ -69,7 +73,10 @@ public class DockerAuthorizationControllerAutowiredTest extends AbstractAutowire
 		cleanupIdList.add(id);
 		
 		//get the auth token
-		DockerAuthorizationToken dockerAuthorizationToken= servletTestHelper.authorizeDockerAccess(dispatchServlet, adminUserId, service, new String[] {"repository:"+id+"/example:push,pull", "repository:"+id+"/example2:push" });
+		DockerAuthorizationToken dockerAuthorizationToken = servletTestHelper.
+				authorizeDockerAccess(dispatchServlet, adminUserId, service, 
+						new String[] {"repository:"+id+"/example:push,pull", 
+						"repository:"+id+"/example2:push" });
 		String token = dockerAuthorizationToken.getToken();
 		assertNotNull(token);
 		
@@ -92,7 +99,18 @@ public class DockerAuthorizationControllerAutowiredTest extends AbstractAutowire
 		
 		//not testing header(index 0 of split) because it is already covered by unit test
 		//not testing signature (index 2 of split) because it changes every time
-		
+	}
+	
+	@Test
+	public void testError() throws Exception {
+		// try to get authorization to do a Docker pull on a non-existent entity
+		DockerErrorResponseList errorList = servletTestHelper.
+				authorizeDockerAccessExpectingError(dispatchServlet, adminUserId, service, 
+						new String[] {"repository:syn111111/example:pull" }, HttpStatus.FORBIDDEN);
+		assertEquals(1, errorList.getErrors().size());
+		DockerErrorResponse error = errorList.getErrors().get(0);
+		assertEquals(DockerErrorCode.DENIED, error.getCode());
+		assertEquals("foo", error.getMessage());
 	}
 
 }
