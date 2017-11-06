@@ -2,17 +2,46 @@ package org.sagebionetworks.repo.manager;
 
 import static org.sagebionetworks.repo.model.docker.RegistryEventAction.pull;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 
+import org.apache.commons.lang.StringUtils;
 import org.sagebionetworks.StackConfiguration;
 import org.sagebionetworks.evaluation.manager.EvaluationPermissionsManager;
 import org.sagebionetworks.evaluation.model.Submission;
 import org.sagebionetworks.reflection.model.PaginatedResults;
 import org.sagebionetworks.repo.manager.file.FileHandleAuthorizationStatus;
 import org.sagebionetworks.repo.manager.team.TeamConstants;
-import org.sagebionetworks.repo.model.*;
+import org.sagebionetworks.repo.model.ACCESS_TYPE;
+import org.sagebionetworks.repo.model.AccessControlListDAO;
+import org.sagebionetworks.repo.model.AccessRequirementDAO;
+import org.sagebionetworks.repo.model.ActivityDAO;
+import org.sagebionetworks.repo.model.AuthorizationConstants;
 import org.sagebionetworks.repo.model.AuthorizationConstants.BOOTSTRAP_PRINCIPAL;
+import org.sagebionetworks.repo.model.AuthorizationUtils;
+import org.sagebionetworks.repo.model.DatastoreException;
+import org.sagebionetworks.repo.model.DockerNodeDao;
+import org.sagebionetworks.repo.model.EntityType;
+import org.sagebionetworks.repo.model.GroupMembersDAO;
+import org.sagebionetworks.repo.model.HasAccessorRequirement;
+import org.sagebionetworks.repo.model.InviteeVerificationSignedToken;
+import org.sagebionetworks.repo.model.MembershipInvtnSignedToken;
+import org.sagebionetworks.repo.model.MembershipInvtnSubmission;
+import org.sagebionetworks.repo.model.MembershipInvtnSubmissionDAO;
+import org.sagebionetworks.repo.model.Node;
+import org.sagebionetworks.repo.model.NodeDAO;
+import org.sagebionetworks.repo.model.ObjectType;
+import org.sagebionetworks.repo.model.Reference;
+import org.sagebionetworks.repo.model.RestrictableObjectDescriptor;
+import org.sagebionetworks.repo.model.RestrictableObjectType;
+import org.sagebionetworks.repo.model.UnauthorizedException;
+import org.sagebionetworks.repo.model.UserInfo;
+import org.sagebionetworks.repo.model.VerificationDAO;
 import org.sagebionetworks.repo.model.dao.FileHandleDao;
 import org.sagebionetworks.repo.model.dao.WikiPageKey;
 import org.sagebionetworks.repo.model.dao.discussion.DiscussionThreadDAO;
@@ -541,7 +570,7 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 				return new HashSet<String>(Arrays.asList(actionTypes));
 			} else {
 				// non-admins cannot do 'registry' operations
-				return Collections.EMPTY_SET;
+				throw new UnauthorizedException("Only administrators may list the registry catalog.");
 			}
 		} else {
 			throw new IllegalArgumentException("Unexpected name for 'registry' type, "+name);
@@ -573,7 +602,7 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 					String parentId = validDockerRepositoryParentId(repositoryPath);
 					if (parentId==null) {
 						// can't push to a non-existent parent
-						as = AuthorizationManagerUtil.ACCESS_DENIED;
+						as = new AuthorizationStatus(false, "Cannot 'push' to a non-existent project.");
 					} else {
 						// check for create permission on parent
 						as = canCreate(userInfo, parentId, EntityType.dockerrepo);
@@ -582,23 +611,36 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 					if (!isInTrash) {
 						// check update permission on this entity
 						as = canAccess(userInfo, existingDockerRepoId, ObjectType.ENTITY, ACCESS_TYPE.UPDATE);
+					} else {
+						as = new AuthorizationStatus(false, "Cannot 'push' a Docker repository which is in the trash can.");
 					}
 				}
-				if (as!=null && as.getAuthorized()) {
+				if (as.getAuthorized()) {
 					permittedActions.add(requestedAction);
 					if (existingDockerRepoId==null) permittedActions.add(pull);
+				} else {
+					// if there is a reason for the denial, return it to the client
+					if (!StringUtils.isEmpty(as.getReason())) throw new UnauthorizedException(as.getReason());
 				}
 				break;
 			case pull:
-				if (
-					// check DOWNLOAD permission and add to permittedActions
-					(existingDockerRepoId!=null && !isInTrash && canAccess(
-							userInfo, existingDockerRepoId, ObjectType.ENTITY, ACCESS_TYPE.DOWNLOAD).getAuthorized()) ||
+				// check DOWNLOAD permission
+				boolean canDownload = existingDockerRepoId!=null && !isInTrash && canAccess(
+						userInfo, existingDockerRepoId, ObjectType.ENTITY, ACCESS_TYPE.DOWNLOAD).getAuthorized();
+				Boolean canRetrieveAsSubmission = null;
+				if (!canDownload) {
 					// If Docker repository was submitted to an Evaluation and if the requester
 					// has administrative access to the queue, then DOWNLOAD permission is granted
-					evaluationPermissionsManager.isDockerRepoNameInEvaluationWithAccess(repositoryName, 
-							userInfo.getGroups(), ACCESS_TYPE.READ_PRIVATE_SUBMISSION)) {
+					canRetrieveAsSubmission = evaluationPermissionsManager.isDockerRepoNameInEvaluationWithAccess(repositoryName, 
+							userInfo.getGroups(), ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
+				}
+				if (canDownload || canRetrieveAsSubmission) {
 						permittedActions.add(requestedAction);
+				} else {
+					// try to return useful information.
+					if (existingDockerRepoId==null) throw new NotFoundException("Repository does not exist: "+repositoryName);
+					if (isInTrash) throw new UnauthorizedException("Repository is in the trash can: "+repositoryName);
+					// If the above conditions aren't met, a generic error will be returned by the client
 				}
 				break;
 			default:
