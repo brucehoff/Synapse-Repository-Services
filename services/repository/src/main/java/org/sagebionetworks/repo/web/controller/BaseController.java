@@ -601,7 +601,7 @@ public abstract class BaseController {
 				: trace.length();
 		String message = "Send a Jira bug report to the platform team with this message: "
 				+ trace.substring(0, endIndex);
-		return createErrorResponsFromMessage(message);
+		return createErrorResponseFromMessage(message);
 	}
 
 	/**
@@ -639,7 +639,7 @@ public abstract class BaseController {
 	JSONEntity handleTransientDataAccessExceptions(TransientDataAccessException ex,
 			HttpServletRequest request) {
 		log.error("Handling " + request.toString(), ex);
-		return createErrorResponsFromMessage(SERVICE_TEMPORARILY_UNAVAIABLE_PLEASE_TRY_AGAIN_LATER);
+		return createErrorResponseFromMessage(SERVICE_TEMPORARILY_UNAVAIABLE_PLEASE_TRY_AGAIN_LATER);
 	}
 
 	/**
@@ -691,7 +691,7 @@ public abstract class BaseController {
 			log.error("Handling " + request.toString());
 		}
 
-		return createErrorResponsFromMessage(message);
+		return createErrorResponseFromMessage(message);
 	}
 
 	/**
@@ -852,7 +852,7 @@ public abstract class BaseController {
 		return handleException(ex.getCause(), request, true);
 	}
 	
-	protected JSONEntity createErrorResponsFromMessage(String message) {
+	protected JSONEntity createErrorResponseFromMessage(String message) {
 		ErrorResponse er = new ErrorResponse();
 		er.setReason(message);
 		return er;

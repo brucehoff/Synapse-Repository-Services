@@ -63,7 +63,7 @@ public class DockerAuthorizationController extends BaseController {
 		return serviceProvider.getDockerService().authorizeDockerAccess(userId, service, scopes);
 	}
 
-	protected JSONEntity createErrorResponsFromMessage(String message) {
+	protected JSONEntity createErrorResponseFromMessage(String message) {
 		DockerErrorResponseList erl = new DockerErrorResponseList();
 		DockerErrorResponse er = new DockerErrorResponse();
 		erl.setErrors(Collections.singletonList(er));
