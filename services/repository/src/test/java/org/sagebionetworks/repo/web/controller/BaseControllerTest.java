@@ -38,7 +38,7 @@ public class BaseControllerTest {
 	public void testDeadlockError(){
 		EntityController controller = new EntityController();
 		HttpServletRequest request = new MockHttpServletRequest();
-		ErrorResponse response = controller.handleTransientDataAccessExceptions(new DeadlockLoserDataAccessException("Message",
+		ErrorResponse response = (ErrorResponse)controller.handleTransientDataAccessExceptions(new DeadlockLoserDataAccessException("Message",
 				new BatchUpdateException()), request);
 		assertEquals(BaseController.SERVICE_TEMPORARILY_UNAVAIABLE_PLEASE_TRY_AGAIN_LATER, response.getReason());
 	}
@@ -47,7 +47,7 @@ public class BaseControllerTest {
 	public void testTransientError() {
 		EntityController controller = new EntityController();
 		HttpServletRequest request = new MockHttpServletRequest();
-		ErrorResponse response = controller.handleTransientDataAccessExceptions(new TransientDataAccessException("Message",
+		ErrorResponse response = (ErrorResponse)controller.handleTransientDataAccessExceptions(new TransientDataAccessException("Message",
 				new BatchUpdateException()) {
 			private static final long serialVersionUID = 1L;
 		}, request);
@@ -63,7 +63,7 @@ public class BaseControllerTest {
 		Map<String, Integer> exceptions = Maps.newHashMap();
 		for (Method handler : handlers) {
 			// The next line is required to ensure that the set of handlers are only those in BaseController
-			if (!handler.getDeclaringClass().equals(BaseController.class)) continue;
+			//if (!handler.getDeclaringClass().equals(BaseController.class)) continue;
 			Class<? extends Throwable>[] exceptionsThrown = handler.getAnnotation(ExceptionHandler.class).value();
 			int statusCode = handler.getAnnotation(ResponseStatus.class).value().value();
 			for (Class<? extends Throwable> exceptionThrown : exceptionsThrown) {

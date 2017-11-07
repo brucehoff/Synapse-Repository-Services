@@ -2153,19 +2153,6 @@ public class ServletTestHelper {
 		return objectMapper.readValue(response.getContentAsString(), DockerAuthorizationToken.class);
 	}
 	
-	public DockerErrorResponseList authorizeDockerAccessExpectingError(DispatcherServlet dispatchServlet, Long userId,
-			String service, String[] scope, HttpStatus httpStatus) throws Exception {
-		MockHttpServletRequest request = ServletTestHelperUtils.initRequest(
-				HTTPMODE.GET, UrlHelpers.DOCKER_PATH, UrlHelpers.DOCKER_AUTHORIZATION, userId, null);
-		request.addParameter(AuthorizationConstants.DOCKER_SERVICE_PARAM, service);
-		if (scope != null) {
-			request.addParameter(AuthorizationConstants.DOCKER_SCOPE_PARAM, scope);
-		}
-		MockHttpServletResponse response = ServletTestHelperUtils.dispatchRequest(dispatchServlet, request,
-				httpStatus);
-		return objectMapper.readValue(response.getContentAsString(), DockerErrorResponseList.class);
-	}
-	
 	public void createDockerCommit(DispatcherServlet dispatchServlet,
 			Long userId, String entityId, DockerCommit commit) throws Exception {
 		MockHttpServletRequest request = ServletTestHelperUtils.initRequest(
