@@ -22,8 +22,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Matchers;
-import org.mockito.Mockito;
-import org.sagebionetworks.common.util.progress.ProgressCallback;
 import org.sagebionetworks.evaluation.dbo.DBOConstants;
 import org.sagebionetworks.repo.model.ACCESS_TYPE;
 import org.sagebionetworks.repo.model.AccessControlListDAO;
@@ -61,42 +59,53 @@ public class QueryDAOImplTest {
 	
 	private static final String EVAL_ID1 = "42";
 	private static final String EVAL_ID2 = "99";
+	private static final String EVAL_ID3 = "00";
     private Set<String> submissionIds;
     private AccessControlListDAO mockAclDAO;
     private UserInfo mockUserInfo;
     private Map<String, Object> annoMap;
+    
+    private void setUpAnnos(String evalId, int i, Double d, List<Annotations> evalList, Map<String, Object> annoMap) {
+    	Annotations annos = TestUtils.createDummyAnnotations(i, d, (long)(i*10L));
+    	annos.getLongAnnos().add(createScopeAnno(Long.parseLong(evalId)));
+    	annos.setScopeId(evalId);
+    	annos.setVersion(0L);
+    	submissionIds.add(annos.getObjectId());
+    	dumpAnnosToMap(annoMap, annos);
+    	evalList.add(annos);	
+    }
     
 	
 	@Before
 	public void setUp() throws DatastoreException, JSONObjectAdapterException, NotFoundException {
 		ssAnnoAsyncManager = new SubmissionStatusAnnotationsAsyncManagerImpl(annotationsDAO, evaluationSubmissionsDAO);
 		// create Annotations
-		Annotations annos;
 		submissionIds = new HashSet<String>();
 		annoMap = new HashMap<String, Object>();
 		
 		List<Annotations> eval1List = new ArrayList<Annotations>();
 		List<Annotations> eval2List = new ArrayList<Annotations>();
 		for (int i = 0; i < NUM_SUBMISSIONS; i++) {
-	    	annos = TestUtils.createDummyAnnotations(i);
-	    	annos.getLongAnnos().add(createScopeAnno(Long.parseLong(EVAL_ID1)));
-	    	annos.setScopeId(EVAL_ID1);
-	    	annos.setVersion(0L);
-	    	submissionIds.add(annos.getObjectId());
-	    	dumpAnnosToMap(annoMap, annos);
-	    	eval1List.add(annos);
-	    	
-	    	annos = TestUtils.createDummyAnnotations(i + NUM_SUBMISSIONS);
-	    	annos.getLongAnnos().add(createScopeAnno(Long.parseLong(EVAL_ID2)));
-	    	annos.setScopeId(EVAL_ID2);
-	    	annos.setVersion(0L);
-	    	submissionIds.add(annos.getObjectId());
-	    	dumpAnnosToMap(annoMap, annos);
-	    	eval2List.add(annos);
+			setUpAnnos(EVAL_ID1, i, (double)(0.5d+i), eval1List, annoMap);
+			setUpAnnos(EVAL_ID2, i+ NUM_SUBMISSIONS, (double)(0.5d+(i+NUM_SUBMISSIONS)), eval2List, annoMap);
 		}
     	annotationsDAO.replaceAnnotations(eval1List);
     	annotationsDAO.replaceAnnotations(eval2List);
 		
+    	{ // PLFM-5276: 27.5 27.5 9 4.5 10 1 29
+    		List<Annotations> eval3List = new ArrayList<Annotations>();
+    		int j= 2*NUM_SUBMISSIONS;
+    		setUpAnnos(EVAL_ID3, j++, 27.5d, eval3List, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 27.5d, eval3List, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 9d, eval3List, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, null, eval3List, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 4.5d, eval3List, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 10d, eval3List, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 1d, eval3List, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 29d, eval3List, annoMap);
+    		annotationsDAO.replaceAnnotations(eval3List);
+    	}
+
 		// set up mocks
 		mockUserInfo = mock(UserInfo.class);
 		mockAclDAO = mock(AccessControlListDAO.class);
@@ -104,6 +113,8 @@ public class QueryDAOImplTest {
 		when(mockAclDAO.canAccess(Matchers.<Set<Long>>any(), eq(EVAL_ID1), eq(ObjectType.EVALUATION), eq(ACCESS_TYPE.READ_PRIVATE_SUBMISSION))).thenReturn(true);
 		when(mockAclDAO.canAccess(Matchers.<Set<Long>>any(), eq(EVAL_ID2), eq(ObjectType.EVALUATION), eq(ACCESS_TYPE.READ))).thenReturn(true);
 		when(mockAclDAO.canAccess(Matchers.<Set<Long>>any(), eq(EVAL_ID2), eq(ObjectType.EVALUATION), eq(ACCESS_TYPE.READ_PRIVATE_SUBMISSION))).thenReturn(false);
+		when(mockAclDAO.canAccess(Matchers.<Set<Long>>any(), eq(EVAL_ID3), eq(ObjectType.EVALUATION), eq(ACCESS_TYPE.READ))).thenReturn(true);
+		when(mockAclDAO.canAccess(Matchers.<Set<Long>>any(), eq(EVAL_ID3), eq(ObjectType.EVALUATION), eq(ACCESS_TYPE.READ_PRIVATE_SUBMISSION))).thenReturn(false);
 		queryDAO.setAclDAO(mockAclDAO);
 	}
 	
@@ -484,7 +495,7 @@ public class QueryDAOImplTest {
 	@Test
 	public void testQueryFilterByDouble() throws DatastoreException, NotFoundException, JSONObjectAdapterException {		
 		// SELECT * FROM evaluation_1 WHERE "double anno"="5.5"
-		String attName = "double anno";
+		String attName = TestUtils.PUBLIC_DOUBLE_ANNOTATION_NAME;
 		BasicQuery query = new BasicQuery();
 		query.setFrom("evaluation" + QueryTools.FROM_TYPE_ID_DELIMTER + EVAL_ID1);
 		query.setLimit(NUM_SUBMISSIONS);
@@ -566,7 +577,7 @@ public class QueryDAOImplTest {
 	@Test
 	public void testQueryLessThanDouble() throws DatastoreException, NotFoundException, JSONObjectAdapterException {		
 		// SELECT * FROM evaluation_1 WHERE "double anno"<"15.0"
-		String attName = "double anno";
+		String attName = TestUtils.PUBLIC_DOUBLE_ANNOTATION_NAME;
 		BasicQuery query = new BasicQuery();
 		query.setFrom("evaluation" + QueryTools.FROM_TYPE_ID_DELIMTER + EVAL_ID1);
 		query.setLimit(NUM_SUBMISSIONS);
@@ -853,6 +864,42 @@ public class QueryDAOImplTest {
 			List<String> values = row.getValues();
 			// validate ordering
 			Long current = Long.parseLong(values.get(index));
+			if (previous != null) {
+				assertTrue(""+current+" should be bigger than "+previous+" but it's not.", current.compareTo(previous) >= 0);
+			}
+			previous = current;
+		}
+	}
+	
+	@Test
+	public void testQuerySortDoubleAscending() throws DatastoreException, NotFoundException, JSONObjectAdapterException {
+		// SELECT * FROM evaluation_1 ORDER BY "double_anno" ASC
+		BasicQuery query = new BasicQuery();
+		query.setFrom("evaluation" + QueryTools.FROM_TYPE_ID_DELIMTER + EVAL_ID3);
+		query.setLimit(NUM_SUBMISSIONS);
+		query.setOffset(0);
+		query.setSort(TestUtils.PUBLIC_DOUBLE_ANNOTATION_NAME);
+		query.setAscending(true);
+		List<String> select = new ArrayList<String>();
+		select.add(TestUtils.PUBLIC_DOUBLE_ANNOTATION_NAME);
+		query.setSelect(select);
+		
+		// perform the query
+		QueryTableResults results = queryDAO.executeQuery(query, mockUserInfo);
+		assertNotNull(results);
+		assertEquals(7, results.getTotalNumberOfResults().longValue());
+		assertEquals(7, results.getRows().size());
+		
+		// examine the results
+		List<Row> rows = results.getRows();
+		int index = results.getHeaders().indexOf(TestUtils.PUBLIC_DOUBLE_ANNOTATION_NAME);
+		Double previous = null;
+		for (int i = 0; i < rows.size(); i++) {
+			Row row = rows.get(i);
+			System.out.println(row);
+			List<String> values = row.getValues();
+			// validate ordering
+			Double current = values.get(index)==null ? null : Double.parseDouble(values.get(index));
 			if (previous != null) {
 				assertTrue(""+current+" should be bigger than "+previous+" but it's not.", current.compareTo(previous) >= 0);
 			}

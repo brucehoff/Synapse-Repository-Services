@@ -140,24 +140,34 @@ public class TestUtils {
 	public static final String PUBLIC_STRING_ANNOTATION_NAME = "string_anno";
 	public static final String PUBLIC_STRING_ANNOTATION_WITH_NULLS_NAME = "string anno_null";
 	public static final String PRIVATE_LONG_ANNOTATION_NAME = "long_anno";
+	public static final String PUBLIC_DOUBLE_ANNOTATION_NAME = "double_anno";
 
 	public static Annotations createDummyAnnotations(int i) {
+		return createDummyAnnotations(i, (double)(0.5d+i), (long)(i*10L));
+	}
+		
+	public static Annotations createDummyAnnotations(int i, Double d, long l) {
+		String objectId = ""+i;
+		String scopeId = "" + 2*i;
+		String s = "foo " + i;
+		boolean includeSecondString = (i % 4 != 3);
+		String s2Value = (i % 2 == 1) ? null : "not null"; // odd numbered annotations are null
+		return createDummyAnnotations(objectId, scopeId, i, s, includeSecondString, s2Value, l, d);
+	}
+		
+	public static Annotations createDummyAnnotations(String objectId, String scopeId, int i, String s, boolean includeSecondString, String s2Value, long l, Double d) {
 		List<StringAnnotation> stringAnnos = new ArrayList<StringAnnotation>();
 		StringAnnotation sa = new StringAnnotation();
 		sa.setIsPrivate(false);
 		sa.setKey(PUBLIC_STRING_ANNOTATION_NAME);
-		sa.setValue("foo " + i);
+		sa.setValue(s);
 		stringAnnos.add(sa);
 		
-		if (i % 4 != 3) { // two ways to have a null annot:  set it null (i%4==1) or omit altogether (i%4==3)
+		if (includeSecondString) { // two ways to have a null annot:  set it null or omit altogether
 			StringAnnotation sa2 = new StringAnnotation();
 			sa2.setIsPrivate(false);
 			sa2.setKey(PUBLIC_STRING_ANNOTATION_WITH_NULLS_NAME);
-			if (i % 2 == 1) { // odd numbered annotations are null
-				sa2.setValue(null);
-			} else {
-				sa2.setValue("not null");
-			}
+			sa2.setValue(s2Value);
 			stringAnnos.add(sa2);
 		}
 		
@@ -165,22 +175,24 @@ public class TestUtils {
 		LongAnnotation la = new LongAnnotation();
 		la.setIsPrivate(true);
 		la.setKey(PRIVATE_LONG_ANNOTATION_NAME);
-		la.setValue(new Long(i*10));
+		la.setValue(new Long(l));
 		longAnnos.add(la);
 		
 		List<DoubleAnnotation> doubleAnnos = new ArrayList<DoubleAnnotation>();
-		DoubleAnnotation da = new DoubleAnnotation();
-		da.setIsPrivate(false);
-		da.setKey("double anno");
-		da.setValue(0.5 + i);
-		doubleAnnos.add(da);
+		if (d!=null) {
+			DoubleAnnotation da = new DoubleAnnotation();
+			da.setIsPrivate(false);
+			da.setKey(PUBLIC_DOUBLE_ANNOTATION_NAME);
+			da.setValue(d);
+			doubleAnnos.add(da);
+		}
 		
 		Annotations annos = new Annotations();
 		annos.setStringAnnos(stringAnnos);
 		annos.setLongAnnos(longAnnos);
 		annos.setDoubleAnnos(doubleAnnos);
-		annos.setObjectId("" + i);
-		annos.setScopeId("" + 2*i);
+		annos.setObjectId(objectId);
+		annos.setScopeId(scopeId);
 		return annos;
 	}
 	
