@@ -1,5 +1,6 @@
 package org.sagebionetworks.repo.model.dbo.dao;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -7,6 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.sagebionetworks.evaluation.model.SubmissionStatus;
 import org.sagebionetworks.repo.model.annotation.Annotations;
 import org.sagebionetworks.repo.model.annotation.DoubleAnnotation;
 import org.sagebionetworks.repo.model.annotation.LongAnnotation;
@@ -14,6 +18,9 @@ import org.sagebionetworks.repo.model.annotation.StringAnnotation;
 import org.sagebionetworks.repo.model.file.ExternalFileHandle;
 import org.sagebionetworks.repo.model.file.PreviewFileHandle;
 import org.sagebionetworks.repo.model.file.S3FileHandle;
+import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
+import org.sagebionetworks.schema.adapter.org.json.EntityFactory;
+import org.springframework.util.StringUtils;
 
 import com.amazonaws.util.BinaryUtils;
 
@@ -194,6 +201,21 @@ public class TestUtils {
 		annos.setObjectId(objectId);
 		annos.setScopeId(scopeId);
 		return annos;
+	}
+	
+	public static Annotations[] annotationsFromJsonSerializedSubmissionStatuses(String source) throws IOException, JSONException, JSONObjectAdapterException {
+		JSONArray jsonArray = new JSONArray(source);
+		Annotations[] result = new Annotations[jsonArray.length()];
+		System.out.println("annotationsFromJsonSerializedSubmissionStatuses: Loaded "+jsonArray.length()+" annotations.");
+		for (int i=0; i<jsonArray.length(); i++) {
+			SubmissionStatus ss = EntityFactory.createEntityFromJSONObject(jsonArray.getJSONObject(i), SubmissionStatus.class);
+			Annotations annos = ss.getAnnotations();
+			annos.setVersion(ss.getStatusVersion());
+			if (StringUtils.isEmpty(annos.getObjectId())) throw new IllegalStateException("Expected non-empty object id.");
+			if (StringUtils.isEmpty(annos.getScopeId())) throw new IllegalStateException("Expected non-empty scope id.");
+			result[i]=annos;
+		}
+		return result;
 	}
 	
 	

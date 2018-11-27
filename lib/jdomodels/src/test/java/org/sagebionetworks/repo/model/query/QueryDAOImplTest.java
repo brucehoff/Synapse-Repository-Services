@@ -9,6 +9,9 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -19,6 +22,7 @@ import java.util.Set;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Matchers;
@@ -42,6 +46,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import com.amazonaws.util.IOUtils;
+
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = { "classpath:jdomodels-test-context.xml" })
 public class QueryDAOImplTest {
@@ -60,6 +66,7 @@ public class QueryDAOImplTest {
 	private static final String EVAL_ID1 = "42";
 	private static final String EVAL_ID2 = "99";
 	private static final String EVAL_ID3 = "00";
+	private static final String EVAL_ID4 = "9614030"; // this is the ID in QueryDAOImplTest.json
     private Set<String> submissionIds;
     private AccessControlListDAO mockAclDAO;
     private UserInfo mockUserInfo;
@@ -77,7 +84,7 @@ public class QueryDAOImplTest {
     
 	
 	@Before
-	public void setUp() throws DatastoreException, JSONObjectAdapterException, NotFoundException {
+	public void setUp() throws DatastoreException, JSONObjectAdapterException, NotFoundException, IOException {
 		ssAnnoAsyncManager = new SubmissionStatusAnnotationsAsyncManagerImpl(annotationsDAO, evaluationSubmissionsDAO);
 		// create Annotations
 		submissionIds = new HashSet<String>();
@@ -93,17 +100,37 @@ public class QueryDAOImplTest {
     	annotationsDAO.replaceAnnotations(eval2List);
 		
     	{ // PLFM-5276: 27.5 27.5 9 4.5 10 1 29
-    		List<Annotations> eval3List = new ArrayList<Annotations>();
+    		List<Annotations> evalList = new ArrayList<Annotations>();
     		int j= 2*NUM_SUBMISSIONS;
-    		setUpAnnos(EVAL_ID3, j++, 27.5d, eval3List, annoMap);
-    		setUpAnnos(EVAL_ID3, j++, 27.5d, eval3List, annoMap);
-    		setUpAnnos(EVAL_ID3, j++, 9d, eval3List, annoMap);
-    		setUpAnnos(EVAL_ID3, j++, null, eval3List, annoMap);
-    		setUpAnnos(EVAL_ID3, j++, 4.5d, eval3List, annoMap);
-    		setUpAnnos(EVAL_ID3, j++, 10d, eval3List, annoMap);
-    		setUpAnnos(EVAL_ID3, j++, 1d, eval3List, annoMap);
-    		setUpAnnos(EVAL_ID3, j++, 29d, eval3List, annoMap);
-    		annotationsDAO.replaceAnnotations(eval3List);
+    		setUpAnnos(EVAL_ID3, j++, 27.5d, evalList, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 27.5d, evalList, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 9d, evalList, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, null, evalList, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 4.5d, evalList, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 10d, evalList, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 1d, evalList, annoMap);
+    		setUpAnnos(EVAL_ID3, j++, 29d, evalList, annoMap);
+    		annotationsDAO.replaceAnnotations(evalList);
+    	}
+    	
+    	{
+    		List<Annotations> evalList = new ArrayList<Annotations>();
+    		InputStream is = QueryDAOImplTest.class.getClassLoader().getResourceAsStream("QueryDAOImplTest.json");
+    		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    		try {
+    			IOUtils.copy(is, baos);
+    		} finally {
+    			is.close();
+    			baos.close();
+    		}
+    		Annotations[] annotations = TestUtils.annotationsFromJsonSerializedSubmissionStatuses(baos.toString());
+    		System.out.println("\nLoaded "+annotations.length+" annotations from .json file.");
+    		for (Annotations annos : annotations) {
+    			submissionIds.add(annos.getObjectId());
+    			dumpAnnosToMap(annoMap, annos);
+    			evalList.add(annos);	
+    		}
+    		annotationsDAO.replaceAnnotations(evalList);
     	}
 
 		// set up mocks
@@ -115,6 +142,8 @@ public class QueryDAOImplTest {
 		when(mockAclDAO.canAccess(Matchers.<Set<Long>>any(), eq(EVAL_ID2), eq(ObjectType.EVALUATION), eq(ACCESS_TYPE.READ_PRIVATE_SUBMISSION))).thenReturn(false);
 		when(mockAclDAO.canAccess(Matchers.<Set<Long>>any(), eq(EVAL_ID3), eq(ObjectType.EVALUATION), eq(ACCESS_TYPE.READ))).thenReturn(true);
 		when(mockAclDAO.canAccess(Matchers.<Set<Long>>any(), eq(EVAL_ID3), eq(ObjectType.EVALUATION), eq(ACCESS_TYPE.READ_PRIVATE_SUBMISSION))).thenReturn(false);
+		when(mockAclDAO.canAccess(Matchers.<Set<Long>>any(), eq(EVAL_ID4), eq(ObjectType.EVALUATION), eq(ACCESS_TYPE.READ))).thenReturn(true);
+		when(mockAclDAO.canAccess(Matchers.<Set<Long>>any(), eq(EVAL_ID4), eq(ObjectType.EVALUATION), eq(ACCESS_TYPE.READ_PRIVATE_SUBMISSION))).thenReturn(false);
 		queryDAO.setAclDAO(mockAclDAO);
 	}
 	
@@ -907,6 +936,49 @@ public class QueryDAOImplTest {
 		}
 	}
 	
+	private static final String PLFM5276_DOUBLE_ANNO = "rank";
+	
+	@Ignore // this just won't work!
+	@Test
+	public void testPLFM5276() throws DatastoreException, NotFoundException, JSONObjectAdapterException {
+		BasicQuery query = new BasicQuery();
+		query.setFrom("evaluation" + QueryTools.FROM_TYPE_ID_DELIMTER + EVAL_ID4);
+		Expression expression = new Expression(new CompoundId(null, PLFM5276_DOUBLE_ANNO), Comparator.NOT_EQUALS, "");
+		List<Expression> filters = new ArrayList<Expression>();
+		filters.add(expression);
+		query.setFilters(filters);		
+		query.setLimit(1000); // get all in one page
+		query.setOffset(0);
+		query.setSort(PLFM5276_DOUBLE_ANNO);
+		query.setAscending(true);
+		List<String> select = new ArrayList<String>();
+		select.add(PLFM5276_DOUBLE_ANNO);
+		query.setSelect(select);
+		
+		// perform the query
+		QueryTableResults results = queryDAO.executeQuery(query, mockUserInfo);
+		assertNotNull(results);
+		assertEquals(37, results.getRows().size());
+		assertEquals(37, results.getTotalNumberOfResults().longValue());
+		
+		// examine the results
+		List<Row> rows = results.getRows();
+		int index = results.getHeaders().indexOf(PLFM5276_DOUBLE_ANNO);
+		Double previous = null;
+		for (int i = 0; i < rows.size(); i++) {
+			Row row = rows.get(i);
+			System.out.println(row);
+			List<String> values = row.getValues();
+			// validate ordering
+			Double current = values.get(index)==null ? null : Double.parseDouble(values.get(index));
+			if (previous != null) {
+				assertTrue(""+current+" should be bigger than "+previous+" but it's not.", current.compareTo(previous) >= 0);
+			}
+			previous = current;
+		}
+	}
+	
+	
 	@Test
 	public void testSortOnColumnHavingNulls() throws Exception {
 		// SELECT "string anno_null" FROM evaluation_1 ORDER BY "string anno_null" ASC
@@ -995,12 +1067,16 @@ public class QueryDAOImplTest {
 			annoMap.put(annos.getObjectId() + sa.getKey(), sa.getValue());
 		}
 		List<LongAnnotation> longAnnos = annos.getLongAnnos();
-		for (LongAnnotation la : longAnnos) {
-			annoMap.put(annos.getObjectId() + la.getKey(), la.getValue());
+		if (longAnnos!=null) {
+			for (LongAnnotation la : longAnnos) {
+				annoMap.put(annos.getObjectId() + la.getKey(), la.getValue());
+			}
 		}
 		List<DoubleAnnotation> doubleAnnos = annos.getDoubleAnnos();
-		for (DoubleAnnotation da : doubleAnnos) {
-			annoMap.put(annos.getObjectId() + da.getKey(), da.getValue());
+		if (doubleAnnos!=null) {
+			for (DoubleAnnotation da : doubleAnnos) {
+				annoMap.put(annos.getObjectId() + da.getKey(), da.getValue());
+			}
 		}
 	}	
 }
