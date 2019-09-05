@@ -161,7 +161,7 @@ public class NodeManagerImpl implements NodeManager {
 		}
 		
 		// check whether the user is allowed to create this type of node
-		if (createPrivate) {
+		if (BooleanUtils.isTrue(createPrivate)) {
 			authorizationManager.canCreatePrivate(userInfo, newNode.getParentId(), newNode.getNodeType()).checkAuthorizationOrElseThrow();
 		} else {
 			authorizationManager.canCreate(userInfo, newNode.getParentId(), newNode.getNodeType()).checkAuthorizationOrElseThrow();
