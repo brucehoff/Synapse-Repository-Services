@@ -74,7 +74,7 @@ public interface EntityBundleService {
 	 * @throws ParseException 
 	 * @throws ACLInheritanceException 
 	 */
-	public EntityBundle createEntityBundle(Long userId, EntityBundleCreate ebc, String activityId)
+	public EntityBundle createEntityBundle(Long userId, EntityBundleCreate ebc, String activityId, Boolean createPrivate)
 			throws ConflictingUpdateException, DatastoreException,
 			InvalidModelException, UnauthorizedException, NotFoundException, ACLInheritanceException, ParseException;
 

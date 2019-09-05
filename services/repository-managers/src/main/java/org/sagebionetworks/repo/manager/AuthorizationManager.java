@@ -52,6 +52,19 @@ public interface AuthorizationManager {
 	AuthorizationStatus canCreate(UserInfo userInfo, String parentId, EntityType nodeType) throws NotFoundException, DatastoreException ;
 
 	/**
+     * Checks whether the given user can create the given node.
+	 * 
+	 * @param userInfo
+	 * @param parentId
+	 * @param nodeType
+	 * @return true iff either (1) the user has 'add child' access to the parent or (2) parent is null
+	 * and user is admin returns whether access is granted and, if not, a String giving the reason why
+	 * @throws NotFoundException
+	 * @throws DatastoreException
+	 */
+	AuthorizationStatus canCreatePrivate(UserInfo userInfo, String parentId, EntityType nodeType) throws NotFoundException, DatastoreException ;
+
+	/**
 	 * Checks whether the given user can modify the settings for the given node.
 	 * 
 	 * @param nodeId

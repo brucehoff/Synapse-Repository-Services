@@ -83,7 +83,7 @@ public class SearchControllerTest extends AbstractAutowiredControllerTestBase {
 		// Create an project
 		project = new Project();
 		project.setName("SearchControllerTest" + UUID.randomUUID());
-		project = entityService.createEntity(adminUserId, project, null);
+		project = entityService.createEntity(adminUserId, project, null, false);
 		// Push this to the search index
 		ChangeMessage changeMessage = new ChangeMessage();
 		changeMessage.setChangeNumber(1L);

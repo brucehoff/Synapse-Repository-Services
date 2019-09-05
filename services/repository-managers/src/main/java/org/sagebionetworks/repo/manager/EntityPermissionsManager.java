@@ -134,6 +134,16 @@ public interface EntityPermissionsManager {
 	 * @param entityId
 	 * @param userInfo
 	 * @return
+	 * @throws NotFoundException 
+	 * @throws DatastoreException 
+	 */
+	public AuthorizationStatus canCreatePrivate(String parentId, EntityType nodeType, UserInfo userInfo) throws DatastoreException, NotFoundException;
+
+	/**
+	 * 
+	 * @param entityId
+	 * @param userInfo
+	 * @return
 	 * @throws NotFoundException
 	 * @throws DatastoreException
 	 */

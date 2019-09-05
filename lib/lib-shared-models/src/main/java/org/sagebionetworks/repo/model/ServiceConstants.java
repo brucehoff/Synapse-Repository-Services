@@ -188,6 +188,11 @@ public class ServiceConstants {
 	public static final String GENERATED_BY_PARAM = "generatedBy";
 
 	/**
+	 * The createPrivate entity creation parameter, indicating that the new entity should have its own ACL
+	 */
+	public static final String CREATE_PRIVATE = "createPrivate";
+
+	/**
 	 * Utility method to sanity check pagination parameters
 	 * <p>
 	 * 

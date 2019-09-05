@@ -43,6 +43,20 @@ public interface EntityManager {
 	 */
 	public <T extends Entity> String createEntity(UserInfo userInfo, T newEntity, String activityId) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException;
 		
+
+	/**
+	 * Create a new data.
+	 * @param userInfo
+	 * @param newEntity
+	 * @param createPrivate if true then new entity should have its own ACL
+	 * @return
+	 * @throws DatastoreException
+	 * @throws InvalidModelException
+	 * @throws NotFoundException
+	 * @throws UnauthorizedException 
+	 */
+	public <T extends Entity> String createEntity(UserInfo userInfo, T newEntity, String activityId, Boolean createPrivate) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException;
+		
 	/**
 	 * Get an existing dataset
 	 * @param userInfo

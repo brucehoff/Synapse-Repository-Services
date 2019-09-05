@@ -98,7 +98,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		when(mockRequest.getServletPath()).thenReturn("/repo/v1");
 		// Create a project
 		project = new Project();
-		project = entityService.createEntity(adminUserId, project, null);
+		project = entityService.createEntity(adminUserId, project, null, null);
 		toDelete.add(project.getId());
 		
 		// Create some file handles
@@ -165,7 +165,7 @@ public class EntityServiceImplAutowiredTestNew  {
 	public void testPLFM_1754CreateNullFileHandleId() throws Exception {
 		FileEntity file = new FileEntity();
 		file.setParentId(project.getId());
-		file = entityService.createEntity(adminUserId, file, null);
+		file = entityService.createEntity(adminUserId, file, null, null);
 	}
 	
 	/**
@@ -177,7 +177,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		FileEntity file = new FileEntity();
 		file.setParentId(project.getId());
 		file.setDataFileHandleId(fileHandle1.getId());
-		file = entityService.createEntity(adminUserId, file, null);
+		file = entityService.createEntity(adminUserId, file, null, null);
 		assertNotNull(file);
 		// Make sure we can update it 
 		file.setDataFileHandleId(fileHandle2.getId());
@@ -193,7 +193,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		FileEntity file = new FileEntity();
 		file.setParentId(project.getId());
 		file.setDataFileHandleId(fileHandle1.getId());
-		file = entityService.createEntity(adminUserId, file, null);
+		file = entityService.createEntity(adminUserId, file, null, null);
 		assertNotNull(file);
 		// Now try to set it to null
 		file.setDataFileHandleId(null);
@@ -212,7 +212,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		FileEntity file = new FileEntity();
 		file.setParentId(project.getId());
 		file.setDataFileHandleId(fileHandle1.getId());
-		file = entityService.createEntity(adminUserId, file, null);
+		file = entityService.createEntity(adminUserId, file, null, null);
 		assertNotNull(file);
 		assertEquals("Should start off as version one",new Long(1), file.getVersionNumber());
 		// Make sure we can update it 
@@ -235,14 +235,14 @@ public class EntityServiceImplAutowiredTestNew  {
 		Project project1 = new Project();
 		project1.setName("project" + UUID.randomUUID());
 		project1.setAlias(alias1);
-		project1 = entityService.createEntity(adminUserId, project1, null);
+		project1 = entityService.createEntity(adminUserId, project1, null, null);
 		toDelete.add(project1.getId());
 		assertEquals(alias1, ((Project) entityService.getEntity(adminUserId, project1.getId())).getAlias());
 		// create alias2
 		Project project2 = new Project();
 		project2.setName("project" + UUID.randomUUID());
 		project2.setAlias(alias2);
-		project2 = entityService.createEntity(adminUserId, project2, null);
+		project2 = entityService.createEntity(adminUserId, project2, null, null);
 		toDelete.add(project2.getId());
 		assertEquals(alias2, ((Project) entityService.getEntity(adminUserId, project2.getId())).getAlias());
 		// fail on create alias1
@@ -250,7 +250,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		projectFailCreate.setName("project" + UUID.randomUUID());
 		projectFailCreate.setAlias(alias1);
 		try {
-			entityService.createEntity(adminUserId, projectFailCreate, null);
+			entityService.createEntity(adminUserId, projectFailCreate, null, null);
 			fail("duplicate entry should have been rejected");
 		} catch (NameConflictException e) {
 			// expected
@@ -274,7 +274,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		Project project2Again = new Project();
 		project2Again.setName("project" + UUID.randomUUID());
 		project2Again.setAlias(alias2);
-		project2Again = entityService.createEntity(adminUserId, project2Again, null);
+		project2Again = entityService.createEntity(adminUserId, project2Again, null, null);
 		toDelete.add(project2Again.getId());
 		assertEquals(alias2, ((Project) entityService.getEntity(adminUserId, project2Again.getId())).getAlias());
 	}
@@ -287,7 +287,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		table.setName("SampleTable");
 		table.setColumnIds(columnIds);
 		
-		table = entityService.createEntity(adminUserId, table, null);
+		table = entityService.createEntity(adminUserId, table, null, null);
 		assertEquals(columnIds, table.getColumnIds());
 		// default label and comment should be added.
 		assertEquals(TableConstants.IN_PROGRESS, table.getVersionLabel());
@@ -311,7 +311,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		table.setVersionLabel(label);
 		table.setVersionComment(comment);
 		
-		table = entityService.createEntity(adminUserId, table, null);
+		table = entityService.createEntity(adminUserId, table, null, null);
 		assertEquals(columnIds, table.getColumnIds());
 		// default label and comment should be added.
 		assertEquals(label, table.getVersionLabel());
@@ -331,7 +331,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		table.setName("SampleTable");
 		table.setColumnIds(columnIds);
 		
-		table = entityService.createEntity(adminUserId, table, null);
+		table = entityService.createEntity(adminUserId, table, null, null);
 		// the first version of a table should not have a transaction linked
 		Optional<Long> optional =tableEntityManager.getTransactionForVersion(table.getId(), table.getVersionNumber());
 		assertNotNull(optional);
@@ -346,7 +346,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		table.setName("SampleTable");
 		table.setColumnIds(columnIds);
 		
-		table = entityService.createEntity(adminUserId, table, null);
+		table = entityService.createEntity(adminUserId, table, null, null);
 		String activityId = null;
 		boolean newVersion = true;
 		table.setVersionLabel(null);
@@ -362,7 +362,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		table.setName("SampleTable");
 		table.setColumnIds(columnIds);
 		
-		table = entityService.createEntity(adminUserId, table, null);
+		table = entityService.createEntity(adminUserId, table, null, null);
 		long firstVersion = table.getVersionNumber();
 		String activityId = null;
 		boolean newVersion = false;
@@ -398,7 +398,7 @@ public class EntityServiceImplAutowiredTestNew  {
 		table.setName("PLFM-5685");
 		table.setColumnIds(firstSchema);
 		
-		table = entityService.createEntity(adminUserId, table, null);
+		table = entityService.createEntity(adminUserId, table, null, null);
 		
 		// call under test
 		table = entityService.getEntityForVersion(adminUserId, table.getId(), 1L, TableEntity.class);

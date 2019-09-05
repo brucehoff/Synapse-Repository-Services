@@ -223,6 +223,12 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 	}
 
 	@Override
+	public AuthorizationStatus canCreatePrivate(UserInfo userInfo, String parentId, EntityType nodeType) 
+		throws NotFoundException, DatastoreException {
+		return entityPermissionsManager.canCreatePrivate(parentId, nodeType, userInfo);
+	}
+
+	@Override
 	public AuthorizationStatus canChangeSettings(UserInfo userInfo, Node node) throws NotFoundException, DatastoreException {
 		return entityPermissionsManager.canChangeSettings(node, userInfo);
 	}

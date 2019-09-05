@@ -186,7 +186,7 @@ public class NodeManagerImplAutoWiredTest {
 		annos.addAnnotation("stringKey", "stringValue");
 		annos.addAnnotation("longKey", new Long(120));
 		// We are not using the admin to create this node.
-		newNode = nodeManager.createNewNode(newNode, annos, userInfo);
+		newNode = nodeManager.createNewNode(newNode, annos, userInfo, null);
 		String id = newNode.getId();
 		assertNotNull(id);
 		nodesToDelete.add(id);

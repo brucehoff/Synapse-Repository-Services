@@ -217,7 +217,7 @@ public class EntityBundleServiceImpl implements EntityBundleService {
 
 	@WriteTransaction
 	@Override
-	public EntityBundle createEntityBundle(Long userId, EntityBundleCreate ebc, String activityId) throws ConflictingUpdateException, DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException, ACLInheritanceException, ParseException {
+	public EntityBundle createEntityBundle(Long userId, EntityBundleCreate ebc, String activityId, Boolean createPrivate) throws ConflictingUpdateException, DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException, ACLInheritanceException, ParseException {
 		if (ebc.getEntity() == null) {
 			throw new IllegalArgumentException("Invalid request: no entity to create");
 		}
@@ -227,7 +227,7 @@ public class EntityBundleServiceImpl implements EntityBundleService {
 		// Create the Entity
 		partsMask += EntityBundle.ENTITY;
 		Entity toCreate = ebc.getEntity();
-		Entity entity = serviceProvider.getEntityService().createEntity(userId, toCreate, activityId);
+		Entity entity = serviceProvider.getEntityService().createEntity(userId, toCreate, activityId, createPrivate);
 		
 		// Create the ACL
 		if (ebc.getAccessControlList() != null) {

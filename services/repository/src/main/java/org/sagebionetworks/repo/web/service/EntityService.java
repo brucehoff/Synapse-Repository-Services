@@ -175,7 +175,7 @@ public interface EntityService {
 	 * @throws NotFoundException
 	 */
 	public <T extends Entity> T createEntity(Long userId, T newEntity,
-											 String activityId)
+											 String activityId, Boolean createPrivate)
 			throws DatastoreException, InvalidModelException,
 			UnauthorizedException, NotFoundException;
 

@@ -85,6 +85,14 @@ public class EntityManagerImpl implements EntityManager {
 	public <T extends Entity> String createEntity(UserInfo userInfo, T newEntity, String activityId)
 			throws DatastoreException, InvalidModelException,
 			UnauthorizedException, NotFoundException {
+		return createEntity(userInfo, newEntity, activityId, null);
+	}
+	
+	@WriteTransaction
+	@Override
+	public <T extends Entity> String createEntity(UserInfo userInfo, T newEntity, String activityId, Boolean createPrivate)
+			throws DatastoreException, InvalidModelException,
+			UnauthorizedException, NotFoundException {
 		if (newEntity == null)
 			throw new IllegalArgumentException("Entity cannot be null");
 		// First create a node the represent the entity
@@ -96,7 +104,7 @@ public class EntityManagerImpl implements EntityManager {
 		// Now add all of the annotations and references from the entity
 		NodeTranslationUtils.updateNodeSecondaryFieldsFromObject(newEntity, entityPropertyAnnotations);
 		// We are ready to create this node
-		node = nodeManager.createNewNode(node, entityPropertyAnnotations, userInfo);
+		node = nodeManager.createNewNode(node, entityPropertyAnnotations, userInfo, createPrivate);
 		// Return the id of the newly created entity
 		return node.getId();
 	}

@@ -250,13 +250,13 @@ public class EntityController {
 			@RequestParam(value = ServiceConstants.GENERATED_BY_PARAM, required = false) String generatedBy,
 			@RequestBody Entity entity, 
 			@RequestHeader HttpHeaders header,
-			@RequestParameter(value = )
+			@RequestParam(value = ServiceConstants.CREATE_PRIVATE, required=false) Boolean createPrivate,
 			HttpServletRequest request) throws DatastoreException,
 			InvalidModelException, UnauthorizedException, NotFoundException,
 			IOException, JSONObjectAdapterException {
 		// Now create the entity
 		Entity createdEntity = serviceProvider.getEntityService().createEntity(
-				userId, entity, generatedBy);
+				userId, entity, generatedBy, createPrivate);
 		// Finally, add the type specific metadata.
 		return createdEntity;
 	}

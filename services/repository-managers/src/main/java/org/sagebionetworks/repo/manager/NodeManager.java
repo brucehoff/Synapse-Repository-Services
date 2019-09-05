@@ -60,6 +60,38 @@ public interface NodeManager {
 	public Node createNewNode(Node newNode, Annotations entityPropertyAnnotations, UserInfo userInfo) throws DatastoreException, InvalidModelException, NotFoundException, UnauthorizedException;
 	
 	/**
+	 * Use: {@link #createNode(Node, UserInfo)}
+	 */
+	@Deprecated
+	public String createNewNode(Node newNode, UserInfo userInfo, Boolean createPrivate) throws DatastoreException,
+			InvalidModelException, NotFoundException, UnauthorizedException;
+	
+	/**
+	 * Create a new node.
+	 * @param newNode
+	 * @param userInfo
+	 * @return
+	 * @throws DatastoreException
+	 * @throws InvalidModelException
+	 * @throws NotFoundException
+	 * @throws UnauthorizedException
+	 */
+	public Node createNode(Node newNode, UserInfo userInfo, Boolean createPrivate) throws DatastoreException,InvalidModelException, NotFoundException, UnauthorizedException;
+	
+	/**
+	 * Create a new node with annotations.
+	 * @param newNode
+	 * @param newAnnotations
+	 * @param userInfo
+	 * @return
+	 * @throws DatastoreException
+	 * @throws InvalidModelException
+	 * @throws NotFoundException
+	 * @throws UnauthorizedException
+	 */
+	public Node createNewNode(Node newNode, Annotations entityPropertyAnnotations, UserInfo userInfo, Boolean createPrivate) throws DatastoreException, InvalidModelException, NotFoundException, UnauthorizedException;
+	
+	/**
 	 * Delete a node using its id.
 	 * @param userName
 	 * @param nodeId

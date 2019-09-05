@@ -112,7 +112,7 @@ public class EntityServiceImplUnitTest {
 	@Test
 	public void testFireCreate() {
 		// Call under test.
-		entityService.createEntity(userInfo.getId(), project, null);
+		entityService.createEntity(userInfo.getId(), project, null, null);
 		verify(mockProjectCreateProvider).entityCreated(userInfo, project);
 		verify(mockProjectUpdateProvider, never()).entityUpdated(any(UserInfo.class), any(Project.class), anyBoolean());
 	}

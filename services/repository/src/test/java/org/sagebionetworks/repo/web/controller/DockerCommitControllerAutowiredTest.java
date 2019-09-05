@@ -39,11 +39,11 @@ public class DockerCommitControllerAutowiredTest extends AbstractAutowiredContro
 		project = new Project();
 		HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
 		when(request.getServletPath()).thenReturn("/repo/v1/dockerTag");
-		project = entityService.createEntity(adminUserId, project, null);
+		project = entityService.createEntity(adminUserId, project, null, false);
 		unmanagedRepository = new DockerRepository();
 		unmanagedRepository.setParentId(project.getId());
 		unmanagedRepository.setRepositoryName("uname/reponame");
-		unmanagedRepository = entityService.createEntity(adminUserId, unmanagedRepository, null);
+		unmanagedRepository = entityService.createEntity(adminUserId, unmanagedRepository, null, false);
 		assertFalse(unmanagedRepository.getIsManaged());
 	}
 	

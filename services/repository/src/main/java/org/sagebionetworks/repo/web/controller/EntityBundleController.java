@@ -144,10 +144,11 @@ public class EntityBundleController {
 	EntityBundle createEntityBundle(
 			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
 			@RequestParam(value = ServiceConstants.GENERATED_BY_PARAM, required = false) String generatedBy,
+			@RequestParam(value = ServiceConstants.CREATE_PRIVATE, required=false) Boolean createPrivate,
 			@RequestBody EntityBundleCreate ebc)
 			throws ConflictingUpdateException, DatastoreException,
 			InvalidModelException, UnauthorizedException, NotFoundException, ACLInheritanceException, ParseException {
-		return serviceProvider.getEntityBundleService().createEntityBundle(userId, ebc, generatedBy);
+		return serviceProvider.getEntityBundleService().createEntityBundle(userId, ebc, generatedBy, createPrivate);
 	}
 	
 	/**

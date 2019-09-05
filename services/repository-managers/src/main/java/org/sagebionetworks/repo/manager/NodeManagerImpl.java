@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -90,7 +91,20 @@ public class NodeManagerImpl implements NodeManager {
 	@Deprecated
 	public String createNewNode(Node newNode, UserInfo userInfo)  throws DatastoreException,
 			InvalidModelException, NotFoundException, UnauthorizedException {
-		newNode = createNode(newNode, userInfo);
+		newNode = createNode(newNode, userInfo, null);
+		return newNode.getId();
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see org.sagebionetworks.repo.manager.NodeManager#createNewNode(org.sagebionetworks.repo.model.Node, org.sagebionetworks.repo.model.UserInfo)
+	 */
+	@WriteTransaction
+	@Override
+	@Deprecated
+	public String createNewNode(Node newNode, UserInfo userInfo, Boolean createPrivate)  throws DatastoreException,
+			InvalidModelException, NotFoundException, UnauthorizedException {
+		newNode = createNode(newNode, userInfo, createPrivate);
 		return newNode.getId();
 	}
 	
@@ -100,6 +114,16 @@ public class NodeManagerImpl implements NodeManager {
 	@WriteTransaction
 	@Override
 	public Node createNode(Node newNode, UserInfo userInfo)  throws DatastoreException,
+			InvalidModelException, NotFoundException, UnauthorizedException {
+		return createNode(newNode, userInfo, null);
+	}
+	
+	/**
+	 * Create a new node
+	 */
+	@WriteTransaction
+	@Override
+	public Node createNode(Node newNode, UserInfo userInfo, Boolean createPrivate)  throws DatastoreException,
 			InvalidModelException, NotFoundException, UnauthorizedException {
 		// First valid the node
 		NodeManagerImpl.validateNode(newNode);
@@ -116,6 +140,9 @@ public class NodeManagerImpl implements NodeManager {
 		
 		// By default all nodes inherit their ACL from their parent.
 		ACL_SCHEME aclScheme = ACL_SCHEME.INHERIT_FROM_PARENT;
+		if (BooleanUtils.isTrue(createPrivate)) {
+			aclScheme = ACL_SCHEME.GRANT_CREATOR_ALL;
+		}
 		
 		// If the user did not provide a parent then we use the default
 		if(newNode.getParentId() == null){
@@ -134,7 +161,11 @@ public class NodeManagerImpl implements NodeManager {
 		}
 		
 		// check whether the user is allowed to create this type of node
-		authorizationManager.canCreate(userInfo, newNode.getParentId(), newNode.getNodeType()).checkAuthorizationOrElseThrow();
+		if (createPrivate) {
+			authorizationManager.canCreatePrivate(userInfo, newNode.getParentId(), newNode.getNodeType()).checkAuthorizationOrElseThrow();
+		} else {
+			authorizationManager.canCreate(userInfo, newNode.getParentId(), newNode.getNodeType()).checkAuthorizationOrElseThrow();
+		}
 		
 		// can this entity be added to the parent?
 		validateChildCount(newNode.getParentId(), newNode.getNodeType());
@@ -493,8 +524,15 @@ public class NodeManagerImpl implements NodeManager {
 	@Override
 	public Node createNewNode(Node newNode, Annotations entityPropertyAnnotations, UserInfo userInfo) throws DatastoreException,
 			InvalidModelException, NotFoundException, UnauthorizedException {
+		return createNewNode(newNode, entityPropertyAnnotations, userInfo, null);
+	}
+	
+	@WriteTransaction
+	@Override
+	public Node createNewNode(Node newNode, Annotations entityPropertyAnnotations, UserInfo userInfo, Boolean createPrivate) throws DatastoreException,
+			InvalidModelException, NotFoundException, UnauthorizedException {
 		// First create the node
-		newNode = createNode(newNode, userInfo);
+		newNode = createNode(newNode, userInfo, createPrivate);
 		// The eTag really has no meaning yet because nobody has access to this id until we return.
 		entityPropertyAnnotations.setEtag(newNode.getETag());
 		entityPropertyAnnotations.setId(newNode.getId());

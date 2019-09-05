@@ -3,6 +3,7 @@ package org.sagebionetworks.repo.manager;
 import static org.sagebionetworks.repo.model.ACCESS_TYPE.CHANGE_PERMISSIONS;
 import static org.sagebionetworks.repo.model.ACCESS_TYPE.CHANGE_SETTINGS;
 import static org.sagebionetworks.repo.model.ACCESS_TYPE.CREATE;
+import static org.sagebionetworks.repo.model.ACCESS_TYPE.CREATE_PRIVATE;
 import static org.sagebionetworks.repo.model.ACCESS_TYPE.DELETE;
 import static org.sagebionetworks.repo.model.ACCESS_TYPE.DOWNLOAD;
 import static org.sagebionetworks.repo.model.ACCESS_TYPE.MODERATE;
@@ -15,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.sagebionetworks.StackConfiguration;
 import org.sagebionetworks.StackConfigurationSingleton;
 import org.sagebionetworks.collections.Transform;
@@ -248,6 +250,17 @@ public class EntityPermissionsManagerImpl implements EntityPermissionsManager {
 	@Override
 	public AuthorizationStatus canCreate(String parentId, EntityType nodeType, UserInfo userInfo) 
 			throws DatastoreException, NotFoundException {
+		return canCreate(parentId, nodeType, userInfo, false);
+	}
+	
+	@Override
+	public AuthorizationStatus canCreatePrivate(String parentId, EntityType nodeType, UserInfo userInfo) 
+			throws DatastoreException, NotFoundException {
+		return canCreate(parentId, nodeType, userInfo, true);
+	}
+
+	private AuthorizationStatus canCreate(String parentId, EntityType nodeType, UserInfo userInfo, Boolean createPrivate) 
+			throws DatastoreException, NotFoundException {
 		if (userInfo.isAdmin()) {
 			return AuthorizationStatus.authorized();
 		}
@@ -257,7 +270,11 @@ public class EntityPermissionsManagerImpl implements EntityPermissionsManager {
 
 		if (!isCertifiedUserOrFeatureDisabled(userInfo) && !EntityType.project.equals(nodeType)) 
 			return AuthorizationStatus.accessDenied(new UserCertificationRequiredException("Only certified users may create content in Synapse."));
-		
+
+		ACCESS_TYPE accessType = CREATE;
+		if (BooleanUtils.isTrue(createPrivate)) {
+			accessType = CREATE_PRIVATE;
+		}
 		return certifiedUserHasAccess(parentId, null, CREATE, userInfo);
 	}
 

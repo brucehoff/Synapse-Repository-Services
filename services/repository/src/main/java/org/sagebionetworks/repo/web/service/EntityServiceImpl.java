@@ -197,7 +197,7 @@ public class EntityServiceImpl implements EntityService {
 
 	@WriteTransaction
 	@Override
-	public <T extends Entity> T createEntity(Long userId, T newEntity, String activityId)
+	public <T extends Entity> T createEntity(Long userId, T newEntity, String activityId, Boolean createPrivate)
 			throws DatastoreException, InvalidModelException,
 			UnauthorizedException, NotFoundException {
 		// Determine the object type from the url.
@@ -209,7 +209,7 @@ public class EntityServiceImpl implements EntityService {
 		EventType eventType = EventType.CREATE;
 		// Fire the event
 		fireValidateEvent(userInfo, eventType, newEntity, type);
-		String id = entityManager.createEntity(userInfo, newEntity, activityId);
+		String id = entityManager.createEntity(userInfo, newEntity, activityId, createPrivate);
 		newEntity.setId(id);
 		fireAfterCreateEntityEvent(userInfo, newEntity, type);
 		// Return the resulting entity.
