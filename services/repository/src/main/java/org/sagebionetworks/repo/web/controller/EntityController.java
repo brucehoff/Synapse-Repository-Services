@@ -248,7 +248,9 @@ public class EntityController {
 	Entity createEntity(
 			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
 			@RequestParam(value = ServiceConstants.GENERATED_BY_PARAM, required = false) String generatedBy,
-			@RequestBody Entity entity, @RequestHeader HttpHeaders header,
+			@RequestBody Entity entity, 
+			@RequestHeader HttpHeaders header,
+			@RequestParameter(value = )
 			HttpServletRequest request) throws DatastoreException,
 			InvalidModelException, UnauthorizedException, NotFoundException,
 			IOException, JSONObjectAdapterException {

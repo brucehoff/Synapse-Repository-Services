@@ -5,67 +5,71 @@
     "enum": [
         {
             "name": "CREATE",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to create entities within a container entity"
         },
         {
             "name": "READ",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to read entity metadata"
         },
         {
             "name": "UPDATE",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to update entities"
         },
         {
             "name": "DELETE",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to delete entities"
         },
         {
             "name": "CHANGE_PERMISSIONS",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to modify the access control list"
         },
         {
             "name": "DOWNLOAD",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to download file(s) associated with entities"
         },
         {
             "name": "UPLOAD",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to upload files to a container entity (project or folder)"
+        },
+         {
+            "name": "CREATE_PRIVATE",
+            "description": "Permission to create entities with a container entity having their own access control list."
         },
         {
             "name": "PARTICIPATE",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to join a team, as controlled by an Access Requirement on the team"
         },
         {
             "name": "SUBMIT",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to submit to an evalution queue"
         },
         {
             "name": "READ_PRIVATE_SUBMISSION",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to read private submission metadata and download the associate files"
         },
         {
             "name": "UPDATE_SUBMISSION",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to modify a submission annotations"
         },
         {
             "name": "DELETE_SUBMISSION",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to delete submissions"
         },
         {
             "name": "TEAM_MEMBERSHIP_UPDATE",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to modify the membership of a team"
         },
         {
             "name": "SEND_MESSAGE",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to send messages to a team"
         },
         {
             "name": "CHANGE_SETTINGS",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to set a friendly URL for a project"
         },
         {
             "name": "MODERATE",
-            "description": "TODO: Auto-generated description"
+            "description": "Permission to moderate a discussion forum"
         }
     ]
 }
