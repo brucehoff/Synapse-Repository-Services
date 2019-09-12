@@ -1,0 +1,21 @@
+{
+    "description": "Parameters for an HTTP-01 Challenge.  At file https://<host_name>/.well-known/acme-challenge/<file_name> must be created with content <file_content>",
+ 	"properties": {
+		"client_id": {
+			"type": "string",
+			"description": "The ID of the OAuth client to be verified"
+		},
+		"host_name": {
+			"type": "string",
+			"description": "The host name"
+		},
+		"file_name": {
+			"type": "string",
+			"description": "The name of the"
+		},
+		"file_content": {
+			"type": "string",
+			"description": "xx"
+		}
+	}
+}

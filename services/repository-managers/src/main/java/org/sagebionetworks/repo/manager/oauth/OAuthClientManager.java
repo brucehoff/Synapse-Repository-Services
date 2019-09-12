@@ -63,5 +63,16 @@ public interface OAuthClientManager {
 	 * @return The new secret
 	 */
 	OAuthClientIdAndSecret createClientSecret(UserInfo userInfo, String clientId);
+	
+	/**
+	 * Create the HTTP-01 challenge parameters for client verification
+	 * @return
+	 */
+	public OAuthHttpO1Challenge createHttp01ChallengeParameters();
+	
+	/**
+	 * Verify the OAuthClient
+	 */
+	public void verifyOAuthClient(String clientId);
 
 }
