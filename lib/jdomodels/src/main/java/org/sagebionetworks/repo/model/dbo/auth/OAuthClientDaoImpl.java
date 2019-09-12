@@ -2,6 +2,7 @@ package org.sagebionetworks.repo.model.dbo.auth;
 
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_OAUTH_CLIENT_CREATED_BY;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_OAUTH_CLIENT_ETAG;
+import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_OAUTH_CLIENT_HTTP_01_CHALLENGE;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_OAUTH_CLIENT_ID;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_OAUTH_CLIENT_IS_VERIFIED;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_OAUTH_CLIENT_SECRET_HASH;
@@ -30,6 +31,7 @@ import org.sagebionetworks.repo.model.dbo.persistence.DBOSectorIdentifier;
 import org.sagebionetworks.repo.model.jdo.JDOSecondaryPropertyUtils;
 import org.sagebionetworks.repo.model.oauth.OAuthClient;
 import org.sagebionetworks.repo.model.oauth.OAuthClientList;
+import org.sagebionetworks.repo.model.oauth.OAuthHttp01Challenge;
 import org.sagebionetworks.repo.transactions.WriteTransaction;
 import org.sagebionetworks.repo.web.NotFoundException;
 import org.sagebionetworks.securitytools.PBKDF2Utils;
@@ -74,6 +76,10 @@ public class OAuthClientDaoImpl implements OAuthClientDao {
 
 	private String SET_CLIENT_SECRET_HASH = "UPDATE "+TABLE_OAUTH_CLIENT+
 			" SET "+COL_OAUTH_CLIENT_SECRET_HASH+"= ?, "+
+			COL_OAUTH_CLIENT_ETAG+"= ? WHERE "+ COL_OAUTH_CLIENT_ID+"= ?";
+
+	private String SET_CLIENT_HTTP_01_CHALLENGE_SQL = "UPDATE "+TABLE_OAUTH_CLIENT+
+			" SET "+COL_OAUTH_CLIENT_HTTP_01_CHALLENGE+"= ?, "+
 			COL_OAUTH_CLIENT_ETAG+"= ? WHERE "+ COL_OAUTH_CLIENT_ID+"= ?";
 
 	@Autowired
@@ -285,6 +291,18 @@ public class OAuthClientDaoImpl implements OAuthClientDao {
 	@Override
 	public void setOAuthClientSecretHash(String clientId, String secretHash, String newEtag) {
 		jdbcTemplate.update(SET_CLIENT_SECRET_HASH, secretHash, newEtag, clientId);	
+	}
+
+	@Override
+	public void setOAuthClientHttp01ChallengeParameters(OAuthHttp01Challenge http01ChallengeParameters,
+			String newEtag) {
+		byte[] blob = null; // TODO serialize http01ChallengeParameters
+		jdbcTemplate.update(SET_CLIENT_HTTP_01_CHALLENGE_SQL, blob, newEtag, http01ChallengeParameters.getClient_id());	
+	}
+
+	@Override
+	public OAuthHttp01Challenge getHttp01ChallengeParameters(String clientId) {
+		blob[] ;
 	}
 
 }

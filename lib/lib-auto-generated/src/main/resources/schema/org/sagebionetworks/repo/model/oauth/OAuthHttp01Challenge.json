@@ -7,15 +7,15 @@
 		},
 		"host_name": {
 			"type": "string",
-			"description": "The host name"
+			"description": "The host name where the verification file is to be placed"
 		},
 		"file_name": {
 			"type": "string",
-			"description": "The name of the"
+			"description": "The name of the verification file"
 		},
 		"file_content": {
 			"type": "string",
-			"description": "xx"
+			"description": "The content of the verification file"
 		}
 	}
 }

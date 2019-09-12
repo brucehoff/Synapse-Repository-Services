@@ -23,6 +23,7 @@ import org.sagebionetworks.repo.model.auth.SectorIdentifier;
 import org.sagebionetworks.repo.model.oauth.OAuthClient;
 import org.sagebionetworks.repo.model.oauth.OAuthClientIdAndSecret;
 import org.sagebionetworks.repo.model.oauth.OAuthClientList;
+import org.sagebionetworks.repo.model.oauth.OAuthHttp01Challenge;
 import org.sagebionetworks.repo.transactions.WriteTransaction;
 import org.sagebionetworks.repo.web.ServiceUnavailableException;
 import org.sagebionetworks.securitytools.EncryptionUtils;
@@ -52,8 +53,8 @@ public class OAuthClientManagerImpl implements OAuthClientManager {
 			ValidateArgument.validUrl(oauthClient.getSector_identifier_uri(), "Sector Identifier URI");
 		}
 	}
-
-	public List<String> readSectorIdentifierFile(URI uri) throws ServiceUnavailableException {
+	
+	public String readFileContent(URI uri) throws ServiceUnavailableException {
 		SimpleHttpRequest request = new SimpleHttpRequest();
 		request.setUri(uri.toString());
 		SimpleHttpResponse response = null;
@@ -67,10 +68,14 @@ public class OAuthClientManagerImpl implements OAuthClientManager {
 			throw new ServiceUnavailableException("Received "+response.getStatusCode()+" status while trying to read the content of "+uri+
 					".  Please check the URL and the file at the address, then try again.");
 		}
+		return response.getContent();
+	}
+	
+	public List<String> readSectorIdentifierFile(URI uri) throws ServiceUnavailableException {
 		List<String> result = new ArrayList<String>();
 		JSONArray array;
 		try {
-			array =  new JSONArray(response.getContent());
+			array =  new JSONArray(readFileContent(uri));
 			for (int i=0; i<array.length(); i++) {
 				result.add(array.getString(i));
 			}
@@ -243,11 +248,58 @@ public class OAuthClientManagerImpl implements OAuthClientManager {
 		}		
 		String secret = PBKDF2Utils.generateClientSecret();
 		String secretHash = PBKDF2Utils.hashPassword(secret, null);
-		oauthClientDao.setOAuthClientSecretHash(clientId, secretHash, UUID.randomUUID().toString());
+		String newEtag = UUID.randomUUID().toString();
+		oauthClientDao.setOAuthClientSecretHash(clientId, secretHash, newEtag);
 		OAuthClientIdAndSecret result = new OAuthClientIdAndSecret();
 		result.setClient_id(clientId);
 		result.setClient_secret(secret);
 		return result;
+	}
+
+	@Override
+	public OAuthHttp01Challenge createHttp01ChallengeParameters(UserInfo userInfo, String clientId) {
+		String creator = oauthClientDao.getOAuthClientCreator(clientId);
+		if (!canAdministrate(userInfo, creator)) {
+			throw new UnauthorizedException("You can only request an HTTP-01 challenge for your own OAuth client(s).");
+		}		
+		String fileName = UUID.randomUUID().toString();
+		String fileContent = "TODO";
+		String sectorIdentifier = oauthClientDao.getSectorIdentifierSecretForClient(clientId);
+
+		OAuthHttp01Challenge http01ChallengeParameters = new OAuthHttp01Challenge();
+		http01ChallengeParameters.setClient_id(clientId);
+		http01ChallengeParameters.setFile_name(fileName);
+		http01ChallengeParameters.setFile_content(fileContent);
+		http01ChallengeParameters.setHost_name(sectorIdentifier);
+		String newEtag = UUID.randomUUID().toString();
+		oauthClientDao.setOAuthClientHttp01ChallengeParameters(http01ChallengeParameters, newEtag);
+		return http01ChallengeParameters;
+	}
+	
+	private static final String ACME_PATH_PREFIX = ".well-known/acme/";
+
+	@Override
+	public void verifyOAuthClient(UserInfo userInfo, String clientId) throws ServiceUnavailableException {
+		String creator = oauthClientDao.getOAuthClientCreator(clientId);
+		if (!canAdministrate(userInfo, creator)) {
+			throw new UnauthorizedException("You can only verify your own OAuth client(s).");
+		}		
+		OAuthHttp01Challenge http01ChallengeParameters = oauthClientDao.getHttp01ChallengeParameters(clientId);
+		URI uri=null;
+		try {
+			uri = new URI("https", http01ChallengeParameters.getHost_name(),
+					ACME_PATH_PREFIX+http01ChallengeParameters.getFile_name(), null);
+		} catch (URISyntaxException e) {
+			throw new IllegalArgumentException("Bad URL: "+uri);
+		}
+		String actualContent = readFileContent(uri);
+		if (http01ChallengeParameters.getFile_content().equals(actualContent)) {
+			String newEtag = UUID.randomUUID().toString();
+			oauthClientDao.setOAuthClientVerified(clientId, newEtag);
+		} else {
+			throw new IllegalArgumentException("Client verification failed.");
+		}
+		
 	}
 
 }

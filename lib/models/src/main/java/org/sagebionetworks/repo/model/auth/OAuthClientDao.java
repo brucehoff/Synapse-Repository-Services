@@ -2,6 +2,7 @@ package org.sagebionetworks.repo.model.auth;
 
 import org.sagebionetworks.repo.model.oauth.OAuthClient;
 import org.sagebionetworks.repo.model.oauth.OAuthClientList;
+import org.sagebionetworks.repo.model.oauth.OAuthHttp01Challenge;
 import org.sagebionetworks.repo.web.NotFoundException;
 
 public interface OAuthClientDao {
@@ -113,6 +114,20 @@ public interface OAuthClientDao {
 	 * @param sectorIdentiferUri
 	 */
 	public void deleteSectorIdentifer(String sectorIdentiferUri);
+
+	/**
+	 * 
+	 * @param http01ChallengeParameters
+	 * @param newEtag
+	 */
+	public void setOAuthClientHttp01ChallengeParameters(OAuthHttp01Challenge http01ChallengeParameters, String newEtag);
+
+	/**
+	 * 
+	 * @param clientId
+	 * @return
+	 */
+	public OAuthHttp01Challenge getHttp01ChallengeParameters(String clientId);
 	
 	
 }

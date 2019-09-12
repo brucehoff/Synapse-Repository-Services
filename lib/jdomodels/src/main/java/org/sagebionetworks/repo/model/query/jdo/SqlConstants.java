@@ -931,6 +931,7 @@ public class SqlConstants {
 	public static final String COL_OAUTH_CLIENT_MODIFIED_ON = 							"MODIFIED_ON";
 	public static final String COL_OAUTH_CLIENT_SECTOR_IDENTIFIER_URI = 				"OAUTH_SECTOR_IDENTIFIER_URI";
 	public static final String COL_OAUTH_CLIENT_IS_VERIFIED = 							"IS_VERIFIED";
+	public static final String COL_OAUTH_CLIENT_HTTP_01_CHALLENGE = 					"HTTP_01_CHALLENGE";
 
 	// Status table for monthly statistics
 	public static final String TABLE_STATISTICS_MONTHLY_STATUS =						"STATISTICS_MONTHLY_STATUS";

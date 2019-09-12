@@ -2,7 +2,7 @@ package org.sagebionetworks.repo.manager.oauth;
 
 import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.oauth.OAuthClient;
-import org.sagebionetworks.repo.model.oauth.OAuthClientIdAndSecret;
+import org.sagebionetworks.repo.model.oauth.*;
 import org.sagebionetworks.repo.model.oauth.OAuthClientList;
 import org.sagebionetworks.repo.web.ServiceUnavailableException;
 
@@ -68,11 +68,12 @@ public interface OAuthClientManager {
 	 * Create the HTTP-01 challenge parameters for client verification
 	 * @return
 	 */
-	public OAuthHttpO1Challenge createHttp01ChallengeParameters();
+	public OAuthHttp01Challenge createHttp01ChallengeParameters(UserInfo userInfo, String clientId);
 	
 	/**
 	 * Verify the OAuthClient
+	 * @throws ServiceUnavailableException 
 	 */
-	public void verifyOAuthClient(String clientId);
+	public void verifyOAuthClient(UserInfo userInfo, String clientId) throws ServiceUnavailableException;
 
 }
