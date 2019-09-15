@@ -78,10 +78,6 @@ public class OAuthClientDaoImpl implements OAuthClientDao {
 			" SET "+COL_OAUTH_CLIENT_SECRET_HASH+"= ?, "+
 			COL_OAUTH_CLIENT_ETAG+"= ? WHERE "+ COL_OAUTH_CLIENT_ID+"= ?";
 
-	private String SET_CLIENT_HTTP_01_CHALLENGE_SQL = "UPDATE "+TABLE_OAUTH_CLIENT+
-			" SET "+COL_OAUTH_CLIENT_HTTP_01_CHALLENGE+"= ?, "+
-			COL_OAUTH_CLIENT_ETAG+"= ? WHERE "+ COL_OAUTH_CLIENT_ID+"= ?";
-
 	@Autowired
 	private DBOBasicDao basicDao;	
 
@@ -298,6 +294,8 @@ public class OAuthClientDaoImpl implements OAuthClientDao {
 			String newEtag) {
 		byte[] blob = null; // TODO serialize http01ChallengeParameters
 		jdbcTemplate.update(SET_CLIENT_HTTP_01_CHALLENGE_SQL, blob, newEtag, http01ChallengeParameters.getClient_id());	
+		
+		basicDao.createOrUpdate(toCreate)
 	}
 
 	@Override

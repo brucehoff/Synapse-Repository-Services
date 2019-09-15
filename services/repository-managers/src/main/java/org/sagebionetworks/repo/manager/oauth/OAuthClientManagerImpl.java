@@ -25,6 +25,7 @@ import org.sagebionetworks.repo.model.oauth.OAuthClientIdAndSecret;
 import org.sagebionetworks.repo.model.oauth.OAuthClientList;
 import org.sagebionetworks.repo.model.oauth.OAuthHttp01Challenge;
 import org.sagebionetworks.repo.transactions.WriteTransaction;
+import org.sagebionetworks.repo.web.NotFoundException;
 import org.sagebionetworks.repo.web.ServiceUnavailableException;
 import org.sagebionetworks.securitytools.EncryptionUtils;
 import org.sagebionetworks.securitytools.PBKDF2Utils;
@@ -36,6 +37,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 public class OAuthClientManagerImpl implements OAuthClientManager {
 	
+	private static final String ACME_PATH_PREFIX = ".well-known/acme/";
+
 	@Autowired
 	private OAuthClientDao oauthClientDao;
 	
@@ -276,7 +279,20 @@ public class OAuthClientManagerImpl implements OAuthClientManager {
 		return http01ChallengeParameters;
 	}
 	
-	private static final String ACME_PATH_PREFIX = ".well-known/acme/";
+	@Override
+	public boolean validateClientCredentials(OAuthClientIdAndSecret clientIdAndSecret) {
+		ValidateArgument.required(clientIdAndSecret, "Client ID and Secret");
+		if (StringUtils.isEmpty(clientIdAndSecret.getClient_id()) || StringUtils.isEmpty(clientIdAndSecret.getClient_secret())) {
+			return false;
+		}
+		try {
+			byte[] secretSalt = oauthClientDao.getSecretSalt(clientIdAndSecret.getClient_id());
+			String hash = PBKDF2Utils.hashPassword(clientIdAndSecret.getClient_secret(), secretSalt);
+			return oauthClientDao.checkOAuthClientSecretHash(clientIdAndSecret.getClient_id(), hash);
+		} catch (NotFoundException e) {
+			return false;
+		}
+	}
 
 	@Override
 	public void verifyOAuthClient(UserInfo userInfo, String clientId) throws ServiceUnavailableException {
@@ -299,7 +315,6 @@ public class OAuthClientManagerImpl implements OAuthClientManager {
 		} else {
 			throw new IllegalArgumentException("Client verification failed.");
 		}
-		
 	}
-
+		
 }

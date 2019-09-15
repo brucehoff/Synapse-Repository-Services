@@ -71,6 +71,13 @@ public interface OAuthClientManager {
 	public OAuthHttp01Challenge createHttp01ChallengeParameters(UserInfo userInfo, String clientId);
 	
 	/**
+	 * Validate the client ID secret pair
+	 * @param idAndSecret
+	 * @return true iff the credentials are valid
+	 */
+	boolean validateClientCredentials(OAuthClientIdAndSecret idAndSecret);
+
+	/**
 	 * Verify the OAuthClient
 	 * @throws ServiceUnavailableException 
 	 */
