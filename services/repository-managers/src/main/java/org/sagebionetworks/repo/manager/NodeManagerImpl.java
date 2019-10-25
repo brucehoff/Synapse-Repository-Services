@@ -17,7 +17,6 @@ import org.sagebionetworks.manager.util.CollectionUtils;
 import org.sagebionetworks.repo.model.ACCESS_TYPE;
 import org.sagebionetworks.repo.model.AccessControlList;
 import org.sagebionetworks.repo.model.AccessControlListDAO;
-import org.sagebionetworks.repo.model.Annotations;
 import org.sagebionetworks.repo.model.AuthorizationConstants.ACL_SCHEME;
 import org.sagebionetworks.repo.model.ConflictingUpdateException;
 import org.sagebionetworks.repo.model.DatastoreException;
@@ -32,7 +31,7 @@ import org.sagebionetworks.repo.model.Reference;
 import org.sagebionetworks.repo.model.UnauthorizedException;
 import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.VersionInfo;
-import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2;
+import org.sagebionetworks.repo.model.annotation.v2.Annotations;
 import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2Utils;
 import org.sagebionetworks.repo.model.bootstrap.EntityBootstrapper;
 import org.sagebionetworks.repo.model.dbo.dao.NodeUtils;
@@ -306,10 +305,16 @@ public class NodeManagerImpl implements NodeManager {
 
 	@WriteTransaction
 	@Override
-	public Node update(UserInfo userInfo, Node updatedNode, Annotations entityPropertyAnnotations, boolean newVersion)
+	public Node update(UserInfo userInfo, Node updatedNode, org.sagebionetworks.repo.model.Annotations entityPropertyAnnotations, boolean newVersion)
 			throws ConflictingUpdateException, NotFoundException, DatastoreException, UnauthorizedException, InvalidModelException {
 
 		UserInfo.validateUserInfo(userInfo);
+		NodeManagerImpl.validateNode(updatedNode);
+		// Validation for update only
+		ValidateArgument.required(updatedNode.getId(), "The id of the node");
+		ValidateArgument.required(updatedNode.getETag(), "The eTag of the node");
+		ValidateArgument.required(updatedNode.getParentId(), "The parent id of the node");
+		
 		// Validate that the user can update the node.
 		authorizationManager.canAccess(userInfo, updatedNode.getId(), ObjectType.ENTITY, ACCESS_TYPE.UPDATE).checkAuthorizationOrElseThrow();
 
@@ -339,12 +344,9 @@ public class NodeManagerImpl implements NodeManager {
 		return get(userInfo, updatedNode.getId());
 	}
 
-	private void updateNode(UserInfo userInfo, Node updatedNode, Annotations entityPropertyAnnotations, boolean newVersion,
+	private void updateNode(UserInfo userInfo, Node updatedNode, org.sagebionetworks.repo.model.Annotations entityPropertyAnnotations, boolean newVersion,
 							ChangeType changeType, Node oldNode) throws ConflictingUpdateException, NotFoundException, DatastoreException,
 			UnauthorizedException, InvalidModelException {
-
-		NodeManagerImpl.validateNode(updatedNode);
-		ValidateArgument.required(updatedNode.getETag(), "eTag");
 
 		canConnectToActivity(updatedNode.getActivityId(), userInfo);
 		
@@ -409,7 +411,7 @@ public class NodeManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public AnnotationsV2 getUserAnnotations(UserInfo userInfo, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException {
+	public Annotations getUserAnnotations(UserInfo userInfo, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException {
 		if(nodeId == null) throw new IllegalArgumentException("NodeId cannot be null");
 		UserInfo.validateUserInfo(userInfo);
 		authorizationManager.canAccess(userInfo, nodeId, ObjectType.ENTITY, ACCESS_TYPE.READ).checkAuthorizationOrElseThrow();
@@ -417,7 +419,7 @@ public class NodeManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public AnnotationsV2 getUserAnnotationsForVersion(UserInfo userInfo, String nodeId, Long versionNumber) throws NotFoundException,
+	public Annotations getUserAnnotationsForVersion(UserInfo userInfo, String nodeId, Long versionNumber) throws NotFoundException,
 			DatastoreException, UnauthorizedException {
 		UserInfo.validateUserInfo(userInfo);
 		authorizationManager.canAccess(userInfo, nodeId, ObjectType.ENTITY, ACCESS_TYPE.READ).checkAuthorizationOrElseThrow();
@@ -425,7 +427,7 @@ public class NodeManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public Annotations getEntityPropertyAnnotations(UserInfo userInfo, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException {
+	public org.sagebionetworks.repo.model.Annotations getEntityPropertyAnnotations(UserInfo userInfo, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException {
 		if(nodeId == null) throw new IllegalArgumentException("NodeId cannot be null");
 		UserInfo.validateUserInfo(userInfo);
 		authorizationManager.canAccess(userInfo, nodeId, ObjectType.ENTITY, ACCESS_TYPE.READ).checkAuthorizationOrElseThrow();
@@ -433,7 +435,7 @@ public class NodeManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public Annotations getEntityPropertyForVersion(UserInfo userInfo, String nodeId, Long versionNumber) throws NotFoundException,
+	public org.sagebionetworks.repo.model.Annotations getEntityPropertyForVersion(UserInfo userInfo, String nodeId, Long versionNumber) throws NotFoundException,
 			DatastoreException, UnauthorizedException {
 		UserInfo.validateUserInfo(userInfo);
 		authorizationManager.canAccess(userInfo, nodeId, ObjectType.ENTITY, ACCESS_TYPE.READ).checkAuthorizationOrElseThrow();
@@ -442,7 +444,7 @@ public class NodeManagerImpl implements NodeManager {
 
 	@WriteTransaction
 	@Override
-	public AnnotationsV2 updateUserAnnotations(UserInfo userInfo, String nodeId, AnnotationsV2 updated) throws ConflictingUpdateException, NotFoundException, DatastoreException, UnauthorizedException, InvalidModelException {
+	public Annotations updateUserAnnotations(UserInfo userInfo, String nodeId, Annotations updated) throws ConflictingUpdateException, NotFoundException, DatastoreException, UnauthorizedException, InvalidModelException {
 		ValidateArgument.required(updated, "annotations");
 		ValidateArgument.requiredNotEmpty(nodeId, "nodeId");
 		ValidateArgument.requiredNotEmpty(updated.getEtag(), "etag");
@@ -491,7 +493,7 @@ public class NodeManagerImpl implements NodeManager {
 
 	@WriteTransaction
 	@Override
-	public Node createNewNode(Node newNode, Annotations entityPropertyAnnotations, UserInfo userInfo) throws DatastoreException,
+	public Node createNewNode(Node newNode, org.sagebionetworks.repo.model.Annotations entityPropertyAnnotations, UserInfo userInfo) throws DatastoreException,
 			InvalidModelException, NotFoundException, UnauthorizedException {
 		// First create the node
 		newNode = createNode(newNode, userInfo);
@@ -699,7 +701,7 @@ public class NodeManagerImpl implements NodeManager {
 	}
 
 
-	private static void deleteConcreteTypeAnnotation(Annotations annotation){
+	private static void deleteConcreteTypeAnnotation(org.sagebionetworks.repo.model.Annotations annotation){
 		Map<String, List<String>> stringAnnotations = annotation.getStringAnnotations();
 		List<String> annoValue = stringAnnotations.get(ObjectSchema.CONCRETE_TYPE);
 		if(annoValue != null && annoValue.size() == 1 && annoValue.get(0).startsWith("org.sage")){

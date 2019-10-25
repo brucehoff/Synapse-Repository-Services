@@ -2,8 +2,10 @@ package org.sagebionetworks.repo.web.controller;
 
 import org.sagebionetworks.repo.model.AccessControlList;
 import org.sagebionetworks.repo.model.AuthorizationConstants;
+import org.sagebionetworks.repo.model.form.FormChangeRequest;
 import org.sagebionetworks.repo.model.form.FormData;
 import org.sagebionetworks.repo.model.form.FormGroup;
+import org.sagebionetworks.repo.model.form.FormRejection;
 import org.sagebionetworks.repo.model.form.ListRequest;
 import org.sagebionetworks.repo.model.form.ListResponse;
 import org.sagebionetworks.repo.web.UrlHelpers;
@@ -33,6 +35,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
  * List (ACL)</a> for administration. The ACL controls both who can submit data
  * to the group and who has access to the submitted data.</li>
  * </ul>
+ * <p>
+ * To download the data associated with a FormData object use:
+ * <a href="${POST.fileHandle.batch}">POST /fileHandle/batch</a> providing the
+ * formData.dataFileHandleId with <a href=
+ * "${org.sagebionetworks.repo.model.file.FileHandleAssociateType}">FileHandleAssociateType.FormData</a>
  */
 @ControllerInfo(displayName = "Form Services", path = "repo/v1")
 @Controller
@@ -53,8 +60,8 @@ public class FormController {
 	 * List (ACL)</a> with the creator listed as an administrator.
 	 * 
 	 * @param userId
-	 * @param name   A globally unique name for the group. Required. Limit 256
-	 *               characters or less.
+	 * @param name   A globally unique name for the group. Required. Between 3 and
+	 *               256 characters.
 	 * @return
 	 */
 	@ResponseStatus(HttpStatus.CREATED)
@@ -138,19 +145,14 @@ public class FormController {
 	 * @param userId
 	 * @param groupId          The identifier of the group that manages this data.
 	 *                         Required.
-	 * @param name             User provided name for this submission. Required.
-	 *                         Limit 256 characters or less.
-	 * @param dataFileHandleId The identifier of the data FileHandle for this
-	 *                         object. Required.
 	 * @return
 	 */
 	@ResponseStatus(HttpStatus.CREATED)
 	@RequestMapping(value = { UrlHelpers.FORM_DATA }, method = RequestMethod.POST)
 	public @ResponseBody FormData createFormData(
 			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
-			@RequestParam(required = true) String groupId, @RequestParam(required = true) String name,
-			@RequestParam(required = true) String dataFileHandleId) {
-		return serviceProvider.getFormService().createFormData(userId, groupId, name, dataFileHandleId);
+			@RequestParam(required = true) String groupId, @RequestBody FormChangeRequest request) {
+		return serviceProvider.getFormService().createFormData(userId, groupId, request);
 	}
 
 	/**
@@ -165,19 +167,15 @@ public class FormController {
 	 * permission on the FormGrup to create/update/submit FormData.
 	 * 
 	 * @param userId
-	 * @param id
-	 * @param name             Rename this submission. Optional. Limit 256 chars.
-	 * @param dataFileHandleId The identifier of the data FileHandle for this
-	 *                         object. Required.
+	 * @param id               The identifier of the FormData to update.
 	 * @return
 	 */
 	@ResponseStatus(HttpStatus.OK)
-	@RequestMapping(value = { UrlHelpers.FORM_DATA }, method = RequestMethod.PUT)
+	@RequestMapping(value = { UrlHelpers.FORM_DATA_ID }, method = RequestMethod.PUT)
 	public @ResponseBody FormData updateFormData(
 			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
-			@PathVariable(value = "id", required = true) String id, @RequestParam String name,
-			@RequestParam(required = true) String dataFileHandleId) {
-		return serviceProvider.getFormService().updateFormData(userId, id, name, dataFileHandleId);
+			@PathVariable(value = "id", required = true) String id, @RequestBody FormChangeRequest request) {
+		return serviceProvider.getFormService().updateFormData(userId, id, request);
 	}
 
 	/**
@@ -190,11 +188,11 @@ public class FormController {
 	 * permission on the identified group to update the group's ACL.
 	 * 
 	 * @param userId
-	 * @param id     The system provided unique identifier of the FormData object.
+	 * @param id     Id of the FormData object to delete
 	 * @return
 	 */
 	@ResponseStatus(HttpStatus.OK)
-	@RequestMapping(value = { UrlHelpers.FORM_DATA }, method = RequestMethod.DELETE)
+	@RequestMapping(value = { UrlHelpers.FORM_DATA_ID }, method = RequestMethod.DELETE)
 	public void deleteFormData(@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
 			@PathVariable(value = "id", required = true) String id) {
 		serviceProvider.getFormService().deleteFormData(userId, id);
@@ -284,14 +282,13 @@ public class FormController {
 	 * 
 	 * @param userId
 	 * @param id     Identifier of the FormData to accept.
-	 * @param reason The reason for the rejection. Limit 500 characters or less.
 	 * @return
 	 */
 	@ResponseStatus(HttpStatus.OK)
 	@RequestMapping(value = { UrlHelpers.FORM_DATA_REJECT }, method = RequestMethod.PUT)
 	public @ResponseBody FormData reviewerRejectForm(
 			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
-			@PathVariable(value = "id", required = true) String id, @RequestParam(required = true) String reason) {
-		return serviceProvider.getFormService().reviewerRejectForm(userId, id, reason);
+			@PathVariable(value = "id", required = true) String id, @RequestBody FormRejection rejection) {
+		return serviceProvider.getFormService().reviewerRejectForm(userId, id, rejection);
 	}
 }

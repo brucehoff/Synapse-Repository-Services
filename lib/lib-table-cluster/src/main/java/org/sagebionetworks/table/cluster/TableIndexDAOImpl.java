@@ -36,12 +36,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -69,6 +69,7 @@ import org.sagebionetworks.table.cluster.utils.TableModelUtils;
 import org.sagebionetworks.table.model.Grouping;
 import org.sagebionetworks.util.Callback;
 import org.sagebionetworks.util.ValidateArgument;
+import org.sagebionetworks.util.csv.CSVWriterStream;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
@@ -90,7 +91,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class TableIndexDAOImpl implements TableIndexDAO {
-
 
 	private static final String SQL_SUM_FILE_SIZES = "SELECT SUM(" + ENTITY_REPLICATION_COL_FILE_SIZE_BYTES + ") FROM "
 			+ ENTITY_REPLICATION_TABLE + " WHERE " + ENTITY_REPLICATION_COL_ID + " IN (:rowIds)";
@@ -779,6 +779,32 @@ public class TableIndexDAOImpl implements TableIndexDAO {
 		String sql = SQLUtils.createSelectInsertFromEntityReplication(viewId, viewTypeMask, currentSchema);
 		namedTemplate.update(sql, param);
 	}
+	
+	@Override
+	public void createViewSnapshotFromEntityReplication(Long viewId, Long viewTypeMask, Set<Long> allContainersInScope,
+			List<ColumnModel> currentSchema, CSVWriterStream outputStream) {
+		ValidateArgument.required(viewTypeMask, "viewTypeMask");
+		ValidateArgument.required(allContainersInScope, "allContainersInScope");
+		if (allContainersInScope.isEmpty()) {
+			// nothing to do if the scope is empty.
+			throw new IllegalArgumentException("Scope has not been defined for this view.");
+		}
+		NamedParameterJdbcTemplate namedTemplate = new NamedParameterJdbcTemplate(this.template);
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		param.addValue(PARENT_ID_PARAMETER_NAME, allContainersInScope);
+		StringBuilder builder = new StringBuilder();
+		List<String> headers = SQLUtils.createSelectFromEntityReplication(builder, viewId, viewTypeMask, currentSchema);
+		// push the headers to the stream
+		outputStream.writeNext(headers.toArray(new String[headers.size()]));
+		namedTemplate.query(builder.toString(), param, (ResultSet rs) -> {
+			// Push each row to the callback
+			String[] row = new String[headers.size()];
+			for (int i = 0; i < headers.size(); i++) {
+				row[i] = rs.getString(i + 1);
+			}
+			outputStream.writeNext(row);
+		});
+	}
 
 	@Override
 	public List<ColumnModel> getPossibleColumnModelsForContainers(
@@ -965,5 +991,34 @@ public class TableIndexDAOImpl implements TableIndexDAO {
 			stats.setSizeInBytes(rs.getLong(3));
 			callback.invoke(stats);
 		});
+	}
+
+	@Override
+	public void populateViewFromSnapshot(IdAndVersion idAndVersion, Iterator<String[]> input, long maxBytesPerBatch) {
+		ValidateArgument.required(idAndVersion, "idAndVersion");
+		ValidateArgument.required(idAndVersion.getVersion().isPresent(), "idAndVersion.version");
+		ValidateArgument.required(input, "input");
+		ValidateArgument.required(input.hasNext(), "input is empty");
+		// The first row is the header
+		String[] headers = input.next();
+		String sql = SQLUtils.createInsertViewFromSnapshot(idAndVersion, headers);
+		
+		// push the data in batches
+		List<Object[]> batch = new LinkedList<>();
+		int batchSize = 0;
+		while(input.hasNext()) {
+			String[] row = input.next();
+			long rowSize = SQLUtils.calculateBytes(row);
+			if(batchSize + rowSize > maxBytesPerBatch) {
+				template.batchUpdate(sql, batch);
+				batch.clear();
+			}
+			batch.add(row);
+			batchSize += rowSize;
+		}
+		
+		if(!batch.isEmpty()) {
+			template.batchUpdate(sql, batch);
+		}
 	}
 }

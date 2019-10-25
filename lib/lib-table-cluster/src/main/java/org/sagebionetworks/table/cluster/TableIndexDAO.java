@@ -1,5 +1,6 @@
 package org.sagebionetworks.table.cluster;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,6 +15,7 @@ import org.sagebionetworks.repo.model.table.EntityDTO;
 import org.sagebionetworks.repo.model.table.RowSet;
 import org.sagebionetworks.table.model.Grouping;
 import org.sagebionetworks.util.Callback;
+import org.sagebionetworks.util.csv.CSVWriterStream;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionCallback;
 
@@ -317,6 +319,17 @@ public interface TableIndexDAO {
 	 */
 	public void copyEntityReplicationToTable(Long viewId, Long viewTypeMask,
 			Set<Long> allContainersInScope, List<ColumnModel> currentSchema);
+	
+	/**
+	 * Copy the data from the entity replication tables to the given view's table.
+	 * 
+	 * @param viewId
+	 * @param viewType
+	 * @param allContainersInScope
+	 * @param currentSchema
+	 */
+	public void createViewSnapshotFromEntityReplication(Long viewId, Long viewTypeMask,
+			Set<Long> allContainersInScope, List<ColumnModel> currentSchema, CSVWriterStream outStream);
 
 	/**
 	 * Calculate the Cyclic-Redundancy-Check (CRC) of a table view's concatenation
@@ -418,4 +431,17 @@ public interface TableIndexDAO {
 	 * @return
 	 */
 	public void streamSynapseStorageStats(Callback<SynapseStorageProjectStats> callback);
+
+	/**
+	 * Populate a view from a snapshot.
+	 * 
+	 * @param idAndVersion
+	 * @param input
+	 * @param maxBytesPerBatch Used to limit the size of each batch of data pushed
+	 *                         to the database. Only a single batch will reside in
+	 *                         memory at a time. A batch will always contain at
+	 *                         least one row even if the size of the row is larger
+	 *                         than maxBytesPerBatch.
+	 */
+	public void populateViewFromSnapshot(IdAndVersion idAndVersion, Iterator<String[]> input, long maxBytesPerBatch);
 }

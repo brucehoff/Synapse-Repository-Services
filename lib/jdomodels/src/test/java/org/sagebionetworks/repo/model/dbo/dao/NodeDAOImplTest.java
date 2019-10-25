@@ -42,7 +42,6 @@ import org.sagebionetworks.repo.model.ACCESS_TYPE;
 import org.sagebionetworks.repo.model.AccessControlList;
 import org.sagebionetworks.repo.model.AccessControlListDAO;
 import org.sagebionetworks.repo.model.ActivityDAO;
-import org.sagebionetworks.repo.model.Annotations;
 import org.sagebionetworks.repo.model.AuthorizationConstants.BOOTSTRAP_PRINCIPAL;
 import org.sagebionetworks.repo.model.DatastoreException;
 import org.sagebionetworks.repo.model.EntityHeader;
@@ -58,6 +57,7 @@ import org.sagebionetworks.repo.model.NodeDAO;
 import org.sagebionetworks.repo.model.NodeIdAndType;
 import org.sagebionetworks.repo.model.ObjectType;
 import org.sagebionetworks.repo.model.ProjectHeader;
+import org.sagebionetworks.repo.model.ProjectListType;
 import org.sagebionetworks.repo.model.ProjectListSortColumn;
 import org.sagebionetworks.repo.model.ProjectListType;
 import org.sagebionetworks.repo.model.Reference;
@@ -68,10 +68,10 @@ import org.sagebionetworks.repo.model.UserGroup;
 import org.sagebionetworks.repo.model.UserGroupDAO;
 import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.VersionInfo;
-import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2;
+import org.sagebionetworks.repo.model.annotation.v2.Annotations;
 import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2TestUtils;
 import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2Utils;
-import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2ValueType;
+import org.sagebionetworks.repo.model.annotation.v2.AnnotationsValueType;
 import org.sagebionetworks.repo.model.dao.FileHandleDao;
 import org.sagebionetworks.repo.model.dbo.DBOBasicDao;
 import org.sagebionetworks.repo.model.dbo.migration.MigratableTableDAO;
@@ -906,22 +906,22 @@ public class NodeDAOImplTest {
 		toDelete.add(id);
 		assertNotNull(id);
 		// Now get the annotations for this node.
-		AnnotationsV2 annos = nodeDao.getUserAnnotations(id);
+		Annotations annos = nodeDao.getUserAnnotations(id);
 		assertNotNull(annos);
 		assertNotNull(annos.getEtag());
 		assertEquals(id, annos.getId());
 		// Now add some annotations to this node.
-		AnnotationsV2TestUtils.putAnnotations(annos,"stringOne", "one", AnnotationsV2ValueType.STRING);
-		AnnotationsV2TestUtils.putAnnotations(annos,"doubleKey", "23.5", AnnotationsV2ValueType.DOUBLE);
-		AnnotationsV2TestUtils.putAnnotations(annos,"longKey", "1234", AnnotationsV2ValueType.LONG);
-		AnnotationsV2TestUtils.putAnnotations(annos,"dateKey", Long.toString(System.currentTimeMillis()), AnnotationsV2ValueType.TIMESTAMP_MS);
+		AnnotationsV2TestUtils.putAnnotations(annos,"stringOne", "one", AnnotationsValueType.STRING);
+		AnnotationsV2TestUtils.putAnnotations(annos,"doubleKey", "23.5", AnnotationsValueType.DOUBLE);
+		AnnotationsV2TestUtils.putAnnotations(annos,"longKey", "1234", AnnotationsValueType.LONG);
+		AnnotationsV2TestUtils.putAnnotations(annos,"dateKey", Long.toString(System.currentTimeMillis()), AnnotationsValueType.TIMESTAMP_MS);
 		// update the eTag
 		String newETagString = UUID.randomUUID().toString();
 		annos.setEtag(newETagString);
 		// Update them
 		nodeDao.updateUserAnnotations(id, annos);
 		// Now get a copy and ensure it equals what we sent
-		AnnotationsV2 copy = nodeDao.getUserAnnotations(id);
+		Annotations copy = nodeDao.getUserAnnotations(id);
 		assertNotNull(copy);
 		assertEquals("one", AnnotationsV2Utils.getSingleValue(copy, "stringOne"));
 		assertEquals("23.5", AnnotationsV2Utils.getSingleValue(copy, "doubleKey"));
@@ -935,25 +935,25 @@ public class NodeDAOImplTest {
 		toDelete.add(id);
 		assertNotNull(id);
 		// Now get the annotations for this node.
-		AnnotationsV2 annos= nodeDao.getUserAnnotations(id);
+		Annotations annos= nodeDao.getUserAnnotations(id);
 		assertNotNull(annos);
 		assertNotNull(annos.getEtag());
 		assertNotNull(annos.getAnnotations());
 		assertTrue(annos.getAnnotations().isEmpty());
 		// Now add some annotations to this node.
-		AnnotationsV2TestUtils.putAnnotations(annos, "stringOne", "one", AnnotationsV2ValueType.STRING);
-		AnnotationsV2TestUtils.putAnnotations(annos, "doubleKey", "23.5", AnnotationsV2ValueType.DOUBLE);
-		AnnotationsV2TestUtils.putAnnotations(annos, "longKey", "1234", AnnotationsV2ValueType.LONG);
+		AnnotationsV2TestUtils.putAnnotations(annos, "stringOne", "one", AnnotationsValueType.STRING);
+		AnnotationsV2TestUtils.putAnnotations(annos, "doubleKey", "23.5", AnnotationsValueType.DOUBLE);
+		AnnotationsV2TestUtils.putAnnotations(annos, "longKey", "1234", AnnotationsValueType.LONG);
 		// Update them
 		nodeDao.updateUserAnnotations(id, annos);
 		// Now get a copy and ensure it equals what we sent
-		AnnotationsV2 copy = nodeDao.getUserAnnotations(id);
+		Annotations copy = nodeDao.getUserAnnotations(id);
 		assertNotNull(copy);
 		assertEquals(annos, copy);
 		// clear an and update
 		assertNotNull(copy.getAnnotations().remove("stringOne"));
 		nodeDao.updateUserAnnotations(id, copy);
-		AnnotationsV2 copy2 = nodeDao.getUserAnnotations(id);
+		Annotations copy2 = nodeDao.getUserAnnotations(id);
 		assertNotNull(copy2);
 		assertEquals(copy, copy2);
 		// Make sure the node has a new eTag
@@ -1058,12 +1058,12 @@ public class NodeDAOImplTest {
 		String id = nodeDao.createNew(node);
 		toDelete.add(id);
 		assertNotNull(id);
-		AnnotationsV2 annos = nodeDao.getUserAnnotations(id);
+		Annotations annos = nodeDao.getUserAnnotations(id);
 		assertNotNull(annos);
-		AnnotationsV2TestUtils.putAnnotations(annos, "string", "value", AnnotationsV2ValueType.STRING);
-		AnnotationsV2TestUtils.putAnnotations(annos, "date", "1", AnnotationsV2ValueType.TIMESTAMP_MS);
-		AnnotationsV2TestUtils.putAnnotations(annos, "double", "2.3", AnnotationsV2ValueType.DOUBLE);
-		AnnotationsV2TestUtils.putAnnotations(annos, "long", "56l", AnnotationsV2ValueType.LONG);
+		AnnotationsV2TestUtils.putAnnotations(annos, "string", "value", AnnotationsValueType.STRING);
+		AnnotationsV2TestUtils.putAnnotations(annos, "date", "1", AnnotationsValueType.TIMESTAMP_MS);
+		AnnotationsV2TestUtils.putAnnotations(annos, "double", "2.3", AnnotationsValueType.DOUBLE);
+		AnnotationsV2TestUtils.putAnnotations(annos, "long", "56l", AnnotationsValueType.LONG);
 		// Update the annotations
 		nodeDao.updateUserAnnotations(id, annos);
 		// Now create a new version
@@ -1074,14 +1074,14 @@ public class NodeDAOImplTest {
 		assertEquals(new Long(2), revNumber);
 		// At this point the new and old version should have the
 		// same annotations.
-		AnnotationsV2 v1Annos = nodeDao.getUserAnnotationsForVersion(id, 1L);
+		Annotations v1Annos = nodeDao.getUserAnnotationsForVersion(id, 1L);
 		assertNotNull(v1Annos);
 		assertEquals(NodeConstants.ZERO_E_TAG, v1Annos.getEtag());
-		AnnotationsV2 v2Annos = nodeDao.getUserAnnotationsForVersion(id, 2L);
+		Annotations v2Annos = nodeDao.getUserAnnotationsForVersion(id, 2L);
 		assertNotNull(v2Annos);
 		assertEquals(NodeConstants.ZERO_E_TAG, v2Annos.getEtag());
 		assertEquals(v1Annos, v2Annos);
-		AnnotationsV2 currentAnnos = nodeDao.getUserAnnotations(id);
+		Annotations currentAnnos = nodeDao.getUserAnnotations(id);
 		assertNotNull(currentAnnos);
 		assertNotNull(currentAnnos.getEtag());
 		// They should be equal except for the e-tag
@@ -1090,7 +1090,7 @@ public class NodeDAOImplTest {
 		assertEquals(currentAnnos, v2Annos);
 		
 		// Now update the current annotations
-		AnnotationsV2TestUtils.putAnnotations(currentAnnos, "double", "8989898.2", AnnotationsV2ValueType.DOUBLE);
+		AnnotationsV2TestUtils.putAnnotations(currentAnnos, "double", "8989898.2", AnnotationsValueType.DOUBLE);
 		nodeDao.updateUserAnnotations(id, currentAnnos);
 		
 		// Now the old and new should no longer match.
@@ -1118,7 +1118,7 @@ public class NodeDAOImplTest {
 		// Node delete the current revision and confirm that the annotations are rolled back
 		node = nodeDao.getNode(id);
 		nodeDao.deleteVersion(id, node.getVersionNumber());
-		AnnotationsV2 rolledBackAnnos = nodeDao.getUserAnnotations(id);
+		Annotations rolledBackAnnos = nodeDao.getUserAnnotations(id);
 		assertEquals("2.3", AnnotationsV2Utils.getSingleValue(rolledBackAnnos, "double"));
 	}
 	
@@ -1829,7 +1829,7 @@ public class NodeDAOImplTest {
 		toDelete.add(projectId);
 		assertNotNull(projectId);
 		// Now get the annotations of the entity
-		AnnotationsV2 annos = nodeDao.getUserAnnotations(projectId);
+		Annotations annos = nodeDao.getUserAnnotations(projectId);
 		assertNotNull(annos);
 		// Create a very large string
 		byte[] largeArray = new byte[10000];
@@ -1837,7 +1837,7 @@ public class NodeDAOImplTest {
 		Arrays.fill(largeArray, value);
 		String largeString = new String(largeArray, "UTF-8");
 		String key = "veryLargeString";
-		AnnotationsV2TestUtils.putAnnotations(annos, key, largeString, AnnotationsV2ValueType.STRING);
+		AnnotationsV2TestUtils.putAnnotations(annos, key, largeString, AnnotationsValueType.STRING);
 		// This update will fail before PLFM-791 is fixed.
 		nodeDao.updateUserAnnotations(projectId, annos);
 		// Get the values back
@@ -2185,30 +2185,30 @@ public class NodeDAOImplTest {
 	}
 	
 	@Test
-	public void testGetProjectStatAdditionalConditionMY_CREATED_PROJECTS(){
+	public void testGetProjectStatAdditionalCondition_CREATED(){
 		Map<String, Object> parameters = new HashMap<>();
 		Long userId = 123L;
-		ProjectListType type = ProjectListType.MY_CREATED_PROJECTS;
+		ProjectListType type = ProjectListType.CREATED;
 		String result = NodeDAOImpl.getProjectStatAdditionalCondition(parameters, userId, type);
 		assertEquals(" AND n.CREATED_BY = :bCreatedBy", result);
 		assertEquals(userId, parameters.get("bCreatedBy"));
 	}
 	
 	@Test
-	public void testGetProjectStatAdditionalConditionMY_PARTICIPATED_PROJECTS(){
+	public void testGetProjectStatAdditionalCondition_PARTICIPATED(){
 		Map<String, Object> parameters = new HashMap<>();
 		Long userId = 123L;
-		ProjectListType type = ProjectListType.MY_PARTICIPATED_PROJECTS;
+		ProjectListType type = ProjectListType.PARTICIPATED;
 		String result = NodeDAOImpl.getProjectStatAdditionalCondition(parameters, userId, type);
 		assertEquals(" AND n.CREATED_BY <> :bCreatedBy", result);
 		assertEquals(userId, parameters.get("bCreatedBy"));
 	}
 	
 	@Test
-	public void testGetProjectStatAdditionalConditionMY_PROJECTS(){
+	public void testGetProjectStatAdditionalCondition_ALL(){
 		Map<String, Object> parameters = new HashMap<>();
 		Long userId = 123L;
-		ProjectListType type = ProjectListType.MY_PROJECTS;
+		ProjectListType type = ProjectListType.ALL;
 		String result = NodeDAOImpl.getProjectStatAdditionalCondition(parameters, userId, type);
 		assertEquals("", result);
 		assertTrue(parameters.isEmpty());
@@ -2218,27 +2218,7 @@ public class NodeDAOImplTest {
 	public void testGetProjectStatAdditionalConditionMY_TEAM_PROJECTS(){
 		Map<String, Object> parameters = new HashMap<>();
 		Long userId = 123L;
-		ProjectListType type = ProjectListType.MY_TEAM_PROJECTS;
-		String result = NodeDAOImpl.getProjectStatAdditionalCondition(parameters, userId, type);
-		assertEquals("", result);
-		assertTrue(parameters.isEmpty());
-	}
-	
-	@Test
-	public void testGetProjectStatAdditionalConditionOTHER_USER_PROJECTS(){
-		Map<String, Object> parameters = new HashMap<>();
-		Long userId = 123L;
-		ProjectListType type = ProjectListType.OTHER_USER_PROJECTS;
-		String result = NodeDAOImpl.getProjectStatAdditionalCondition(parameters, userId, type);
-		assertEquals("", result);
-		assertTrue(parameters.isEmpty());
-	}
-	
-	@Test
-	public void testGetProjectStatAdditionalConditionTEAM_PROJECTS(){
-		Map<String, Object> parameters = new HashMap<>();
-		Long userId = 123L;
-		ProjectListType type = ProjectListType.TEAM_PROJECTS;
+		ProjectListType type = ProjectListType.TEAM;
 		String result = NodeDAOImpl.getProjectStatAdditionalCondition(parameters, userId, type);
 		assertEquals("", result);
 		assertTrue(parameters.isEmpty());
@@ -2303,7 +2283,7 @@ public class NodeDAOImplTest {
 		Node projectTwo = createProject("testGetProjectHeaders.two", user1);
 		Node projectThree = createProject("testGetProjectHeaders.three", user1);
 		Set<Long> projectIds = Sets.newHashSet(KeyFactory.stringToKey(projectTwo.getId()), KeyFactory.stringToKey(projectThree.getId()));
-		ProjectListType type = ProjectListType.MY_CREATED_PROJECTS;
+		ProjectListType type = ProjectListType.CREATED;
 		ProjectListSortColumn sortColumn = ProjectListSortColumn.LAST_ACTIVITY;
 		SortDirection sortDirection = SortDirection.ASC;
 		Long limit = 10L;
@@ -2327,7 +2307,7 @@ public class NodeDAOImplTest {
 		Long user1Id = Long.parseLong(user1);
 		// empty project ids should return an empty set.
 		Set<Long> projectIds = new HashSet<>();
-		ProjectListType type = ProjectListType.MY_CREATED_PROJECTS;
+		ProjectListType type = ProjectListType.CREATED;
 		ProjectListSortColumn sortColumn = ProjectListSortColumn.LAST_ACTIVITY;
 		SortDirection sortDirection = SortDirection.ASC;
 		Long limit = 10L;
@@ -2744,16 +2724,16 @@ public class NodeDAOImplTest {
 		file = nodeDao.createNewNode(file);
 		long fileIdLong = KeyFactory.stringToKey(file.getId());
 		toDelete.add(file.getId());
-		AnnotationsV2 userAnnos = new AnnotationsV2();
+		Annotations userAnnos = new Annotations();
 		userAnnos.setId(file.getId());
 		userAnnos.setEtag(file.getETag());
-		AnnotationsV2TestUtils.putAnnotations(userAnnos, "aString", "someString", AnnotationsV2ValueType.STRING);
-		AnnotationsV2TestUtils.putAnnotations(userAnnos, "aLong", "123", AnnotationsV2ValueType.LONG);
-		AnnotationsV2TestUtils.putAnnotations(userAnnos, "aDouble", "1.22", AnnotationsV2ValueType.DOUBLE);
+		AnnotationsV2TestUtils.putAnnotations(userAnnos, "aString", "someString", AnnotationsValueType.STRING);
+		AnnotationsV2TestUtils.putAnnotations(userAnnos, "aLong", "123", AnnotationsValueType.LONG);
+		AnnotationsV2TestUtils.putAnnotations(userAnnos, "aDouble", "1.22", AnnotationsValueType.DOUBLE);
 		nodeDao.updateUserAnnotations(file.getId(), userAnnos);
 		//Ensure that entity property annotations are not included in the entity replication (PLFM-4601)
 
-		Annotations entityPropertyAnnotations = new Annotations();
+		org.sagebionetworks.repo.model.Annotations entityPropertyAnnotations = new org.sagebionetworks.repo.model.Annotations();
 		entityPropertyAnnotations.setId(file.getId());
 		entityPropertyAnnotations.setEtag(file.getETag());
 		entityPropertyAnnotations.addAnnotation("primaryString", "primaryTest");
@@ -2815,13 +2795,13 @@ public class NodeDAOImplTest {
 		file = nodeDao.createNewNode(file);
 		long fileIdLong = KeyFactory.stringToKey(file.getId());
 		toDelete.add(file.getId());
-		AnnotationsV2 annos = new AnnotationsV2();
+		Annotations annos = new Annotations();
 		annos.setId(file.getId());
 		annos.setEtag(file.getETag());
 		// added for PLFM_4184
-		AnnotationsV2TestUtils.putAnnotations(annos,"emptyList", Collections.emptyList(), AnnotationsV2ValueType.STRING);
+		AnnotationsV2TestUtils.putAnnotations(annos,"emptyList", Collections.emptyList(), AnnotationsValueType.STRING);
 		// added for PLFM-4224
-		AnnotationsV2TestUtils.putAnnotations(annos, "listWithNullValue", Collections.singletonList(null), AnnotationsV2ValueType.DOUBLE);
+		AnnotationsV2TestUtils.putAnnotations(annos, "listWithNullValue", Collections.singletonList(null), AnnotationsValueType.DOUBLE);
 		nodeDao.updateUserAnnotations(file.getId(), annos);
 		
 		int maxAnnotationChars = 10;
@@ -3759,7 +3739,7 @@ public class NodeDAOImplTest {
 		toDelete.add(id);
 		assertNotNull(id);
 		// Now get the annotations for this node.
-		AnnotationsV2 annos = nodeDao.getUserAnnotations(id);
+		Annotations annos = nodeDao.getUserAnnotations(id);
 		assertNotNull(annos);
 		assertTrue(annos.getAnnotations().isEmpty());
 		// Write the annotation to database
@@ -3772,7 +3752,7 @@ public class NodeDAOImplTest {
 		DBORevision nodeRevision = basicDao.getObjectByPrimaryKey(DBORevision.class, parameterSource);
 
 		// Now retrieve it and we should stil get back an empty NamedAnnotation
-		AnnotationsV2 copy = nodeDao.getUserAnnotations(id);
+		Annotations copy = nodeDao.getUserAnnotations(id);
 		assertNotNull(copy);
 		assertTrue(copy.getAnnotations().isEmpty());
 		assertEquals(annos, copy);
@@ -3784,14 +3764,14 @@ public class NodeDAOImplTest {
 		toDelete.add(node.getId());
 
 
-		AnnotationsV2 annotationsV2 = new AnnotationsV2();
+		Annotations annotationsV2 = new Annotations();
 		annotationsV2.setAnnotations(Collections.singletonMap(
 				"myKey",
-				AnnotationsV2TestUtils.createNewValue(AnnotationsV2ValueType.STRING, "myValue1", "myValue2"
+				AnnotationsV2TestUtils.createNewValue(AnnotationsValueType.STRING, "myValue1", "myValue2"
 				)));
 		nodeDao.updateUserAnnotations(node.getId(), annotationsV2);
 
-		AnnotationsV2 retrievedAnnotations = nodeDao.getUserAnnotations(node.getId());
+		Annotations retrievedAnnotations = nodeDao.getUserAnnotations(node.getId());
 
 		//verify id and etag information were added
 		assertEquals(node.getId(), retrievedAnnotations.getId());
@@ -3809,10 +3789,10 @@ public class NodeDAOImplTest {
 		toDelete.add(nodeId);
 
 		//set up annotations for first version
-		AnnotationsV2 oldNodeVersionAnnotations = new AnnotationsV2();
+		Annotations oldNodeVersionAnnotations = new Annotations();
 		oldNodeVersionAnnotations.setAnnotations(Collections.singletonMap(
 				"myKey",
-				AnnotationsV2TestUtils.createNewValue(AnnotationsV2ValueType.STRING, "version1Value", "version1Value2"
+				AnnotationsV2TestUtils.createNewValue(AnnotationsValueType.STRING, "version1Value", "version1Value2"
 				)));
 		nodeDao.updateUserAnnotations(nodeId, oldNodeVersionAnnotations);
 		Long oldVersion = node.getVersionNumber();
@@ -3825,16 +3805,16 @@ public class NodeDAOImplTest {
 
 		assertNotEquals(oldVersion, newVersion);
 
-		AnnotationsV2 newNodeVersionAnnotations = new AnnotationsV2();
+		Annotations newNodeVersionAnnotations = new Annotations();
 		newNodeVersionAnnotations.setAnnotations(Collections.singletonMap(
 				"myKey",
-				AnnotationsV2TestUtils.createNewValue(AnnotationsV2ValueType.STRING, "version2Value", "version2Value2"
+				AnnotationsV2TestUtils.createNewValue(AnnotationsValueType.STRING, "version2Value", "version2Value2"
 				)));
 		nodeDao.updateUserAnnotations(nodeId, newNodeVersionAnnotations);
 
 
-		AnnotationsV2 retrievedOldVersion = nodeDao.getUserAnnotationsForVersion(nodeId, oldVersion);
-		AnnotationsV2 retrievedNewVersion = nodeDao.getUserAnnotationsForVersion(nodeId, newVersion);
+		Annotations retrievedOldVersion = nodeDao.getUserAnnotationsForVersion(nodeId, oldVersion);
+		Annotations retrievedNewVersion = nodeDao.getUserAnnotationsForVersion(nodeId, newVersion);
 
 		//verify old and new versions do not have same content
 		assertNotEquals(retrievedOldVersion.getAnnotations(),retrievedNewVersion.getAnnotations());
@@ -3853,17 +3833,17 @@ public class NodeDAOImplTest {
 
 		String nodeId = nodeDao.createNewNode(privateCreateNew("testEntityPropertiesRoundTrip")).getId();
 
-		Annotations entityPropertyAnnotations = new Annotations();
+		org.sagebionetworks.repo.model.Annotations entityPropertyAnnotations = new org.sagebionetworks.repo.model.Annotations();
 		entityPropertyAnnotations.addAnnotation("primaryString", "primaryTest");
 		nodeDao.updateEntityPropertyAnnotations(nodeId, entityPropertyAnnotations);
-		Annotations retrieved = nodeDao.getEntityPropertyAnnotations(nodeId);
+		org.sagebionetworks.repo.model.Annotations retrieved = nodeDao.getEntityPropertyAnnotations(nodeId);
 
 		assertEquals(entityPropertyAnnotations.getStringAnnotations(), retrieved.getStringAnnotations());
 	}
 
 	@Test
 	public void testEntityPropertiesForVersion(){
-		Annotations oldEntityPropertyAnnotations = new Annotations();
+		org.sagebionetworks.repo.model.Annotations oldEntityPropertyAnnotations = new org.sagebionetworks.repo.model.Annotations();
 		oldEntityPropertyAnnotations.addAnnotation("primaryString", "primaryTest");
 
 		Node node = nodeDao.createNewNode(privateCreateNew("testEntityPropertiesRoundTrip"));
@@ -3876,13 +3856,13 @@ public class NodeDAOImplTest {
 		newNode.setVersionComment("Comment "+2);
 		newNode.setVersionLabel("2");
 		Long newNodeVersion = nodeDao.createNewVersion(newNode);
-		Annotations newEntityPropertiesAnnotations = new Annotations();
+		org.sagebionetworks.repo.model.Annotations newEntityPropertiesAnnotations = new org.sagebionetworks.repo.model.Annotations();
 		newEntityPropertiesAnnotations.addAnnotation("primaryString", "NEW VALUE YEAH");
 		nodeDao.updateEntityPropertyAnnotations(nodeId, newEntityPropertiesAnnotations);
 
 
-		Annotations retrievedOldVersion = nodeDao.getEntityPropertyAnnotationsForVersion(nodeId, oldNodeVersion);
-		Annotations retrievedNewVersion = nodeDao.getEntityPropertyAnnotationsForVersion(nodeId, newNodeVersion);
+		org.sagebionetworks.repo.model.Annotations retrievedOldVersion = nodeDao.getEntityPropertyAnnotationsForVersion(nodeId, oldNodeVersion);
+		org.sagebionetworks.repo.model.Annotations retrievedNewVersion = nodeDao.getEntityPropertyAnnotationsForVersion(nodeId, newNodeVersion);
 
 		assertNotEquals(retrievedOldVersion.getStringAnnotations(), retrievedNewVersion.getStringAnnotations());
 

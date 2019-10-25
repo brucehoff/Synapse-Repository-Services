@@ -12,7 +12,7 @@ import org.sagebionetworks.StackConfiguration;
 import org.sagebionetworks.common.util.progress.ProgressCallback;
 import org.sagebionetworks.common.util.progress.ProgressListener;
 import org.sagebionetworks.repo.manager.statistics.StatisticsProcessingException;
-import org.sagebionetworks.repo.model.dao.statistics.StatisticsMonthlyStatusDAO;
+import org.sagebionetworks.repo.model.dbo.statistics.StatisticsMonthlyStatusDAO;
 import org.sagebionetworks.repo.model.statistics.StatisticsObjectType;
 import org.sagebionetworks.repo.model.statistics.StatisticsStatus;
 import org.sagebionetworks.repo.model.statistics.monthly.StatisticsMonthlyStatus;
@@ -76,7 +76,7 @@ public class StatisticsMonthlyManagerImpl implements StatisticsMonthlyManager {
 	@WriteTransaction
 	public boolean startProcessingMonth(StatisticsObjectType objectType, YearMonth month, long processingTimeout) {
 		ValidateArgument.required(objectType, "objectType");
-		ValidateArgument.required(objectType, "objectType");
+		ValidateArgument.required(month, "month");
 
 		long now = System.currentTimeMillis();
 

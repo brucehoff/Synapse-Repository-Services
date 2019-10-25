@@ -56,13 +56,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.commons.lang3.NotImplementedException;
 import org.sagebionetworks.StackConfigurationSingleton;
 import org.sagebionetworks.ids.IdGenerator;
 import org.sagebionetworks.ids.IdType;
-import org.sagebionetworks.repo.model.Annotations;
 import org.sagebionetworks.repo.model.DatastoreException;
 import org.sagebionetworks.repo.model.EntityHeader;
 import org.sagebionetworks.repo.model.EntityType;
@@ -81,7 +78,7 @@ import org.sagebionetworks.repo.model.ProjectListSortColumn;
 import org.sagebionetworks.repo.model.ProjectListType;
 import org.sagebionetworks.repo.model.Reference;
 import org.sagebionetworks.repo.model.VersionInfo;
-import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2;
+import org.sagebionetworks.repo.model.annotation.v2.Annotations;
 import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2Utils;
 import org.sagebionetworks.repo.model.dbo.DBOBasicDao;
 import org.sagebionetworks.repo.model.dbo.persistence.DBONode;
@@ -120,6 +117,9 @@ import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * This is a basic implementation of the NodeDAO.
@@ -412,6 +412,8 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 		}
 	};
 
+	private static final RowMapper<Node> NODE_MAPPER = new NodeMapper();
+	
 	// This is better suited for JDBC query.
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
@@ -563,7 +565,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 	public Node getNode(String id){
 		if(id == null) throw new IllegalArgumentException("Id cannot be null");
 		try {
-			return this.jdbcTemplate.queryForObject(SQL_SELECT_CURRENT_NODE, new NodeMapper(), KeyFactory.stringToKey(id));
+			return this.jdbcTemplate.queryForObject(SQL_SELECT_CURRENT_NODE, NODE_MAPPER, KeyFactory.stringToKey(id));
 		} catch (EmptyResultDataAccessException e) {
 			throw new NotFoundException(ERROR_RESOURCE_NOT_FOUND);
 		}
@@ -574,7 +576,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 		if(id == null) throw new IllegalArgumentException("Id cannot be null");
 		if(versionNumber == null) throw new IllegalArgumentException("Version number cannot be null");
 		try {
-			return this.jdbcTemplate.queryForObject(SQL_SELECT_NODE_VERSION, new NodeMapper(),versionNumber, KeyFactory.stringToKey(id));
+			return this.jdbcTemplate.queryForObject(SQL_SELECT_NODE_VERSION, NODE_MAPPER,versionNumber, KeyFactory.stringToKey(id));
 		} catch (EmptyResultDataAccessException e) {
 			throw new NotFoundException(ERROR_RESOURCE_NOT_FOUND);
 		}
@@ -690,18 +692,18 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 	}
 
 	@Override
-	public Annotations getEntityPropertyAnnotations(final String id) {
+	public org.sagebionetworks.repo.model.Annotations getEntityPropertyAnnotations(final String id) {
 		ValidateArgument.requiredNotEmpty(id, "id");
 		return getAnnotations(id, null, COL_REVISION_ENTITY_PROPERTY_ANNOTATIONS_BLOB);
 	}
 
 	@Override
-	public Annotations getEntityPropertyAnnotationsForVersion(final String id, Long versionNumber){
+	public org.sagebionetworks.repo.model.Annotations getEntityPropertyAnnotationsForVersion(final String id, Long versionNumber){
 		ValidateArgument.requiredNotEmpty(id, "id");
 		ValidateArgument.required(versionNumber, "versionNumber");
 		return getAnnotations(id, versionNumber, COL_REVISION_ENTITY_PROPERTY_ANNOTATIONS_BLOB);
 	}
-	private Annotations getAnnotations(final String id, Long version, final String annotationsColumnName){
+	private org.sagebionetworks.repo.model.Annotations getAnnotations(final String id, Long version, final String annotationsColumnName){
 		final Long idLong = KeyFactory.stringToKey(id);
 
 		StringBuilder sql = new StringBuilder(SELECT_ANNOTATIONS_ONLY_SELECT_CLAUSE_PREFIX);
@@ -718,7 +720,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 		}
 		// Select just the references, not the entire node.
 		try{
-			Annotations annos =  namedParameterJdbcTemplate.queryForObject(sql.toString(), parameters, new AnnotationsRowMapper(annotationsColumnName));
+			org.sagebionetworks.repo.model.Annotations annos =  namedParameterJdbcTemplate.queryForObject(sql.toString(), parameters, new AnnotationsRowMapper(annotationsColumnName));
 			// Remove the eTags when version is specified (See PLFM-1420)
 			if(annos != null && version != null){
 				annos.setEtag(NodeConstants.ZERO_E_TAG);
@@ -735,18 +737,18 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 	 * The result set must include COL_REVISION_USER_ANNOS_JSON, COL_NODE_CREATED_ON, COL_NODE_ID, COL_NODE_CREATED_BY
 	 *
 	 */
-	private static final RowMapper<AnnotationsV2> ANNOTATIONS_V2_ROW_MAPPER = (ResultSet rs, int roNum) ->{
-		AnnotationsV2 annos;
+	private static final RowMapper<Annotations> ANNOTATIONS_V2_ROW_MAPPER = (ResultSet rs, int roNum) ->{
+		Annotations annos;
 		String jsonString = rs.getString(COL_REVISION_USER_ANNOS_JSON);
 		if(jsonString != null){
 			try {
-				annos = EntityFactory.createEntityFromJSONString(jsonString, AnnotationsV2.class);
+				annos = EntityFactory.createEntityFromJSONString(jsonString, Annotations.class);
 			} catch (JSONObjectAdapterException e) {
 				throw new DatastoreException(e);
 			}
 		}else{
 			// If there is no annotations then create a new one.
-			annos = new AnnotationsV2();
+			annos = new Annotations();
 		}
 		// Pull out the rest of the data.
 		annos.setEtag(rs.getString(COL_NODE_ETAG));
@@ -763,7 +765,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 	 *
 	 */
 
-	private static class AnnotationsRowMapper implements RowMapper<Annotations> {
+	private static class AnnotationsRowMapper implements RowMapper<org.sagebionetworks.repo.model.Annotations> {
 
 		private String annotationColumnName;
 
@@ -772,8 +774,8 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 		}
 
 		@Override
-		public Annotations mapRow(ResultSet rs, int rowNum) throws SQLException {
-			Annotations annos = null;
+		public org.sagebionetworks.repo.model.Annotations mapRow(ResultSet rs, int rowNum) throws SQLException {
+			org.sagebionetworks.repo.model.Annotations annos = null;
 			byte[] bytes = rs.getBytes(annotationColumnName);
 			if(bytes != null){
 				try {
@@ -783,7 +785,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 				}
 			}else{
 				// If there is no annotations blob then create a new one.
-				annos = new Annotations();
+				annos = new org.sagebionetworks.repo.model.Annotations();
 			}
 			// Pull out the rest of the data.
 			annos.setEtag(rs.getString(COL_NODE_ETAG));
@@ -850,7 +852,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 
 	@WriteTransaction
 	@Override
-	public void updateUserAnnotations(String id, AnnotationsV2 annotationsV2){
+	public void updateUserAnnotations(String id, Annotations annotationsV2){
 		ValidateArgument.requiredNotEmpty(id, "id");
 
 		final Long nodeIdLong = KeyFactory.stringToKey(id);
@@ -865,7 +867,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 	}
 
 	@Override
-	public AnnotationsV2 getUserAnnotations(String id) {
+	public Annotations getUserAnnotations(String id) {
 		ValidateArgument.requiredNotEmpty(id, "id");
 		// Select just the references, not the entire node.
 		try{
@@ -878,12 +880,12 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 	}
 
 	@Override
-	public AnnotationsV2 getUserAnnotationsForVersion(final String id, Long versionNumber){
+	public Annotations getUserAnnotationsForVersion(final String id, Long versionNumber){
 		ValidateArgument.requiredNotEmpty(id, "id");
 		ValidateArgument.required(versionNumber, "versionNumber");
 		// Select just the references, not the entire node.
 		try{
-			AnnotationsV2 userAnnotations = jdbcTemplate.queryForObject(
+			Annotations userAnnotations = jdbcTemplate.queryForObject(
 					SELECT_USER_ANNOTATIONS_ONLY_PREFIX + "?",
 					ANNOTATIONS_V2_ROW_MAPPER, KeyFactory.stringToKey(id), versionNumber);
 			// Remove the eTags (See PLFM-1420)
@@ -899,11 +901,11 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 
 	@WriteTransaction
 	@Override
-	public void updateEntityPropertyAnnotations(String nodeId, Annotations updatedAnnos) throws NotFoundException, DatastoreException {
+	public void updateEntityPropertyAnnotations(String nodeId, org.sagebionetworks.repo.model.Annotations updatedAnnos) throws NotFoundException, DatastoreException {
 		updateAnnotations(nodeId, updatedAnnos, COL_REVISION_ENTITY_PROPERTY_ANNOTATIONS_BLOB);
 	}
 
-	void updateAnnotations(String nodeId, Annotations updatedAnnos, String annotationColumnName) throws NotFoundException, DatastoreException {
+	void updateAnnotations(String nodeId, org.sagebionetworks.repo.model.Annotations updatedAnnos, String annotationColumnName) throws NotFoundException, DatastoreException {
 
 		ValidateArgument.required(nodeId, "nodeId");
 		ValidateArgument.required(updatedAnnos, "updatedAnnos");
@@ -1468,10 +1470,10 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 
 	@Override
 	public List<ProjectHeader> getProjectHeaders(Long userId, Set<Long> projectIds,
-				ProjectListType type, ProjectListSortColumn sortColumn, SortDirection sortDirection, Long limit, Long offset) {
+			ProjectListType type, ProjectListSortColumn sortColumn, SortDirection sortDirection, Long limit, Long offset) {
 		ValidateArgument.required(userId, "userId");
 		ValidateArgument.required(projectIds, "projectIds");
-		ValidateArgument.requirement(limit >= 0 && offset >= 0, "limit and offset must be greater than 0");
+		ValidateArgument.requirement(limit >= 0 && offset >= 0, "limit and offset must be at least 0");
 		if(projectIds.isEmpty()){
 			return new LinkedList<>();
 		}
@@ -1496,15 +1498,13 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 	 */
 	public static String getProjectStatAdditionalCondition(Map<String, Object> parameters, Long userId, ProjectListType type){
 		switch (type) {
-		case MY_PROJECTS:
-		case OTHER_USER_PROJECTS:
-		case MY_TEAM_PROJECTS:
-		case TEAM_PROJECTS:
+		case ALL:
+		case TEAM:
 			return "";
-		case MY_CREATED_PROJECTS:
+		case CREATED:
 			parameters.put(BIND_CREATED_BY, userId);
 			return SELECT_CREATED;
-		case MY_PARTICIPATED_PROJECTS:
+		case PARTICIPATED:
 			parameters.put(BIND_CREATED_BY, userId);
 			return SELECT_NOT_CREATED;
 		default:
@@ -1720,7 +1720,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 				String userAnnoJson = rs.getString(COL_REVISION_USER_ANNOS_JSON);
 				if(userAnnoJson != null){
 					try {
-						AnnotationsV2 annos = EntityFactory.createEntityFromJSONString(userAnnoJson, AnnotationsV2.class);
+						Annotations annos = EntityFactory.createEntityFromJSONString(userAnnoJson, Annotations.class);
 						dto.setAnnotations(AnnotationsV2Utils.translate(entityId, annos, maxAnnotationSize));
 					} catch (JSONObjectAdapterException e) {
 						throw new DatastoreException(e);
