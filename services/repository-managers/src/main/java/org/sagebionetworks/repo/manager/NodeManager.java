@@ -28,7 +28,7 @@ public interface NodeManager {
 	 * Use: {@link #createNode(Node, UserInfo)}
 	 */
 	@Deprecated
-	public String createNewNode(Node newNode, UserInfo userInfo) throws DatastoreException,
+	public String createNewNode(Node newNode, UserAuthorization userAuthorization) throws DatastoreException,
 			InvalidModelException, NotFoundException, UnauthorizedException;
 	
 	/**
@@ -41,7 +41,7 @@ public interface NodeManager {
 	 * @throws NotFoundException
 	 * @throws UnauthorizedException
 	 */
-	public Node createNode(Node newNode, UserInfo userInfo) throws DatastoreException,InvalidModelException, NotFoundException, UnauthorizedException;
+	public Node createNode(Node newNode, UserAuthorization userAuthorization) throws DatastoreException,InvalidModelException, NotFoundException, UnauthorizedException;
 	
 	/**
 	 * Create a new node with annotations.
@@ -54,7 +54,7 @@ public interface NodeManager {
 	 * @throws NotFoundException
 	 * @throws UnauthorizedException
 	 */
-	public Node createNewNode(Node newNode, org.sagebionetworks.repo.model.Annotations entityPropertyAnnotations, UserInfo userInfo) throws DatastoreException, InvalidModelException, NotFoundException, UnauthorizedException;
+	public Node createNewNode(Node newNode, org.sagebionetworks.repo.model.Annotations entityPropertyAnnotations, UserAuthorization userAuthorization) throws DatastoreException, InvalidModelException, NotFoundException, UnauthorizedException;
 	
 	/**
 	 * Delete a node using its id.
@@ -64,7 +64,7 @@ public interface NodeManager {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public void delete(UserInfo userInfo, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public void delete(UserAuthorization userAuthorization, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * Get a node using its id.
@@ -75,7 +75,7 @@ public interface NodeManager {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public Node get(UserInfo userInfo, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public Node get(UserAuthorization userAuthorization, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * Get the full path of a node.
@@ -88,7 +88,7 @@ public interface NodeManager {
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public List<EntityHeader> getNodePath(UserInfo userInfo, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public List<EntityHeader> getNodePath(UserAuthorization userAuthorization, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * This should only be called for internal use.
@@ -110,7 +110,7 @@ public interface NodeManager {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public Node getNodeForVersionNumber(UserInfo userInfo, String nodeId, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public Node getNodeForVersionNumber(UserAuthorization userAuthorization, String nodeId, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException;
 
 	/**
 	 * Update a node and its annotations in the same call.  This means we only need to acquire the lock once.
@@ -124,7 +124,7 @@ public interface NodeManager {
 	 * @throws ConflictingUpdateException 
 	 * @throws InvalidModelException 
 	 */
-	public Node update(UserInfo userInfo, Node updatedNode, org.sagebionetworks.repo.model.Annotations entityPropertyAnnotations, boolean newVersion) throws ConflictingUpdateException, NotFoundException, DatastoreException, UnauthorizedException, InvalidModelException;
+	public Node update(UserAuthorization userAuthorization, Node updatedNode, org.sagebionetworks.repo.model.Annotations entityPropertyAnnotations, boolean newVersion) throws ConflictingUpdateException, NotFoundException, DatastoreException, UnauthorizedException, InvalidModelException;
 
 	/**
 	 * Update the user annotations of a node.
@@ -137,16 +137,16 @@ public interface NodeManager {
 	 * @throws NotFoundException 
 	 * @throws InvalidModelException 
 	 */
-	public Annotations updateUserAnnotations(UserInfo userInfo, String nodeId, Annotations updated) throws ConflictingUpdateException, NotFoundException, DatastoreException, UnauthorizedException, InvalidModelException;
+	public Annotations updateUserAnnotations(UserAuthorization userAuthorization, String nodeId, Annotations updated) throws ConflictingUpdateException, NotFoundException, DatastoreException, UnauthorizedException, InvalidModelException;
 
-	Annotations getUserAnnotations(UserInfo userInfo, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	Annotations getUserAnnotations(UserAuthorization userAuthorization, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException;
 
-	Annotations getUserAnnotationsForVersion(UserInfo userInfo, String nodeId, Long versionNumber) throws NotFoundException,
+	Annotations getUserAnnotationsForVersion(UserAuthorization userAuthorization, String nodeId, Long versionNumber) throws NotFoundException,
 			DatastoreException, UnauthorizedException;
 
-	org.sagebionetworks.repo.model.Annotations getEntityPropertyAnnotations(UserInfo userInfo, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	org.sagebionetworks.repo.model.Annotations getEntityPropertyAnnotations(UserAuthorization userAuthorization, String nodeId) throws NotFoundException, DatastoreException, UnauthorizedException;
 
-	org.sagebionetworks.repo.model.Annotations getEntityPropertyForVersion(UserInfo userInfo, String nodeId, Long versionNumber) throws NotFoundException,
+	org.sagebionetworks.repo.model.Annotations getEntityPropertyForVersion(UserAuthorization userAuthorization, String nodeId, Long versionNumber) throws NotFoundException,
 			DatastoreException, UnauthorizedException;
 
 	/**
@@ -158,7 +158,7 @@ public interface NodeManager {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public EntityType getNodeType(UserInfo userInfo, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public EntityType getNodeType(UserAuthorization userAuthorization, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * Get the node type of an entity for deletion
@@ -183,7 +183,7 @@ public interface NodeManager {
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public EntityHeader getNodeHeader(UserInfo userInfo, String entityId, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public EntityHeader getNodeHeader(UserAuthorization userAuthorization, String entityId, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * Get an entity header for each reference.
@@ -195,12 +195,12 @@ public interface NodeManager {
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public List<EntityHeader> getNodeHeader(UserInfo userInfo, List<Reference> references) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public List<EntityHeader> getNodeHeader(UserAuthorization userAuthorization, List<Reference> references) throws NotFoundException, DatastoreException, UnauthorizedException;
 
 	/**
 	 * Gets the header information for entities whose file's MD5 matches the given MD5 checksum.
 	 */
-	public List<EntityHeader> getNodeHeaderByMd5(UserInfo userInfo, String md5)
+	public List<EntityHeader> getNodeHeaderByMd5(UserAuthorization userAuthorization, String md5)
 			throws NotFoundException, DatastoreException;
 
 	/**
@@ -213,7 +213,7 @@ public interface NodeManager {
 	 * @throws UnauthorizedException 
 	 * @throws ConflictingUpdateException 
 	 */
-	public void deleteVersion(UserInfo userInfo, String id, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException, ConflictingUpdateException;
+	public void deleteVersion(UserAuthorization userAuthorization, String id, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException, ConflictingUpdateException;
 
 	/**
 	 * Does this node have children?
@@ -223,7 +223,7 @@ public interface NodeManager {
 	 */
 	public boolean doesNodeHaveChildren(String entityId);
 
-	public List<VersionInfo> getVersionsOfEntity(UserInfo userInfo,
+	public List<VersionInfo> getVersionsOfEntity(UserAuthorization userAuthorization,
 			String entityId, long offset, long limit) throws NotFoundException, UnauthorizedException, DatastoreException;
 
 	/**
@@ -235,7 +235,7 @@ public interface NodeManager {
 	 * @throws NotFoundException 
 	 * @throws DatastoreException 
 	 */
-	public Activity getActivityForNode(UserInfo userInfo, String nodeId, Long versionNumber) throws DatastoreException, NotFoundException;
+	public Activity getActivityForNode(UserAuthorization userAuthorization, String nodeId, Long versionNumber) throws DatastoreException, NotFoundException;
 
 	/**
 	 * Sets the activity that generated the current version of the node
@@ -246,7 +246,7 @@ public interface NodeManager {
 	 * @throws UnauthorizedException
 	 * @throws DatastoreException
 	 */
-	public void setActivityForNode(UserInfo userInfo, String nodeId,
+	public void setActivityForNode(UserAuthorization userAuthorization, String nodeId,
 			String activityId) throws NotFoundException, UnauthorizedException,
 			DatastoreException;
 
@@ -258,7 +258,7 @@ public interface NodeManager {
 	 * @throws UnauthorizedException
 	 * @throws DatastoreException
 	 */
-	public void deleteActivityLinkToNode(UserInfo userInfo, String nodeId)
+	public void deleteActivityLinkToNode(UserAuthorization userAuthorization, String nodeId)
 			throws NotFoundException, UnauthorizedException, DatastoreException;
 
 
@@ -273,7 +273,7 @@ public interface NodeManager {
 	 * @throws UnauthorizedException
 	 * @throws NotFoundException
 	 */
-	public String getFileHandleIdForVersion(UserInfo userInfo, String id, Long versionNumber) throws NotFoundException, UnauthorizedException;
+	public String getFileHandleIdForVersion(UserAuthorization userAuthorization, String id, Long versionNumber) throws NotFoundException, UnauthorizedException;
 
 	/**
 	 * Get a reference for the current version of the given node ids
@@ -288,7 +288,7 @@ public interface NodeManager {
 	 * @param toFilter
 	 * @return
 	 */
-	List<EntityHeader> filterUnauthorizedHeaders(UserInfo userInfo,
+	List<EntityHeader> filterUnauthorizedHeaders(UserAuthorization userAuthorization,
 			List<EntityHeader> toFilter);
 
 	/**
@@ -353,7 +353,7 @@ public interface NodeManager {
 	 * @param activity Optional. Associate an activity with the new version.
 	 * @return The version number that represents the snapshot/
 	 */
-	public long createSnapshotAndVersion(UserInfo userInfo, String nodeId, SnapshotRequest request);
+	public long createSnapshotAndVersion(UserAuthorization userAuthorization, String nodeId, SnapshotRequest request);
 
 	/**
 	 * Get the current revision number for the given Entity Id.

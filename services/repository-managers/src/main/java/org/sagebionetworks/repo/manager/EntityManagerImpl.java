@@ -98,7 +98,7 @@ public class EntityManagerImpl implements EntityManager {
 
 	@Override
 	public <T extends Entity> T getEntity(
-			UserInfo userInfo, String entityId, Class<? extends T> entityClass)
+			UserAuthorization userAuthorization, String entityId, Class<? extends T> entityClass)
 			throws NotFoundException, DatastoreException, UnauthorizedException {
 		ValidateArgument.required(entityId, "entityId");
 		// Get the annotations for this entity
@@ -112,7 +112,7 @@ public class EntityManagerImpl implements EntityManager {
 	}
 	
 	@Override
-	public Entity getEntity(UserInfo user, String entityId) throws DatastoreException, UnauthorizedException, NotFoundException {
+	public Entity getEntity(UserAuthorization userAuthorization, String entityId) throws DatastoreException, UnauthorizedException, NotFoundException {
 		// Get the annotations for this entity
 		org.sagebionetworks.repo.model.Annotations entityPropertyAnnotations = nodeManager.getEntityPropertyAnnotations(user, entityId);
 		// Fetch the current node from the server
@@ -152,7 +152,7 @@ public class EntityManagerImpl implements EntityManager {
 	 */
 	@Override
 	public  <T extends Entity> T getEntityForVersion(
-			UserInfo userInfo, String entityId, Long versionNumber,
+			UserAuthorization userAuthorization, String entityId, Long versionNumber,
 			Class<? extends T> entityClass) throws NotFoundException,
 			DatastoreException, UnauthorizedException {
 		// Get the annotations for this entity
@@ -235,7 +235,7 @@ public class EntityManagerImpl implements EntityManager {
 	}
 
 	@Override
-	public Annotations getAnnotations(UserInfo userInfo, String entityId)
+	public Annotations getAnnotations(UserAuthorization userAuthorization, String entityId)
 			throws NotFoundException, DatastoreException, UnauthorizedException {
 		if (entityId == null)
 			throw new IllegalArgumentException("Entity ID cannot be null");
@@ -244,7 +244,7 @@ public class EntityManagerImpl implements EntityManager {
 	}
 
 	@Override
-	public Annotations getAnnotationsForVersion(UserInfo userInfo, String id,
+	public Annotations getAnnotationsForVersion(UserAuthorization userAuthorization, String id,
 												Long versionNumber) throws NotFoundException, DatastoreException,
 			UnauthorizedException {
 		// Get all of the annotations.
@@ -342,7 +342,7 @@ public class EntityManagerImpl implements EntityManager {
 	}
 
 	@Override
-	public EntityType getEntityType(UserInfo userInfo, String entityId)
+	public EntityType getEntityType(UserAuthorization userAuthorization, String entityId)
 			throws NotFoundException, DatastoreException, UnauthorizedException {
 		return nodeManager.getNodeType(userInfo, entityId);
 	}
@@ -353,20 +353,20 @@ public class EntityManagerImpl implements EntityManager {
 	}
 
 	@Override
-	public EntityHeader getEntityHeader(UserInfo userInfo, String entityId, Long versionNumber)
+	public EntityHeader getEntityHeader(UserAuthorization userAuthorization, String entityId, Long versionNumber)
 			throws NotFoundException, DatastoreException, UnauthorizedException {
 		return nodeManager.getNodeHeader(userInfo, entityId, versionNumber);
 	}
 	
 	@Override
-	public List<EntityHeader> getEntityHeader(UserInfo userInfo,
+	public List<EntityHeader> getEntityHeader(UserAuthorization userAuthorization,
 			List<Reference> references) throws NotFoundException,
 			DatastoreException, UnauthorizedException {
 		return nodeManager.getNodeHeader(userInfo, references);
 	}
 
 	@Override
-	public List<VersionInfo> getVersionsOfEntity(UserInfo userInfo, String entityId,
+	public List<VersionInfo> getVersionsOfEntity(UserAuthorization userAuthorization, String entityId,
 			long offset, long limit) throws DatastoreException,
 			UnauthorizedException, NotFoundException {
 		// pass through
@@ -374,14 +374,14 @@ public class EntityManagerImpl implements EntityManager {
 	}
 
 	@Override
-	public List<EntityHeader> getEntityPath(UserInfo userInfo, String entityId)
+	public List<EntityHeader> getEntityPath(UserAuthorization userAuthorization, String entityId)
 			throws NotFoundException, DatastoreException, UnauthorizedException {
 		// pass through
 		return nodeManager.getNodePath(userInfo, entityId);
 	}
 
 	@Override
-	public String getEntityPathAsFilePath(UserInfo userInfo, String entityId) throws NotFoundException, DatastoreException,
+	public String getEntityPathAsFilePath(UserAuthorization userAuthorization, String entityId) throws NotFoundException, DatastoreException,
 			UnauthorizedException {
 		List<EntityHeader> entityPath = getEntityPath(userInfo, entityId);
 
@@ -409,7 +409,7 @@ public class EntityManagerImpl implements EntityManager {
 	}
 	
 	@Override
-	public void validateReadAccess(UserInfo userInfo, String entityId)
+	public void validateReadAccess(UserAuthorization userAuthorization, String entityId)
 			throws DatastoreException, NotFoundException, UnauthorizedException {
 		if (!entityPermissionsManager.hasAccess(entityId,
 				ACCESS_TYPE.READ, userInfo).isAuthorized()) {
@@ -437,7 +437,7 @@ public class EntityManagerImpl implements EntityManager {
 	}
 
 	@Override
-	public Activity getActivityForEntity(UserInfo userInfo, String entityId,
+	public Activity getActivityForEntity(UserAuthorization userAuthorization, String entityId,
 			Long versionNumber) throws DatastoreException,
 			UnauthorizedException, NotFoundException {
 		return nodeManager.getActivityForNode(userInfo, entityId, versionNumber);		
@@ -462,7 +462,7 @@ public class EntityManagerImpl implements EntityManager {
 	}
 
 	@Override
-	public String getFileHandleIdForVersion(UserInfo userInfo, String id, Long versionNumber)
+	public String getFileHandleIdForVersion(UserAuthorization userAuthorization, String id, Long versionNumber)
 			throws UnauthorizedException, NotFoundException {
 		// The manager handles this call.
 		return nodeManager.getFileHandleIdForVersion(userInfo, id, versionNumber);
@@ -479,7 +479,7 @@ public class EntityManagerImpl implements EntityManager {
 	}
 
 	@Override
-	public EntityChildrenResponse getChildren(UserInfo user,
+	public EntityChildrenResponse getChildren(UserAuthorization userAuthorization,
 			EntityChildrenRequest request) {
 		ValidateArgument.required(user, "UserInfo");
 		ValidateArgument.required(request, "EntityChildrenRequest");
@@ -525,8 +525,8 @@ public class EntityManagerImpl implements EntityManager {
 	}
 
 	@Override
-	public EntityId lookupChild(UserInfo userInfo, EntityLookupRequest request) {
-		ValidateArgument.required(userInfo, "userInfo");
+	public EntityId lookupChild(UserAuthorization userAuthorization, EntityLookupRequest request) {
+		ValidateArgument.required(userAuthorization, "userAuthorization");
 		ValidateArgument.required(request, "request");
 		ValidateArgument.required(request.getEntityName(), "EntityLookupRequest.entityName");
 		if(request.getParentId() == null){

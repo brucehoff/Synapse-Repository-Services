@@ -77,14 +77,14 @@ public interface EntityService {
 	/**
 	 * Get an entity without knowing the type
 	 * 
-	 * @param userId
+	 * @param accessToken
 	 * @param id
 	 * @return
 	 * @throws NotFoundException
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public Entity getEntity(Long userId, String id)
+	public Entity getEntity(String accessToken, String id)
 			throws NotFoundException, DatastoreException, UnauthorizedException;
 
 	/**

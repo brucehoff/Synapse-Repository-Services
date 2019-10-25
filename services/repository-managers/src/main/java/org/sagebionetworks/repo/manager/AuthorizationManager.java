@@ -35,9 +35,21 @@ public interface AuthorizationManager {
 	 * @throws NotFoundException 
 	 * @throws DatastoreException 
 	 */
+	@Deprecated
 	AuthorizationStatus canAccess(UserInfo userInfo, String objectId, ObjectType objectType, ACCESS_TYPE accessType) throws DatastoreException, NotFoundException;
 
-
+	/**
+	 * Check user access to an object
+	 * 
+	 * @param userInfo
+	 * @param objectId
+	 * @param objectType
+	 * @param accessType
+	 * @return whether access is granted and, if not, a String giving the reason why
+	 * @throws NotFoundException 
+	 * @throws DatastoreException 
+	 */
+	AuthorizationStatus canAccess(UserAuthorization userAuthorization, String objectId, ObjectType objectType, ACCESS_TYPE accessType) throws DatastoreException, NotFoundException;
 
 	/**
      * Checks whether the given user can create the given node.
@@ -50,7 +62,7 @@ public interface AuthorizationManager {
 	 * @throws NotFoundException
 	 * @throws DatastoreException
 	 */
-	AuthorizationStatus canCreate(UserInfo userInfo, String parentId, EntityType nodeType) throws NotFoundException, DatastoreException ;
+	AuthorizationStatus canCreate(UserAuthorization userAuthorization, String parentId, EntityType nodeType) throws NotFoundException, DatastoreException ;
 
 	/**
 	 * Checks whether the given user can modify the settings for the given node.
@@ -61,7 +73,7 @@ public interface AuthorizationManager {
 	 * @exception NotFoundException if the group or node is invalid
 	 * 
 	 */
-	AuthorizationStatus canChangeSettings(UserInfo userInfo, final Node node) throws NotFoundException, DatastoreException;
+	AuthorizationStatus canChangeSettings(UserAuthorization userAuthorization, final Node node) throws NotFoundException, DatastoreException;
 
 	/**
 	 * 
@@ -69,7 +81,7 @@ public interface AuthorizationManager {
 	 * @param activityId activity that generated the entities
 	 * @return Returns true if the specified user can read at least one entity with the specified activity Id.  Returns whether access is granted and, if not, a String giving the reason why
 	 */
-	AuthorizationStatus canAccessActivity(UserInfo userInfo, String activityId) throws NotFoundException;
+	AuthorizationStatus canAccessActivity(UserAuthorization userAuthorization, String activityId) throws NotFoundException;
 	
 	/**
 	 * The raw FileHandle can only be accessed by the user that created it.
@@ -78,7 +90,7 @@ public interface AuthorizationManager {
 	 * @param creator
 	 * @return whether access is granted and, if not, a String giving the reason why
 	 */
-	AuthorizationStatus canAccessRawFileHandleByCreator(UserInfo userInfo, String fileHandleId, String creator);
+	AuthorizationStatus canAccessRawFileHandleByCreator(UserAuthorization userAuthorization, String fileHandleId, String creator);
 	
 	/**
 	 * Is the user the creator or are they an admin
@@ -95,7 +107,7 @@ public interface AuthorizationManager {
 	 * @return whether access is granted and, if not, a String giving the reason why
 	 * @throws NotFoundException 
 	 */
-	AuthorizationStatus canAccessRawFileHandleById(UserInfo userInfo, String fileHandleId) throws NotFoundException;
+	AuthorizationStatus canAccessRawFileHandleById(UserAuthorization userAuthorization, String fileHandleId) throws NotFoundException;
 
 	/**
 	 * 
@@ -156,7 +168,7 @@ public interface AuthorizationManager {
 	 * @return whether access is granted and, if not, a String giving the reason why
 	 * @throws NotFoundException 
 	 */
-	AuthorizationStatus canUserMoveRestrictedEntity(UserInfo userInfo, String sourceParentId, String destParentId) throws NotFoundException;
+	AuthorizationStatus canUserMoveRestrictedEntity(UserAuthorization userAuthorization, String sourceParentId, String destParentId) throws NotFoundException;
 
 	/**
 	 * 
@@ -195,7 +207,7 @@ public interface AuthorizationManager {
 	 * @param originalBenefactors
 	 * @return
 	 */
-	Set<Long> getAccessibleBenefactors(UserInfo userInfo, Set<Long> originalBenefactors);
+	Set<Long> getAccessibleBenefactors(UserAuthorization userAuthorization, Set<Long> originalBenefactors);
 
 	/**
 	 * Check user access to an subscribable object

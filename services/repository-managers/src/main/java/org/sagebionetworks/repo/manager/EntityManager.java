@@ -51,7 +51,7 @@ public interface EntityManager {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public <T extends Entity> T getEntity(UserInfo userInfo, String entityId, Class<? extends T> entityClass) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public <T extends Entity> T getEntity(UserAuthorization userAuthorization, String entityId, Class<? extends T> entityClass) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * Get the full path of an entity.
@@ -64,7 +64,7 @@ public interface EntityManager {
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public List<EntityHeader> getEntityPath(UserInfo userInfo, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public List<EntityHeader> getEntityPath(UserAuthorization userAuthorization, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
 
 	/**
 	 * Get the full path of an entity as a '/' separated string
@@ -76,7 +76,7 @@ public interface EntityManager {
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public String getEntityPathAsFilePath(UserInfo userInfo, String entityId) throws NotFoundException, DatastoreException,
+	public String getEntityPathAsFilePath(UserAuthorization userAuthorization, String entityId) throws NotFoundException, DatastoreException,
 			UnauthorizedException;
 
 	/**
@@ -99,7 +99,7 @@ public interface EntityManager {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public EntityType getEntityType(UserInfo userInfo, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public EntityType getEntityType(UserAuthorization userAuthorization, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * Get the type of an entity for purposes of a delete action
@@ -124,7 +124,7 @@ public interface EntityManager {
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public EntityHeader getEntityHeader(UserInfo userInfo, String entityId, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public EntityHeader getEntityHeader(UserAuthorization userAuthorization, String entityId, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * Get an entity header for each reference.
@@ -136,7 +136,7 @@ public interface EntityManager {
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public List<EntityHeader> getEntityHeader(UserInfo userInfo, List<Reference> references) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public List<EntityHeader> getEntityHeader(UserAuthorization userAuthorization, List<Reference> references) throws NotFoundException, DatastoreException, UnauthorizedException;
 
 
 	/**
@@ -171,7 +171,7 @@ public interface EntityManager {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public Annotations getAnnotations(UserInfo userInfo, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public Annotations getAnnotations(UserAuthorization userAuthorization, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * Get the annotations of an entity for a given version.
@@ -183,7 +183,7 @@ public interface EntityManager {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public Annotations getAnnotationsForVersion(UserInfo userInfo, String id, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public Annotations getAnnotationsForVersion(UserAuthorization userAuthorization, String id, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * update a datasets annotations 
@@ -225,7 +225,7 @@ public interface EntityManager {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public <T extends Entity> T getEntityForVersion(UserInfo userInfo, String entityId, Long versionNumber, Class<? extends T> entityClass) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public <T extends Entity> T getEntityForVersion(UserAuthorization userAuthorization, String entityId, Long versionNumber, Class<? extends T> entityClass) throws NotFoundException, DatastoreException, UnauthorizedException;
 
 	/**
 	 * Gets the entity whose file's MD5 is the same as the specified MD5 string.
@@ -242,7 +242,7 @@ public interface EntityManager {
 	 * @throws NotFoundException
 	 * @throws UnauthorizedException
 	 */
-	public void validateReadAccess(UserInfo userInfo, String entityId) throws DatastoreException, NotFoundException, UnauthorizedException;
+	public void validateReadAccess(UserAuthorization userAuthorization, String entityId) throws DatastoreException, NotFoundException, UnauthorizedException;
 	
 	/**
 	 * Dev Note: since the user has update permission, we do not need to check
@@ -273,7 +273,7 @@ public interface EntityManager {
 	 * @throws UnauthorizedException
 	 * @throws NotFoundException
 	 */
-	public List<VersionInfo> getVersionsOfEntity(UserInfo userInfo, String entityId, long offset, long limit) throws DatastoreException, UnauthorizedException, NotFoundException;
+	public List<VersionInfo> getVersionsOfEntity(UserAuthorization userAuthorization, String entityId, long offset, long limit) throws DatastoreException, UnauthorizedException, NotFoundException;
 
 	/**
 	 * Gets the activity for the given Entity
@@ -285,7 +285,7 @@ public interface EntityManager {
 	 * @throws UnauthorizedException
 	 * @throws NotFoundException
 	 */
-	public Activity getActivityForEntity(UserInfo userInfo, String entityId,
+	public Activity getActivityForEntity(UserAuthorization userAuthorization, String entityId,
 			Long versionNumber) throws DatastoreException, UnauthorizedException, NotFoundException;
 
 	/**
@@ -321,7 +321,7 @@ public interface EntityManager {
 	 * @throws NotFoundException 
 	 * @throws UnauthorizedException 
 	 */
-	public String getFileHandleIdForVersion(UserInfo userInfo, String id, Long versionNumber)
+	public String getFileHandleIdForVersion(UserAuthorization userAuthorization, String id, Long versionNumber)
 			throws UnauthorizedException, NotFoundException;
 
 	/**
@@ -341,7 +341,7 @@ public interface EntityManager {
 	 * @throws UnauthorizedException 
 	 * @throws DatastoreException 
 	 */
-	public Entity getEntity(UserInfo user, String entityId) throws DatastoreException, UnauthorizedException, NotFoundException;
+	public Entity getEntity(UserAuthorization userAuthorization, String entityId) throws DatastoreException, UnauthorizedException, NotFoundException;
 
 	/**
 	 * Lookup an Entity ID using an alias.
@@ -357,7 +357,7 @@ public interface EntityManager {
 	 * @param request
 	 * @return
 	 */
-	public EntityChildrenResponse getChildren(UserInfo user, EntityChildrenRequest request);
+	public EntityChildrenResponse getChildren(UserAuthorization userAuthorization, EntityChildrenRequest request);
 
 	/**
 	 * Retrieve the entityId based on its name and parentId.
@@ -366,7 +366,7 @@ public interface EntityManager {
 	 * @param request
 	 * @return
 	 */
-	public EntityId lookupChild(UserInfo userInfo, EntityLookupRequest request);
+	public EntityId lookupChild(UserAuthorization userAuthorization, EntityLookupRequest request);
 
 	/**
 	 * Change the given entity's {@link DataType}

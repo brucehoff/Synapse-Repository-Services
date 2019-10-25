@@ -6,9 +6,11 @@ import java.util.List;
 import org.sagebionetworks.reflection.model.PaginatedResults;
 import org.sagebionetworks.repo.manager.EntityManager;
 import org.sagebionetworks.repo.manager.EntityPermissionsManager;
+import org.sagebionetworks.repo.manager.UserAuthorization;
 import org.sagebionetworks.repo.manager.UserManager;
 import org.sagebionetworks.repo.manager.file.FileHandleManager;
 import org.sagebionetworks.repo.manager.file.FileHandleUrlRequest;
+import org.sagebionetworks.repo.manager.oauth.OpenIDConnectManager;
 import org.sagebionetworks.repo.model.ACCESS_TYPE;
 import org.sagebionetworks.repo.model.ACLInheritanceException;
 import org.sagebionetworks.repo.model.AccessControlList;
@@ -77,6 +79,8 @@ public class EntityServiceImpl implements EntityService {
 	@Autowired
 	UserManager userManager;
 	@Autowired
+	OpenIDConnectManager oidcManager;
+	@Autowired
 	MetadataProviderFactory metadataProviderFactory;
 	@Autowired
 	AllTypesValidator allTypesValidator;
@@ -108,11 +112,11 @@ public class EntityServiceImpl implements EntityService {
 	}
 	
 	@Override
-	public Entity getEntity(Long userId, String id) throws NotFoundException, DatastoreException, UnauthorizedException {
-		UserInfo userInfo = userManager.getUserInfo(userId);
-		EntityHeader header = entityManager.getEntityHeader(userInfo, id, null);
+	public Entity getEntity(String accessToken, String id) throws NotFoundException, DatastoreException, UnauthorizedException {
+		UserAuthorization userAuthorization = oidcManager.getUserAuthorization(accessToken);
+		EntityHeader header = entityManager.getEntityHeader(userAuthorization, id, null);
 		EntityType type = EntityTypeUtils.getEntityTypeForClassName(header.getType());
-		return getEntity(userInfo, id, EntityTypeUtils.getClassForType(type), EventType.GET);
+		return getEntity(userAuthorization, id, EntityTypeUtils.getClassForType(type), EventType.GET);
 	}
 	/**
 	 * Any time we fetch an entity we do so through this path.
@@ -125,12 +129,12 @@ public class EntityServiceImpl implements EntityService {
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public <T extends Entity> T getEntity(UserInfo info, String id, Class<? extends T> clazz, EventType eventType) throws NotFoundException, DatastoreException, UnauthorizedException{
+	public <T extends Entity> T getEntity(UserAuthorization userAuthorization, String id, Class<? extends T> clazz, EventType eventType) throws NotFoundException, DatastoreException, UnauthorizedException{
 		// Determine the object type from the url.
 		EntityType type = EntityTypeUtils.getEntityTypeForClass(clazz);
-		T entity = entityManager.getEntity(info, id, clazz);
+		T entity = entityManager.getEntity(userAuthorization, id, clazz);
 		// Do all of the type specific stuff.
-		this.doAddServiceSpecificMetadata(info, entity, type, eventType);
+		this.doAddServiceSpecificMetadata(userAuthorization, entity, type, eventType);
 		return entity;
 	}
 
