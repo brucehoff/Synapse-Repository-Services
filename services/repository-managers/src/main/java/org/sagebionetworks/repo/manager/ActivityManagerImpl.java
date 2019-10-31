@@ -19,6 +19,7 @@ import org.sagebionetworks.repo.model.message.ChangeType;
 import org.sagebionetworks.repo.model.provenance.Activity;
 import org.sagebionetworks.repo.transactions.WriteTransaction;
 import org.sagebionetworks.repo.web.NotFoundException;
+import org.sagebionetworks.util.ValidateArgument;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class ActivityManagerImpl implements ActivityManager {
@@ -49,29 +50,29 @@ public class ActivityManagerImpl implements ActivityManager {
 	
 	@WriteTransaction
 	@Override
-	public String createActivity(UserInfo userInfo, Activity activity)
+	public String createActivity(UserAuthorization userAuthorization, Activity activity)
 			throws DatastoreException, InvalidModelException {		
 
 		// for idGenerator based id on create, regardless of what is passed
 		activity.setId(idGenerator.generateNewId(IdType.ACTIVITY_ID).toString());
 
-		populateCreationFields(userInfo, activity);
+		populateCreationFields(userAuthorization.getUserInfo().getId(), activity);
 		return activityDAO.create(activity);
 	}
 	
 	@WriteTransaction
 	@Override
-	public Activity updateActivity(UserInfo userInfo, Activity activity)
+	public Activity updateActivity(UserAuthorization userAuthorization, Activity activity)
 			throws InvalidModelException, NotFoundException,
 			ConflictingUpdateException, DatastoreException,
 			UnauthorizedException {
 		
 		// only owner can change
-		UserInfo.validateUserInfo(userInfo);
-		String requestorId = userInfo.getId().toString();
-		String requestorName = userInfo.getId().toString();
+		ValidateArgument.required(userAuthorization, "User Authorization");
+		String requestorId = userAuthorization.getUserInfo().getId().toString();
+		String requestorName = userAuthorization.getUserInfo().getId().toString();
 		Activity currentAct = activityDAO.get(activity.getId());
-		if(!userInfo.isAdmin() && !currentAct.getCreatedBy().equals(requestorId)) {
+		if(!userAuthorization.getUserInfo().isAdmin() && !currentAct.getCreatedBy().equals(requestorId)) {
 			throw new UnauthorizedException(requestorName +" lacks change access to the requested object.");
 		}			
 		
@@ -82,25 +83,25 @@ public class ActivityManagerImpl implements ActivityManager {
 		if(log.isDebugEnabled()){
 			log.debug("username "+requestorName+" updated activity: "+currentAct.getId());
 		}
-		populateModifiedFields(userInfo, activity);
+		populateModifiedFields(userAuthorization.getUserInfo().getId(), activity);
 		// update
 		return activityDAO.update(activity);
 	}
 
 	@WriteTransaction
 	@Override
-	public void deleteActivity(UserInfo userInfo, String activityId) throws DatastoreException, UnauthorizedException {				
+	public void deleteActivity(UserAuthorization userAuthorization, String activityId) throws DatastoreException, UnauthorizedException {				
 		Activity activity;
 		try {
 			activity = activityDAO.get(activityId);
 		} catch (NotFoundException ex) {
 			return; // don't bug people with 404s on delete
 		}
-		UserInfo.validateUserInfo(userInfo);
-		String requestorId = userInfo.getId().toString();
-		String requestorName = userInfo.getId().toString();
+		ValidateArgument.required(userAuthorization, "User Authorization");
+		String requestorId = userAuthorization.getUserInfo().getId().toString();
+		String requestorName = userAuthorization.getUserInfo().getId().toString();
 		// only owner can change
-		if(!activity.getCreatedBy().equals(requestorId) && !userInfo.isAdmin()) {
+		if(!activity.getCreatedBy().equals(requestorId) && !userAuthorization.getUserInfo().isAdmin()) {
 			throw new UnauthorizedException(requestorName +" lacks change access to the requested object.");
 		}			
 				
@@ -109,10 +110,10 @@ public class ActivityManagerImpl implements ActivityManager {
 	}
 
 	@Override
-	public Activity getActivity(UserInfo userInfo, String activityId) 
+	public Activity getActivity(UserAuthorization userAuthorization, String activityId) 
 		throws DatastoreException, NotFoundException, UnauthorizedException {		
 		Activity act = activityDAO.get(activityId);
-		authorizationManager.canAccessActivity(userInfo, activityId).checkAuthorizationOrElseThrow();
+		authorizationManager.canAccessActivity(userAuthorization, activityId).checkAuthorizationOrElseThrow();
 		return act;
 	}
 
@@ -122,14 +123,14 @@ public class ActivityManagerImpl implements ActivityManager {
 	}
 	
 	@Override
-	public PaginatedResults<Reference> getEntitiesGeneratedBy(UserInfo userInfo, String activityId,
+	public PaginatedResults<Reference> getEntitiesGeneratedBy(UserAuthorization userAuthorization, String activityId,
 			Integer limit, Integer offset) throws DatastoreException, NotFoundException, UnauthorizedException {
 		if (offset==null) offset = 0;
 		if (limit==null) limit = Integer.MAX_VALUE;
 		ServiceConstants.validatePaginationParams((long)offset, (long)limit);
 
 		Activity act = activityDAO.get(activityId);
-		authorizationManager.canAccessActivity(userInfo, activityId).checkAuthorizationOrElseThrow();
+		authorizationManager.canAccessActivity(userAuthorization, activityId).checkAuthorizationOrElseThrow();
 		return activityDAO.getEntitiesGeneratedBy(activityId, limit, offset);
 	}
 
@@ -137,19 +138,19 @@ public class ActivityManagerImpl implements ActivityManager {
 	/*
 	 * Private Methods
 	 */
-	static void populateCreationFields(UserInfo userInfo, Activity a) {
+	static void populateCreationFields(Long userId, Activity a) {
 		Date now = new Date();
-		a.setCreatedBy(userInfo.getId().toString());
+		a.setCreatedBy(userId.toString());
 		a.setCreatedOn(now);
-		a.setModifiedBy(userInfo.getId().toString());
+		a.setModifiedBy(userId.toString());
 		a.setModifiedOn(now);
 	}
 
-	static void populateModifiedFields(UserInfo userInfo, Activity a) {
+	static void populateModifiedFields(Long userId, Activity a) {
 		Date now = new Date();
 		a.setCreatedBy(null); // by setting to null we are telling the DAO to use the current values
 		a.setCreatedOn(null);
-		a.setModifiedBy(userInfo.getId().toString());
+		a.setModifiedBy(userId.toString());
 		a.setModifiedOn(now);
 	}
 

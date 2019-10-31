@@ -228,18 +228,18 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 	}
 
 	@Override
-	public AuthorizationStatus canCreate(UserInfo userInfo, String parentId, EntityType nodeType) 
+	public AuthorizationStatus canCreate(UserAuthorization userAuthorization, String parentId, EntityType nodeType) 
 		throws NotFoundException, DatastoreException {
-		return entityPermissionsManager.canCreate(parentId, nodeType, userInfo);
+		return entityPermissionsManager.canCreate(parentId, nodeType, userAuthorization);
 	}
 
 	@Override
-	public AuthorizationStatus canChangeSettings(UserInfo userInfo, Node node) throws NotFoundException, DatastoreException {
-		return entityPermissionsManager.canChangeSettings(node, userInfo);
+	public AuthorizationStatus canChangeSettings(UserAuthorization userAuthorization, Node node) throws NotFoundException, DatastoreException {
+		return entityPermissionsManager.canChangeSettings(node, userAuthorization);
 	}
 
 	@Override
-	public AuthorizationStatus canAccessActivity(UserInfo userInfo, String activityId) throws DatastoreException, NotFoundException {
+	public AuthorizationStatus canAccessActivity(UserAuthorization userAuthorization, String activityId) throws DatastoreException, NotFoundException {
 		if(userInfo.isAdmin()) return AuthorizationStatus.authorized();
 		
 		// check if owner

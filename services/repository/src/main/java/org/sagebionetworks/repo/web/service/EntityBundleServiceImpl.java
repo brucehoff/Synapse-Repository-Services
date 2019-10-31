@@ -7,7 +7,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.sagebionetworks.repo.manager.AccessRequirementManager;
+import org.sagebionetworks.repo.manager.UserAuthorization;
 import org.sagebionetworks.repo.manager.UserManager;
+import org.sagebionetworks.repo.manager.oauth.OpenIDConnectManager;
 import org.sagebionetworks.repo.model.ACCESS_TYPE;
 import org.sagebionetworks.repo.model.ACLInheritanceException;
 import org.sagebionetworks.repo.model.AccessControlList;
@@ -54,6 +56,10 @@ public class EntityBundleServiceImpl implements EntityBundleService {
 	@Autowired
 	AccessRequirementManager accessRequirementManager;
 	
+
+	@Autowired
+	OpenIDConnectManager oidcManager;
+
 	public EntityBundleServiceImpl() {}
 	
 	/**
@@ -72,7 +78,7 @@ public class EntityBundleServiceImpl implements EntityBundleService {
 	}
 
 	@Override
-	public EntityBundle getEntityBundle(Long userId, String entityId,
+	public EntityBundle getEntityBundle(String accessToken, String entityId,
 										Long versionNumber, EntityBundleRequest request)
 			throws NotFoundException, DatastoreException,
 			UnauthorizedException, ACLInheritanceException, ParseException {
@@ -81,6 +87,7 @@ public class EntityBundleServiceImpl implements EntityBundleService {
 		Entity entity = null;
 		IdAndVersion idAndVersion = KeyFactory.idAndVersion(entityId, versionNumber);
 		if (isTrue(request.getIncludeEntity()) || isTrue(request.getIncludeFileName())) {
+			UserAuthorization userAuthorization = oidcManager.getUserAuthorization(accessToken);
 			if(versionNumber == null) {
 				entity = serviceProvider.getEntityService().getEntity(userId, entityId);
 			} else {

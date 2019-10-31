@@ -107,6 +107,17 @@ public interface AuthorizationManager {
 	 * @return whether access is granted and, if not, a String giving the reason why
 	 * @throws NotFoundException 
 	 */
+	@Deprecated
+	AuthorizationStatus canAccessRawFileHandleById(UserInfo userInfo, String fileHandleId) throws NotFoundException;
+
+	
+	/**
+	 * 
+	 * @param userAuthorization
+	 * @param fileHandleId
+	 * @return whether access is granted and, if not, a String giving the reason why
+	 * @throws NotFoundException 
+	 */
 	AuthorizationStatus canAccessRawFileHandleById(UserAuthorization userAuthorization, String fileHandleId) throws NotFoundException;
 
 	/**

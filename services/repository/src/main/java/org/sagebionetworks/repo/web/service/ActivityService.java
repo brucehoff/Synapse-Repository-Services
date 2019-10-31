@@ -14,7 +14,7 @@ public interface ActivityService {
 	public Activity createActivity(Long userId, Activity activity)
 			throws DatastoreException, InvalidModelException, NotFoundException;
 	
-	public Activity getActivity(Long userId, String activityId)
+	public Activity getActivity(String accessToken, String activityId)
 			throws DatastoreException, NotFoundException, UnauthorizedException;
 	
 	public Activity updateActivity(Long userId, Activity activity)

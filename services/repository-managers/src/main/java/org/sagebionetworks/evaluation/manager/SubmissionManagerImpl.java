@@ -35,6 +35,7 @@ import org.sagebionetworks.repo.manager.EmailUtils;
 import org.sagebionetworks.repo.manager.EntityManager;
 import org.sagebionetworks.repo.manager.MessageToUserAndBody;
 import org.sagebionetworks.repo.manager.NodeManager;
+import org.sagebionetworks.repo.manager.UserAuthorization;
 import org.sagebionetworks.repo.manager.UserProfileManager;
 import org.sagebionetworks.repo.manager.file.FileHandleManager;
 import org.sagebionetworks.repo.manager.file.FileHandleUrlRequest;
@@ -176,22 +177,22 @@ public class SubmissionManagerImpl implements SubmissionManager {
 
 	@Override
 	@WriteTransaction
-	public Submission createSubmission(UserInfo userInfo, Submission submission, String entityEtag, String submissionEligibilityHash, EntityBundle bundle)
+	public Submission createSubmission(UserAuthorization userAuthorization, Submission submission, String entityEtag, String submissionEligibilityHash, EntityBundle bundle)
 			throws NotFoundException, DatastoreException, JSONObjectAdapterException {
 		EvaluationUtils.ensureNotNull(submission, "Submission");
 		EvaluationUtils.ensureNotNull(bundle, "EntityBundle");
 		String evalId = submission.getEvaluationId();
-		UserInfo.validateUserInfo(userInfo);
-		String principalId = userInfo.getId().toString();
+		ValidateArgument.required(userAuthorization, "User Authorization");
+		String principalId = userAuthorization.getUserInfo().getId().toString();
 		
 		submission.setUserId(principalId);
 		
 		// validate permissions
-		evaluationPermissionsManager.hasAccess(userInfo, evalId, ACCESS_TYPE.SUBMIT).checkAuthorizationOrElseThrow();
+		evaluationPermissionsManager.hasAccess(userAuthorization, evalId, ACCESS_TYPE.SUBMIT).checkAuthorizationOrElseThrow();
 		
 		// validate eTag
 		String entityId = submission.getEntityId();
-		Node node = nodeManager.get(userInfo, entityId);
+		Node node = nodeManager.get(userAuthorization, entityId);
 		if (!node.getETag().equals(entityEtag)) {
 			// invalid eTag; reject the Submission
 			throw new IllegalArgumentException("The supplied eTag is out of date. " +

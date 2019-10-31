@@ -10,7 +10,9 @@ import java.util.Map;
 import org.sagebionetworks.reflection.model.PaginatedResults;
 import org.sagebionetworks.repo.manager.ActivityManager;
 import org.sagebionetworks.repo.manager.EntityManager;
+import org.sagebionetworks.repo.manager.UserAuthorization;
 import org.sagebionetworks.repo.manager.UserManager;
+import org.sagebionetworks.repo.manager.oauth.OpenIDConnectManager;
 import org.sagebionetworks.repo.model.ConflictingUpdateException;
 import org.sagebionetworks.repo.model.DatastoreException;
 import org.sagebionetworks.repo.model.InvalidModelException;
@@ -32,6 +34,8 @@ public class ActivityServiceImpl implements ActivityService {
 	EntityManager entityManager;
 	@Autowired
 	UserManager userManager;
+	@Autowired
+	OpenIDConnectManager oidcManager;
 	
 	public ActivityServiceImpl() {	}
 	
@@ -59,10 +63,10 @@ public class ActivityServiceImpl implements ActivityService {
 	}
 	
 	@Override
-	public Activity getActivity(Long userId, String activityId)
+	public Activity getActivity(String accessToken, String activityId)
 			throws DatastoreException, NotFoundException, UnauthorizedException {
-		UserInfo userInfo = userManager.getUserInfo(userId);
-		return activityManager.getActivity(userInfo, activityId);
+		UserAuthorization userAuthorization = oidcManager.getUserAuthorization(accessToken);
+		return activityManager.getActivity(userAuthorization, activityId);
 	}
 
 	@Override

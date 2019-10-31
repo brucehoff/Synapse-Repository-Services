@@ -15,6 +15,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.sagebionetworks.evaluation.model.Evaluation;
 import org.sagebionetworks.evaluation.model.UserEvaluationPermissions;
 import org.sagebionetworks.repo.manager.PermissionsManagerUtils;
+import org.sagebionetworks.repo.manager.UserAuthorization;
 import org.sagebionetworks.repo.manager.UserManager;
 import org.sagebionetworks.repo.model.ACCESS_TYPE;
 import org.sagebionetworks.repo.model.AccessControlList;
@@ -137,6 +138,16 @@ public class EvaluationPermissionsManagerImpl implements EvaluationPermissionsMa
 		return acl;
 	}
 
+	/**
+	 * Whether the user has the access to the specified evaluation.
+	 * Has the same logic as 'hasAccess' but throws informative exception if the answer is false.
+	 */
+	@Override
+	public AuthorizationStatus hasAccess(UserAuthorization userAuthorization, String evalId, ACCESS_TYPE accessType)
+			throws NotFoundException, DatastoreException {
+		return AuthorizationStatus.accessDenied("TODO"); // TODO
+	}
+	
 	/**
 	 * Whether the user has the access to the specified evaluation.
 	 * Has the same logic as 'hasAccess' but throws informative exception if the answer is false.

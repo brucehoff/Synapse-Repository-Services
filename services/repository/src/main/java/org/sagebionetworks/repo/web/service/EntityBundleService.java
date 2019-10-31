@@ -32,7 +32,7 @@ public interface EntityBundleService {
 	 * @throws ACLInheritanceException
 	 * @throws ParseException
 	 */
-	public EntityBundle getEntityBundle(Long userId, String entityId, EntityBundleRequest request) throws NotFoundException,
+	public EntityBundle getEntityBundle(String accessToken, String entityId, EntityBundleRequest request) throws NotFoundException,
 			DatastoreException, UnauthorizedException, ACLInheritanceException, ParseException;
 
 	/**
@@ -49,7 +49,7 @@ public interface EntityBundleService {
 	 * @throws ACLInheritanceException
 	 * @throws ParseException
 	 */
-	public EntityBundle getEntityBundle(Long userId, String entityId, Long versionNumber, EntityBundleRequest request) throws NotFoundException,
+	public EntityBundle getEntityBundle(String accessToken, String entityId, Long versionNumber, EntityBundleRequest request) throws NotFoundException,
 			DatastoreException, UnauthorizedException, ACLInheritanceException, ParseException;
 
 	/**
