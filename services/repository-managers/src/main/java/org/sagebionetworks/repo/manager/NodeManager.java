@@ -34,7 +34,7 @@ public interface NodeManager {
 	/**
 	 * Create a new node.
 	 * @param newNode
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @return
 	 * @throws DatastoreException
 	 * @throws InvalidModelException
@@ -47,7 +47,7 @@ public interface NodeManager {
 	 * Create a new node with annotations.
 	 * @param newNode
 	 * @param newAnnotations
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @return
 	 * @throws DatastoreException
 	 * @throws InvalidModelException
@@ -80,7 +80,7 @@ public interface NodeManager {
 	/**
 	 * Get the full path of a node.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param nodeId
 	 * @return The first EntityHeader in the list will be the root parent for this node, and the last
 	 * will be the EntityHeader for the given node.
@@ -92,7 +92,6 @@ public interface NodeManager {
 	
 	/**
 	 * This should only be called for internal use.
-	 * @param userInfo
 	 * @param nodeId
 	 * @return
 	 * @throws NotFoundException
@@ -103,7 +102,7 @@ public interface NodeManager {
 	
 	/**
 	 * Get a node for a given version number.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param nodeId
 	 * @return
 	 * @throws UnauthorizedException 
@@ -128,7 +127,7 @@ public interface NodeManager {
 
 	/**
 	 * Update the user annotations of a node.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param nodeId
 	 * @return
 	 * @throws ConflictingUpdateException 
@@ -151,7 +150,7 @@ public interface NodeManager {
 
 	/**
 	 * Get the node type of an entity
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @return
 	 * @throws UnauthorizedException 
@@ -175,7 +174,7 @@ public interface NodeManager {
 	/**
 	 * Get a full header for an entity.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @param versionNumber
 	 * @return
@@ -188,7 +187,7 @@ public interface NodeManager {
 	/**
 	 * Get an entity header for each reference.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param references
 	 * @return
 	 * @throws NotFoundException
@@ -205,7 +204,7 @@ public interface NodeManager {
 
 	/**
 	 * Delete a specific version of a node.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param id
 	 * @param long1
 	 * @throws DatastoreException 
@@ -228,7 +227,7 @@ public interface NodeManager {
 
 	/**
 	 * Gets the activity that generated the Node
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param nodeId
 	 * @param versionNumber
 	 * @return
@@ -239,7 +238,7 @@ public interface NodeManager {
 
 	/**
 	 * Sets the activity that generated the current version of the node
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param nodeId
 	 * @param activityId
 	 * @throws NotFoundException
@@ -252,7 +251,7 @@ public interface NodeManager {
 
 	/**
 	 * Deletes the generatedBy relationship between the entity and its activity
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param nodeId
 	 * @throws NotFoundException
 	 * @throws UnauthorizedException
@@ -266,7 +265,7 @@ public interface NodeManager {
 	 * Get the FileHandleId of the file associated with a given version of the entity. The caller must have permission
 	 * to downlaod this file to get the handle.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param id
 	 * @param versionNumber if null, use current version
 	 * @return
@@ -284,7 +283,7 @@ public interface NodeManager {
 
 	/**
 	 * Given a list of EntityHeaders, return the sub-set of EntityHeaders that the user is authorized to read.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param toFilter
 	 * @return
 	 */

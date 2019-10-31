@@ -5,8 +5,8 @@ import java.util.List;
 
 import org.sagebionetworks.evaluation.model.Evaluation;
 import org.sagebionetworks.evaluation.model.TeamSubmissionEligibility;
+import org.sagebionetworks.repo.manager.UserAuthorization;
 import org.sagebionetworks.repo.model.DatastoreException;
-import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.auth.AuthorizationStatus;
 import org.sagebionetworks.repo.web.NotFoundException;
 
@@ -27,7 +27,7 @@ public interface SubmissionEligibilityManager {
 	/*
 	 * Determine whether an individual is authorized to submit to the given evaluation
 	 */
-	public AuthorizationStatus isIndividualEligible(String evalId, UserInfo userInfo, Date now) throws DatastoreException, NotFoundException;
+	public AuthorizationStatus isIndividualEligible(String evalId, UserAuthorization UserAuthorization, Date now) throws DatastoreException, NotFoundException;
 
 	
 }

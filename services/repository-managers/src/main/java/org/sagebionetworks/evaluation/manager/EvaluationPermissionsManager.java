@@ -10,7 +10,6 @@ import org.sagebionetworks.repo.model.ConflictingUpdateException;
 import org.sagebionetworks.repo.model.DatastoreException;
 import org.sagebionetworks.repo.model.InvalidModelException;
 import org.sagebionetworks.repo.model.UnauthorizedException;
-import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.auth.AuthorizationStatus;
 import org.sagebionetworks.repo.web.NotFoundException;
 
@@ -22,34 +21,28 @@ public interface EvaluationPermissionsManager {
 	/**
 	 * Creates a new ACL.
 	 */
-	public AccessControlList createAcl(UserInfo userInfo, AccessControlList acl)
+	public AccessControlList createAcl(UserAuthorization userAuthorization, AccessControlList acl)
 			throws NotFoundException, DatastoreException, InvalidModelException,
 			UnauthorizedException, ConflictingUpdateException;
 
 	/**
 	 * Updates with the given ACL.
 	 */
-	public AccessControlList updateAcl(UserInfo userInfo, AccessControlList acl)
+	public AccessControlList updateAcl(UserAuthorization userAuthorization, AccessControlList acl)
 			throws NotFoundException, DatastoreException, InvalidModelException,
 			UnauthorizedException, ConflictingUpdateException;
 
 	/**
 	 * Deletes the ACL of the specified evaluation.
 	 */
-	public void deleteAcl(UserInfo userInfo, String evalId)
+	public void deleteAcl(UserAuthorization userAuthorization, String evalId)
 			throws NotFoundException, DatastoreException, InvalidModelException,
 			UnauthorizedException, ConflictingUpdateException;
 
 	/**
 	 * Gets the access control list (ACL) governing the given evaluation.
 	 */
-	public AccessControlList getAcl(UserInfo userInfo, String evalId)
-			throws NotFoundException, DatastoreException;
-
-	/**
-	 * Whether the user has the access to the specified evaluation.
-	 */
-	public AuthorizationStatus hasAccess(UserInfo userInfo, String evalId, ACCESS_TYPE accessType)
+	public AccessControlList getAcl(UserAuthorization userAuthorization, String evalId)
 			throws NotFoundException, DatastoreException;
 
 	/**
@@ -61,19 +54,19 @@ public interface EvaluationPermissionsManager {
 	/**
 	 * Gets the user permissions for an evaluation.
 	 */
-	public UserEvaluationPermissions getUserPermissionsForEvaluation(UserInfo userInfo, String evalId)
+	public UserEvaluationPermissions getUserPermissionsForEvaluation(UserAuthorization userAuthorization, String evalId)
 			throws NotFoundException, DatastoreException;
 
 	/**
 	 * User must have submit permission and be a member of the given team
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param evaluationId
 	 * @param teamId
 	 * @throws NotFoundException 
 	 * @throws DatastoreException 
 	 */
-	public AuthorizationStatus canCheckTeamSubmissionEligibility(UserInfo userInfo, String evaluationId, String teamId) throws DatastoreException, NotFoundException;
+	public AuthorizationStatus canCheckTeamSubmissionEligibility(UserAuthorization userAuthorization, String evaluationId, String teamId) throws DatastoreException, NotFoundException;
 
 	/*
 	 * Return true if and only if the given Docker Repository name is in a Submission under some Evaluation 

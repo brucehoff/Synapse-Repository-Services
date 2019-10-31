@@ -123,23 +123,23 @@ public class SubmissionManagerImpl implements SubmissionManager {
 	private static final String NON_CANCELLABLE_REASON = "This submission is currently noncancellable.";
 
 	@Override
-	public Submission getSubmission(UserInfo userInfo, String submissionId) throws DatastoreException, NotFoundException {
+	public Submission getSubmission(UserAuthorization userAuthorization, String submissionId) throws DatastoreException, NotFoundException {
 		EvaluationUtils.ensureNotNull(submissionId, "Submission ID");
 		Submission sub = submissionDAO.get(submissionId);
-		validateEvaluationAccess(userInfo, sub.getEvaluationId(), ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
+		validateEvaluationAccess(userAuthorization, sub.getEvaluationId(), ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
 		return sub;
 	}
 
 	@Override
-	public SubmissionStatus getSubmissionStatus(UserInfo userInfo, String submissionId) throws DatastoreException, NotFoundException {
+	public SubmissionStatus getSubmissionStatus(UserAuthorization userAuthorization, String submissionId) throws DatastoreException, NotFoundException {
 		EvaluationUtils.ensureNotNull(submissionId, "Submission ID");
 		SubmissionBundle bundle = submissionDAO.getBundle(submissionId);
 		String evaluationId = bundle.getSubmission().getEvaluationId();
-		validateEvaluationAccess(userInfo, evaluationId, ACCESS_TYPE.READ);
+		validateEvaluationAccess(userAuthorization, evaluationId, ACCESS_TYPE.READ);
 		// only authorized users can view private Annotations 
 		SubmissionStatus result = bundle.getSubmissionStatus();
 		boolean includePrivateAnnos = evaluationPermissionsManager.hasAccess(
-				userInfo, evaluationId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION).isAuthorized();
+				userAuthorization, evaluationId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION).isAuthorized();
 		if (!includePrivateAnnos) {
 			Annotations annos = result.getAnnotations();
 			if (annos != null) {
@@ -159,7 +159,7 @@ public class SubmissionManagerImpl implements SubmissionManager {
 				submission.getContributors().iterator().next().getPrincipalId().equals(submission.getUserId());
 	}
 	
-	AuthorizationStatus checkSubmissionEligibility(UserInfo userInfo, Submission submission, String submissionEligibilityHash, Date now) throws DatastoreException, NotFoundException {
+	AuthorizationStatus checkSubmissionEligibility(UserAuthorization userAuthorization, Submission submission, String submissionEligibilityHash, Date now) throws DatastoreException, NotFoundException {
 		String evalId = submission.getEvaluationId();
 		if (isTeamSubmission(submission, submissionEligibilityHash)) {
 			List<String> contributors = new ArrayList<String>();
@@ -169,7 +169,7 @@ public class SubmissionManagerImpl implements SubmissionManager {
 			return submissionEligibilityManager.isTeamEligible(
 					evalId, submission.getTeamId(), contributors, submissionEligibilityHash, now);
 		} else if (isIndividualSubmission(submission, submissionEligibilityHash)) {
-			return submissionEligibilityManager.isIndividualEligible(evalId, userInfo, now);
+			return submissionEligibilityManager.isIndividualEligible(evalId, userAuthorization, now);
 		} else {
 			throw new InvalidModelException("Submission is neither a valid Team or Individual Submission.");
 		}
@@ -237,7 +237,7 @@ public class SubmissionManagerImpl implements SubmissionManager {
 		}
 		submission.setContributors(scs);
 		
-		checkSubmissionEligibility(userInfo, submission, submissionEligibilityHash, now).checkAuthorizationOrElseThrow();
+		checkSubmissionEligibility(userAuthorization, submission, submissionEligibilityHash, now).checkAuthorizationOrElseThrow();
 		
 		// if no name is provided, use the Entity name
 		if (submission.getName() == null) {
@@ -284,7 +284,7 @@ public class SubmissionManagerImpl implements SubmissionManager {
 	 * @param submission
 	 * @return
 	 */
-	public List<MessageToUserAndBody> createSubmissionNotifications(UserInfo userInfo, 
+	public List<MessageToUserAndBody> createSubmissionNotifications(UserAuthorization userAuthorization, 
 			Submission submission, String submissionEligibilityHash,
 			String challengeEndpoint, String notificationUnsubscribeEndpoint) {
 		ValidateArgument.required(challengeEndpoint, "challengeEndpoint");
@@ -303,7 +303,7 @@ public class SubmissionManagerImpl implements SubmissionManager {
 		String challengeEntityId = evaluation.getContentSource();
 		EntityHeader entityHeader = null;
 		try {
-			entityHeader = entityManager.getEntityHeader(userInfo, challengeEntityId, null);
+			entityHeader = entityManager.getEntityHeader(userAuthorization, challengeEntityId, null);
 		} catch (UnauthorizedException e) {
 			entityHeader = null;
 		}
@@ -340,13 +340,13 @@ public class SubmissionManagerImpl implements SubmissionManager {
 	
 	@Override
 	@WriteTransaction
-	public SubmissionStatus updateSubmissionStatus(UserInfo userInfo, SubmissionStatus submissionStatus) throws NotFoundException {
+	public SubmissionStatus updateSubmissionStatus(UserAuthorization userAuthorization, SubmissionStatus submissionStatus) throws NotFoundException {
 		EvaluationUtils.ensureNotNull(submissionStatus, "SubmissionStatus");
-		UserInfo.validateUserInfo(userInfo);
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		
 		// ensure Submission exists and validate access rights
-		String evalId = getSubmission(userInfo, submissionStatus.getId()).getEvaluationId();		
-		validateEvaluationAccess(userInfo, evalId, ACCESS_TYPE.UPDATE_SUBMISSION);
+		String evalId = getSubmission(userAuthorization, submissionStatus.getId()).getEvaluationId();		
+		validateEvaluationAccess(userAuthorization, evalId, ACCESS_TYPE.UPDATE_SUBMISSION);
 		
 		validateContent(submissionStatus, evalId);
 		
@@ -381,10 +381,10 @@ public class SubmissionManagerImpl implements SubmissionManager {
 	
 	@Override
 	@WriteTransaction
-	public BatchUploadResponse updateSubmissionStatusBatch(UserInfo userInfo, String evalId,
+	public BatchUploadResponse updateSubmissionStatusBatch(UserAuthorization userAuthorization, String evalId,
 			SubmissionStatusBatch batch) throws NotFoundException, ConflictingUpdateException {
 		
-		UserInfo.validateUserInfo(userInfo);
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		
 		// validate content of batch
 		EvaluationUtils.ensureNotNull(batch.getIsFirstBatch(), "isFirstBatch");
@@ -403,7 +403,7 @@ public class SubmissionManagerImpl implements SubmissionManager {
 			throw new IllegalArgumentException("Specified Evaluation ID does not match submissions in the batch.");
 		
 		// ensure Submission exists and validate access rights
-		validateEvaluationAccess(userInfo, evalId, ACCESS_TYPE.UPDATE_SUBMISSION);
+		validateEvaluationAccess(userAuthorization, evalId, ACCESS_TYPE.UPDATE_SUBMISSION);
 		
 		Long evalIdLong = KeyFactory.stringToKey(evalId);
 		EvaluationSubmissions evalSubs = evaluationSubmissionsDAO.lockAndGetForEvaluation(evalIdLong);
@@ -431,16 +431,16 @@ public class SubmissionManagerImpl implements SubmissionManager {
 	
 	/**
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param submissionId
 	 * @param submissionContributor
 	 * @return
 	 */
 	@Override
 	@WriteTransaction
-	public SubmissionContributor addSubmissionContributor(UserInfo userInfo,
+	public SubmissionContributor addSubmissionContributor(UserAuthorization userAuthorization,
 			String submissionId, SubmissionContributor submissionContributor) {
-		if (!userInfo.isAdmin()) throw new UnauthorizedException("This service is only available to Synapse administrators.");
+		if (!userAuthorization.getUserInfo().isAdmin()) throw new UnauthorizedException("This service is only available to Synapse administrators.");
 		SubmissionContributor created=new SubmissionContributor();
 		created.setPrincipalId(submissionContributor.getPrincipalId());
 		created.setCreatedOn(new Date());
@@ -450,12 +450,12 @@ public class SubmissionManagerImpl implements SubmissionManager {
 
 	@Override
 	@WriteTransaction
-	public void deleteSubmission(UserInfo userInfo, String submissionId) throws DatastoreException, NotFoundException {
-		UserInfo.validateUserInfo(userInfo);
+	public void deleteSubmission(UserAuthorization userAuthorization, String submissionId) throws DatastoreException, NotFoundException {
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		
 		Submission sub = submissionDAO.get(submissionId);		
 		String evalId = sub.getEvaluationId();
-		validateEvaluationAccess(userInfo, evalId, ACCESS_TYPE.DELETE_SUBMISSION);
+		validateEvaluationAccess(userAuthorization, evalId, ACCESS_TYPE.DELETE_SUBMISSION);
 		
 		// the associated SubmissionStatus object will be deleted via cascade
 		Long evalIdLong = KeyFactory.stringToKey(evalId);
@@ -464,14 +464,14 @@ public class SubmissionManagerImpl implements SubmissionManager {
 	}
 
 	@Override
-	public List<Submission> getAllSubmissions(UserInfo userInfo, String evalId, SubmissionStatusEnum status, long limit, long offset) 
+	public List<Submission> getAllSubmissions(UserAuthorization userAuthorization, String evalId, SubmissionStatusEnum status, long limit, long offset) 
 			throws DatastoreException, UnauthorizedException, NotFoundException {
 		EvaluationUtils.ensureNotNull(evalId, "Evaluation ID");
-		UserInfo.validateUserInfo(userInfo);
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		ValidateArgument.requirement(limit >= 0 && limit <= MAX_LIMIT, "limit must be between 0 and "+MAX_LIMIT);
 		ValidateArgument.requirement(offset >= 0, "'offset' may not be negative");
 
-		validateEvaluationAccess(userInfo, evalId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
+		validateEvaluationAccess(userAuthorization, evalId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
 		
 		return getAllSubmissionsPrivate(evalId, status, limit, offset);
 	}
@@ -510,18 +510,18 @@ public class SubmissionManagerImpl implements SubmissionManager {
 	}
 	
 	@Override
-	public List<SubmissionStatus> getAllSubmissionStatuses(UserInfo userInfo, String evalId, 
+	public List<SubmissionStatus> getAllSubmissionStatuses(UserAuthorization userAuthorization, String evalId, 
 			SubmissionStatusEnum status, long limit, long offset) 
 			throws DatastoreException, UnauthorizedException, NotFoundException {
 		EvaluationUtils.ensureNotNull(evalId, "Evaluation ID");
-		UserInfo.validateUserInfo(userInfo);
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		ValidateArgument.requirement(limit >= 0 && limit <= MAX_LIMIT, "limit must be between 0 and "+MAX_LIMIT);
 		ValidateArgument.requirement(offset >= 0, "'offset' may not be negative");
 
-		validateEvaluationAccess(userInfo, evalId, ACCESS_TYPE.READ);
+		validateEvaluationAccess(userAuthorization, evalId, ACCESS_TYPE.READ);
 		// only authorized users can view private Annotations
 		boolean includePrivateAnnos = evaluationPermissionsManager.hasAccess(
-				userInfo, evalId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION).isAuthorized();
+				userAuthorization, evalId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION).isAuthorized();
 		List<SubmissionBundle> bundles = 
 				getAllSubmissionBundlesPrivate(evalId, status, limit, offset, includePrivateAnnos);
 		List<SubmissionStatus> result = new ArrayList<SubmissionStatus>();
@@ -532,24 +532,24 @@ public class SubmissionManagerImpl implements SubmissionManager {
 	}
 	
 	@Override
-	public List<SubmissionBundle> getAllSubmissionBundles(UserInfo userInfo, String evalId, 
+	public List<SubmissionBundle> getAllSubmissionBundles(UserAuthorization userAuthorization, String evalId, 
 			SubmissionStatusEnum status, long limit, long offset) 
 			throws DatastoreException, UnauthorizedException, NotFoundException {
 		EvaluationUtils.ensureNotNull(evalId, "Evaluation ID");
-		UserInfo.validateUserInfo(userInfo);
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		ValidateArgument.requirement(limit >= 0 && limit <= MAX_LIMIT, "limit must be between 0 and "+MAX_LIMIT);
 		ValidateArgument.requirement(offset >= 0, "'offset' may not be negative");
 
-		validateEvaluationAccess(userInfo, evalId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
+		validateEvaluationAccess(userAuthorization, evalId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
 		
 		return getAllSubmissionBundlesPrivate(evalId, status, limit, offset, true);
 	}
 	
 	@Override
-	public List<Submission> getMyOwnSubmissionsByEvaluation(UserInfo userInfo,
+	public List<Submission> getMyOwnSubmissionsByEvaluation(UserAuthorization userAuthorization,
 			String evalId, long limit, long offset)
 			throws DatastoreException, NotFoundException {
-		String principalId = userInfo.getId().toString();
+		String principalId = userAuthorization.getUserInfo().getId().toString();
 		ValidateArgument.requirement(limit >= 0 && limit <= MAX_LIMIT, "limit must be between 0 and "+MAX_LIMIT);
 		ValidateArgument.requirement(offset >= 0, "'offset' may not be negative");
 
@@ -558,16 +558,16 @@ public class SubmissionManagerImpl implements SubmissionManager {
 	
 	@Override
 	public List<SubmissionBundle> getMyOwnSubmissionBundlesByEvaluation(
-			UserInfo userInfo, String evalId, long limit, long offset)
+			UserAuthorization userAuthorization, String evalId, long limit, long offset)
 					throws DatastoreException, NotFoundException {
 		EvaluationUtils.ensureNotNull(evalId, "Evaluation ID");
-		UserInfo.validateUserInfo(userInfo);
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		ValidateArgument.requirement(limit >= 0 && limit <= MAX_LIMIT, "limit must be between 0 and "+MAX_LIMIT);
 		ValidateArgument.requirement(offset >= 0, "'offset' may not be negative");
 
-		boolean haveReadPrivateAccess = evaluationPermissionsManager.hasAccess(userInfo, evalId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION).isAuthorized();
+		boolean haveReadPrivateAccess = evaluationPermissionsManager.hasAccess(userAuthorization, evalId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION).isAuthorized();
 
-		String principalId = userInfo.getId().toString();
+		String principalId = userAuthorization.getUserInfo().getId().toString();
 		List<SubmissionBundle> result = submissionDAO.getAllBundlesByEvaluationAndUser(evalId, principalId, limit, offset);
 		if (!haveReadPrivateAccess) {
 			for (SubmissionBundle bundle : result) {
@@ -582,20 +582,20 @@ public class SubmissionManagerImpl implements SubmissionManager {
 	}
 		
 	@Override
-	public long getSubmissionCount(UserInfo userInfo, String evalId) 
+	public long getSubmissionCount(UserAuthorization userAuthorization, String evalId) 
 			throws DatastoreException, NotFoundException {
-		EvaluationUtils.ensureNotNull(userInfo, "UserInfo");
+		EvaluationUtils.ensureNotNull(userAuthorization, "User Authorization");
 		EvaluationUtils.ensureNotNull(evalId, "Evaluation ID");
-		validateEvaluationAccess(userInfo, evalId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
+		validateEvaluationAccess(userAuthorization, evalId, ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
 		return submissionDAO.getCountByEvaluation(evalId);
 	}
 	
 	@Override
-	public String getRedirectURLForFileHandle(UserInfo userInfo,
+	public String getRedirectURLForFileHandle(UserAuthorization userAuthorization,
 			String submissionId, String fileHandleId) 
 			throws DatastoreException, NotFoundException {
-		Submission submission = getSubmission(userInfo, submissionId);
-		validateEvaluationAccess(userInfo, submission.getEvaluationId(), ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
+		Submission submission = getSubmission(userAuthorization, submissionId);
+		validateEvaluationAccess(userAuthorization, submission.getEvaluationId(), ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
 
 		// ensure that the requested ID is included in the Submission
 		List<String> ids = submissionFileHandleDAO.getAllBySubmission(submissionId);
@@ -604,7 +604,7 @@ public class SubmissionManagerImpl implements SubmissionManager {
 					"not contain the requested FileHandle " + fileHandleId);
 		}
 		
-		FileHandleUrlRequest urlRequest = new FileHandleUrlRequest(userInfo, fileHandleId)
+		FileHandleUrlRequest urlRequest = new FileHandleUrlRequest(userAuthorization, fileHandleId)
 				.withAssociation(FileHandleAssociateType.SubmissionAttachment, submissionId);
 		
 		// generate the URL
@@ -614,14 +614,14 @@ public class SubmissionManagerImpl implements SubmissionManager {
 	/**
 	 * Check that a user has the specified permission on an Evaluation
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param evalId
 	 * @param accessType
 	 * @throws NotFoundException
 	 */
-	private void validateEvaluationAccess(UserInfo userInfo, String evalId, ACCESS_TYPE accessType)
+	private void validateEvaluationAccess(UserAuthorization userAuthorization, String evalId, ACCESS_TYPE accessType)
 			throws NotFoundException {
-		evaluationPermissionsManager.hasAccess(userInfo, evalId, accessType).checkAuthorizationOrElseThrow();
+		evaluationPermissionsManager.hasAccess(userAuthorization, evalId, accessType).checkAuthorizationOrElseThrow();
 	}
 
 	/**
@@ -671,10 +671,10 @@ public class SubmissionManagerImpl implements SubmissionManager {
 
 	@WriteTransaction
 	@Override
-	public void processUserCancelRequest(UserInfo userInfo, String submissionId) {
-		UserInfo.validateUserInfo(userInfo);
+	public void processUserCancelRequest(UserAuthorization userAuthorization, String submissionId) {
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		ValidateArgument.required(submissionId, "submissionId");
-		if (!submissionDAO.getCreatedBy(submissionId).equals(userInfo.getId().toString())) {
+		if (!submissionDAO.getCreatedBy(submissionId).equals(userAuthorization.getUserInfo().getId().toString())) {
 			throw new UnauthorizedException(ONLY_SUBMITTER_REASON);
 		}
 		SubmissionStatus status = submissionStatusDAO.get(submissionId);

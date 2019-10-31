@@ -15,7 +15,6 @@ import org.sagebionetworks.repo.model.EntityType;
 import org.sagebionetworks.repo.model.InvalidModelException;
 import org.sagebionetworks.repo.model.Reference;
 import org.sagebionetworks.repo.model.UnauthorizedException;
-import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.VersionInfo;
 import org.sagebionetworks.repo.model.annotation.v2.Annotations;
 import org.sagebionetworks.repo.model.entity.EntityLookupRequest;
@@ -32,7 +31,7 @@ public interface EntityManager {
 
 	/**
 	 * Create a new data.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param newEntity
 	 * @return
 	 * @throws DatastoreException
@@ -40,11 +39,11 @@ public interface EntityManager {
 	 * @throws NotFoundException
 	 * @throws UnauthorizedException 
 	 */
-	public <T extends Entity> String createEntity(UserInfo userInfo, T newEntity, String activityId) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException;
+	public <T extends Entity> String createEntity(UserAuthorization userAuthorization, T newEntity, String activityId) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException;
 		
 	/**
 	 * Get an existing dataset
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @return
 	 * @throws UnauthorizedException 
@@ -56,7 +55,7 @@ public interface EntityManager {
 	/**
 	 * Get the full path of an entity.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @return The first EntityHeader in the list will be the root parent for this node, and the last
 	 * will be the EntityHeader for the given node.
@@ -69,7 +68,7 @@ public interface EntityManager {
 	/**
 	 * Get the full path of an entity as a '/' separated string
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @return
 	 * @throws NotFoundException
@@ -92,7 +91,7 @@ public interface EntityManager {
 	
 	/**
 	 * Get the type of an entity
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @return
 	 * @throws UnauthorizedException 
@@ -116,7 +115,7 @@ public interface EntityManager {
 	/**
 	 * Get the entity header.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @param versionNumber (optional) null means current version.
 	 * @return
@@ -129,7 +128,7 @@ public interface EntityManager {
 	/**
 	 * Get an entity header for each reference.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param references
 	 * @return
 	 * @throws NotFoundException
@@ -142,17 +141,17 @@ public interface EntityManager {
 	/**
 	 * Delete an existing dataset.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @throws UnauthorizedException 
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public void deleteEntity(UserInfo userInfo, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public void deleteEntity(UserAuthorization userAuthorization, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * Delete a specfic version of an entity
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param id
 	 * @param versionNumber
 	 * @throws ConflictingUpdateException 
@@ -160,11 +159,11 @@ public interface EntityManager {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public void deleteEntityVersion(UserInfo userInfo, String id, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException, ConflictingUpdateException;
+	public void deleteEntityVersion(UserAuthorization userAuthorization, String id, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException, ConflictingUpdateException;
 	
 	/**
 	 * Get the annotations of an entity.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @return
 	 * @throws UnauthorizedException 
@@ -175,7 +174,7 @@ public interface EntityManager {
 	
 	/**
 	 * Get the annotations of an entity for a given version.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param id
 	 * @param versionNumber
 	 * @return
@@ -187,7 +186,7 @@ public interface EntityManager {
 	
 	/**
 	 * update a datasets annotations 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param updated
 	 * @return
 	 * @throws UnauthorizedException 
@@ -196,11 +195,11 @@ public interface EntityManager {
 	 * @throws ConflictingUpdateException 
 	 * @throws InvalidModelException 
 	 */
-	public void updateAnnotations(UserInfo userInfo, String entityId, Annotations updated) throws ConflictingUpdateException, NotFoundException, DatastoreException, UnauthorizedException, InvalidModelException;
+	public void updateAnnotations(UserAuthorization userAuthorization, String entityId, Annotations updated) throws ConflictingUpdateException, NotFoundException, DatastoreException, UnauthorizedException, InvalidModelException;
 	
 	/**
 	 * Update a dataset.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param updated
 	 * @param newVersion should a new version be created for this update?
 	 * @param activityId Activity id for version. Activity id for entity will not be updated if new version is false and activity id is null
@@ -212,12 +211,12 @@ public interface EntityManager {
 	 * @throws ConflictingUpdateException 
 	 * @throws InvalidModelException 
 	 */
-	public <T extends Entity> boolean updateEntity(UserInfo userInfo, T updated, boolean newVersion, String activityId) throws NotFoundException, DatastoreException, UnauthorizedException, ConflictingUpdateException, InvalidModelException;
+	public <T extends Entity> boolean updateEntity(UserAuthorization userAuthorization, T updated, boolean newVersion, String activityId) throws NotFoundException, DatastoreException, UnauthorizedException, ConflictingUpdateException, InvalidModelException;
 
 	/**
 	 * Get a specific version of an entity.
 	 * @param <T>
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @param versionNumber
 	 * @return
@@ -230,7 +229,7 @@ public interface EntityManager {
 	/**
 	 * Gets the entity whose file's MD5 is the same as the specified MD5 string.
 	 */
-	public List<EntityHeader> getEntityHeaderByMd5(UserInfo userInfo, String md5)
+	public List<EntityHeader> getEntityHeaderByMd5(UserAuthorization userAuthorization, String md5)
 			throws NotFoundException, DatastoreException;
 
 	/**
@@ -252,22 +251,22 @@ public interface EntityManager {
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public void validateUpdateAccess(UserInfo userInfo, String entityId) throws DatastoreException, NotFoundException, UnauthorizedException;
+	public void validateUpdateAccess(UserAuthorization userAuthorization, String entityId) throws DatastoreException, NotFoundException, UnauthorizedException;
 	
 	/**
 	 * Does an entity have children?
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @return
 	 * @throws NotFoundException 
 	 * @throws UnauthorizedException 
 	 * @throws DatastoreException 
 	 */
-	public boolean doesEntityHaveChildren(UserInfo userInfo, String entityId) throws DatastoreException, UnauthorizedException, NotFoundException;
+	public boolean doesEntityHaveChildren(UserAuthorization userAuthorization, String entityId) throws DatastoreException, UnauthorizedException, NotFoundException;
 
 	/**
 	 * Return a paginated list of all version of this entity.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
@@ -277,7 +276,7 @@ public interface EntityManager {
 
 	/**
 	 * Gets the activity for the given Entity
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @param versionNumber
 	 * @return
@@ -290,7 +289,7 @@ public interface EntityManager {
 
 	/**
 	 * Sets the activity for the current version of the Entity
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @param activityId
 	 * @return
@@ -298,23 +297,23 @@ public interface EntityManager {
 	 * @throws UnauthorizedException
 	 * @throws NotFoundException
 	 */
-	public Activity setActivityForEntity(UserInfo userInfo, String entityId,
+	public Activity setActivityForEntity(UserAuthorization userAuthorization, String entityId,
 			String activityId) throws DatastoreException, UnauthorizedException, NotFoundException;
 
 	/**
 	 * Deletes the activity generated by relationship to the current version of the Entity
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param entityId
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 * @throws NotFoundException
 	 */
-	public void deleteActivityForEntity(UserInfo userInfo, String entityId)
+	public void deleteActivityForEntity(UserAuthorization userAuthorization, String entityId)
 			throws DatastoreException, UnauthorizedException, NotFoundException;
 
 	/**
 	 * Get the FileHandle ID for a given version number.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param id
 	 * @param versionNumber
 	 * @return
@@ -362,7 +361,7 @@ public interface EntityManager {
 	/**
 	 * Retrieve the entityId based on its name and parentId.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param request
 	 * @return
 	 */
@@ -370,10 +369,10 @@ public interface EntityManager {
 
 	/**
 	 * Change the given entity's {@link DataType}
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param id
 	 * @param dataType
 	 * @return
 	 */
-	public DataTypeResponse changeEntityDataType(UserInfo userInfo, String id, DataType dataType);
+	public DataTypeResponse changeEntityDataType(UserAuthorization userAuthorization, String id, DataType dataType);
 }

@@ -15,7 +15,6 @@ import org.sagebionetworks.repo.model.ConflictingUpdateException;
 import org.sagebionetworks.repo.model.DatastoreException;
 import org.sagebionetworks.repo.model.EntityBundle;
 import org.sagebionetworks.repo.model.UnauthorizedException;
-import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.web.NotFoundException;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
 
@@ -29,7 +28,7 @@ public interface SubmissionManager {
 	 * @throws DatastoreException
 	 * @throws NotFoundException
 	 */
-	public Submission getSubmission(UserInfo userInfo, String submissionId)
+	public Submission getSubmission(UserAuthorization userAuthorization, String submissionId)
 			throws DatastoreException, NotFoundException;
 
 	/**
@@ -40,14 +39,14 @@ public interface SubmissionManager {
 	 * @throws DatastoreException
 	 * @throws NotFoundException
 	 */
-	public SubmissionStatus getSubmissionStatus(UserInfo userInfo, String submissionId)
+	public SubmissionStatus getSubmissionStatus(UserAuthorization userAuthorization, String submissionId)
 			throws DatastoreException, NotFoundException;
 
 	
 	/**
 	 * Create a Submission.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param submission
 	 * @return
 	 * @throws NotFoundException
@@ -63,7 +62,7 @@ public interface SubmissionManager {
 	 * @return
 	 */
 	public List<MessageToUserAndBody> createSubmissionNotifications(
-			UserInfo userInfo, Submission submission, String submissionEligibilityHash,
+			UserAuthorization userAuthorization, Submission submission, String submissionEligibilityHash,
 			String challengeEndpoint, String notificationUnsubscribeEndpoint);
 
 	/**
@@ -71,33 +70,33 @@ public interface SubmissionManager {
 	 * requesting user must be an admin of the Evaluation for which this
 	 * Submission was created.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param submissionStatus
 	 * @return
 	 * @throws NotFoundException
 	 */
-	public SubmissionStatus updateSubmissionStatus(UserInfo userInfo,
+	public SubmissionStatus updateSubmissionStatus(UserAuthorization userAuthorization,
 			SubmissionStatus submissionStatus) throws NotFoundException, ConflictingUpdateException;
 	
 	/**
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param evalId
 	 * @param batch
 	 * @return
 	 * @throws NotFoundException
 	 * @throws ConflictingUpdateException
 	 */
-	public BatchUploadResponse updateSubmissionStatusBatch(UserInfo userInfo, String evalId,
+	public BatchUploadResponse updateSubmissionStatusBatch(UserAuthorization userAuthorization, String evalId,
 			SubmissionStatusBatch batch) throws NotFoundException, ConflictingUpdateException;
 	/**
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param submissionId
 	 * @param submissionContributor
 	 * @return
 	 */
-	public SubmissionContributor addSubmissionContributor(UserInfo userInfo,
+	public SubmissionContributor addSubmissionContributor(UserAuthorization userAuthorization,
 			String submissionId, SubmissionContributor submissionContributor);
 
 	/**
@@ -106,13 +105,13 @@ public interface SubmissionManager {
 	 * 
 	 * Use of this method is discouraged, since Submissions should be immutable.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param submissionId
 	 * @throws DatastoreException
 	 * @throws NotFoundException
 	 */
 	@Deprecated
-	public void deleteSubmission(UserInfo userInfo, String submissionId)
+	public void deleteSubmission(UserAuthorization userAuthorization, String submissionId)
 			throws DatastoreException, NotFoundException;
 
 	/**
@@ -122,7 +121,7 @@ public interface SubmissionManager {
 	 * If a SubmissionStatusEnum is provided, results will be filtered
 	 * accordingly.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param evalId
 	 * @param status
 	 * @return
@@ -130,7 +129,7 @@ public interface SubmissionManager {
 	 * @throws UnauthorizedException
 	 * @throws NotFoundException
 	 */
-	public List<Submission> getAllSubmissions(UserInfo userInfo, String evalId,
+	public List<Submission> getAllSubmissions(UserAuthorization userAuthorization, String evalId,
 			SubmissionStatusEnum status, long limit, long offset) 
 			throws DatastoreException, UnauthorizedException, NotFoundException;
 
@@ -143,7 +142,7 @@ public interface SubmissionManager {
 	 * @throws DatastoreException
 	 * @throws NotFoundException
 	 */
-	public List<Submission> getMyOwnSubmissionsByEvaluation(UserInfo userInfo,
+	public List<Submission> getMyOwnSubmissionsByEvaluation(UserAuthorization userAuthorization,
 			String evalId, long limit, long offset)
 			throws DatastoreException, NotFoundException;
 
@@ -155,13 +154,13 @@ public interface SubmissionManager {
 	 * @throws DatastoreException
 	 * @throws NotFoundException
 	 */
-	public long getSubmissionCount(UserInfo userInfo, String evalId) throws DatastoreException,
+	public long getSubmissionCount(UserAuthorization userAuthorization, String evalId) throws DatastoreException,
 			NotFoundException;
 
 	/**
 	 * Get bundled Submissions and SubmissionStatuses by Evaluation and user.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param evalId
 	 * @param limit
 	 * @param offset
@@ -170,14 +169,14 @@ public interface SubmissionManager {
 	 * @throws NotFoundException
 	 */
 	public List<SubmissionBundle> getMyOwnSubmissionBundlesByEvaluation(
-			UserInfo userInfo, String evalId, long limit, long offset)
+			UserAuthorization userAuthorization, String evalId, long limit, long offset)
 			throws DatastoreException, NotFoundException;
 
 	/**
 	 * Get bundled Submissions and SubmissionStatuses by Evaluation and status.
 	 * Requires admin permission on the Evaluation.
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param evalId
 	 * @param status
 	 * @param limit
@@ -187,7 +186,7 @@ public interface SubmissionManager {
 	 * @throws UnauthorizedException
 	 * @throws NotFoundException
 	 */
-	public List<SubmissionBundle> getAllSubmissionBundles(UserInfo userInfo,
+	public List<SubmissionBundle> getAllSubmissionBundles(UserAuthorization userAuthorization,
 			String evalId, SubmissionStatusEnum status, long limit, long offset)
 			throws DatastoreException, UnauthorizedException, NotFoundException;
 
@@ -203,7 +202,7 @@ public interface SubmissionManager {
 	 * @throws UnauthorizedException
 	 * @throws NotFoundException
 	 */
-	public List<SubmissionStatus> getAllSubmissionStatuses(UserInfo userInfo, String evalId, 
+	public List<SubmissionStatus> getAllSubmissionStatuses(UserAuthorization userAuthorization, String evalId, 
 			SubmissionStatusEnum status, long limit, long offset)
 			throws DatastoreException, UnauthorizedException, NotFoundException;
 
@@ -217,15 +216,15 @@ public interface SubmissionManager {
 	 * @throws NotFoundException 
 	 * @throws DatastoreException 
 	 */
-	public String getRedirectURLForFileHandle(UserInfo userInfo,
+	public String getRedirectURLForFileHandle(UserAuthorization userAuthorization,
 			String submissionId, String filehandleId)
 			throws DatastoreException, NotFoundException;
 
 	/**
 	 * Process the user cancel request
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param submissionId
 	 */
-	public void processUserCancelRequest(UserInfo userInfo, String submissionId);
+	public void processUserCancelRequest(UserAuthorization userAuthorization, String submissionId);
 }
