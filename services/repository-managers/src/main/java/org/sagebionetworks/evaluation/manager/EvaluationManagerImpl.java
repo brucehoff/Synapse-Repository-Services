@@ -19,7 +19,6 @@ import org.sagebionetworks.repo.model.InvalidModelException;
 import org.sagebionetworks.repo.model.NodeDAO;
 import org.sagebionetworks.repo.model.ObjectType;
 import org.sagebionetworks.repo.model.UnauthorizedException;
-import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.evaluation.EvaluationDAO;
 import org.sagebionetworks.repo.model.evaluation.EvaluationSubmissionsDAO;
 import org.sagebionetworks.repo.model.jdo.KeyFactory;
@@ -27,6 +26,7 @@ import org.sagebionetworks.repo.model.jdo.NameValidation;
 import org.sagebionetworks.repo.model.util.AccessControlListUtil;
 import org.sagebionetworks.repo.transactions.WriteTransaction;
 import org.sagebionetworks.repo.web.NotFoundException;
+import org.sagebionetworks.util.ValidateArgument;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class EvaluationManagerImpl implements EvaluationManager {
@@ -64,8 +64,8 @@ public class EvaluationManagerImpl implements EvaluationManager {
 			throw new IllegalArgumentException("Evaluation " + eval.getId() +
 					" is missing content source (are you sure there is Synapse entity for it?).");
 		}
-		if (!authorizationManager.canAccess(userInfo, nodeId, ObjectType. ENTITY, ACCESS_TYPE.CREATE).isAuthorized()) {
-			throw new UnauthorizedException("User " + userInfo.getId().toString() +
+		if (!authorizationManager.canAccess(userAuthorization, nodeId, ObjectType. ENTITY, ACCESS_TYPE.CREATE).isAuthorized()) {
+			throw new UnauthorizedException("User " + userAuthorization.getUserInfo().getId().toString() +
 					" must have " + ACCESS_TYPE.CREATE.name() + " right on the entity " +
 					nodeId + " in order to create a evaluation based on it.");
 		}
@@ -79,13 +79,13 @@ public class EvaluationManagerImpl implements EvaluationManager {
 		eval.setName(NameValidation.validateName(eval.getName()));
 		eval.setId(idGenerator.generateNewId(IdType.EVALUATION_ID).toString());
 		eval.setCreatedOn(new Date());
-		String principalId = userInfo.getId().toString();
+		String principalId = userAuthorization.getUserInfo().getId().toString();
 		String id = evaluationDAO.create(eval, Long.parseLong(principalId));
 
 		// Create the default ACL
 		AccessControlList acl =  AccessControlListUtil.
-				createACLToGrantEvaluationAdminAccess(eval.getId(), userInfo, new Date());
-		evaluationPermissionsManager.createAcl(userInfo, acl);
+				createACLToGrantEvaluationAdminAccess(eval.getId(), userAuthorization.getUserInfo().getId(), new Date());
+		evaluationPermissionsManager.createAcl(userAuthorization, acl);
 		
 		evaluationSubmissionsDAO.createForEvaluation(KeyFactory.stringToKey(id));
 
@@ -96,32 +96,33 @@ public class EvaluationManagerImpl implements EvaluationManager {
 	public Evaluation getEvaluation(UserAuthorization userAuthorization, String id)
 			throws DatastoreException, NotFoundException, UnauthorizedException {
 		EvaluationUtils.ensureNotNull(id, "Evaluation ID");
-		evaluationPermissionsManager.hasAccess(userInfo, id, ACCESS_TYPE.READ).checkAuthorizationOrElseThrow();
+		evaluationPermissionsManager.hasAccess(userAuthorization, id, ACCESS_TYPE.READ).checkAuthorizationOrElseThrow();
 		return evaluationDAO.get(id);
 	}
 	
 	@Override
-	public List<Evaluation> getEvaluationByContentSource(UserAuthorization userAuthorization, String id, long limit, long offset)
+	public List<Evaluation> getEvaluationByContentSource(UserAuthorization userAuthorization, String id, boolean activeOnly, long limit, long offset)
 			throws DatastoreException, NotFoundException {
 		EvaluationUtils.ensureNotNull(id, "Entity ID");
-		if (userInfo == null) {
-			throw new IllegalArgumentException("User info cannot be null.");
-		}
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		
-		return evaluationDAO.getAccessibleEvaluationsForProject(id, new ArrayList<Long>(userInfo.getGroups()), ACCESS_TYPE.READ, limit, offset);
+		Long now = activeOnly ? System.currentTimeMillis() : null;
+		return evaluationDAO.getAccessibleEvaluationsForProject(id, userAuthorization, ACCESS_TYPE.READ, now, limit, offset);
 	}
 
 	@Override
-	public List<Evaluation> getInRange(UserAuthorization userAuthorization, long limit, long offset)
+	public List<Evaluation> getInRange(UserAuthorization userAuthorization, boolean activeOnly, long limit, long offset)
 			throws DatastoreException, NotFoundException {
-		return evaluationDAO.getAccessibleEvaluations(new ArrayList<Long>(userInfo.getGroups()), ACCESS_TYPE.READ, 
+		Long now = activeOnly ? System.currentTimeMillis() : null;
+		return evaluationDAO.getAccessibleEvaluations(userAuthorization, ACCESS_TYPE.READ, now,
 				limit, offset, null);
 	}
 
 	@Override
-	public List<Evaluation> getAvailableInRange(UserAuthorization userAuthorization, long limit, long offset, List<Long> evaluationIds)
+	public List<Evaluation> getAvailableInRange(UserAuthorization userAuthorization, boolean activeOnly, long limit, long offset, List<Long> evaluationIds)
 			throws DatastoreException, NotFoundException {
-		return evaluationDAO.getAccessibleEvaluations(new ArrayList<Long>(userInfo.getGroups()), ACCESS_TYPE.SUBMIT, 
+		Long now = activeOnly ? System.currentTimeMillis() : null;
+		return evaluationDAO.getAccessibleEvaluations(nuserAuthorization, ACCESS_TYPE.SUBMIT, now,
 				limit, offset, evaluationIds);
 	}
 
