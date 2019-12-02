@@ -11,14 +11,9 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
-import com.google.gson.JsonObject;
-import org.apache.commons.lang3.BooleanUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -49,7 +44,7 @@ import org.sagebionetworks.repo.transactions.NewWriteTransaction;
 import org.sagebionetworks.repo.transactions.WriteTransaction;
 import org.sagebionetworks.table.cluster.ColumnTypeListMappings;
 import org.sagebionetworks.table.cluster.SQLUtils;
-import org.sagebionetworks.table.cluster.utils.ColumnConstants;
+import org.sagebionetworks.repo.model.table.ColumnConstants;
 import org.sagebionetworks.util.FileProvider;
 import org.sagebionetworks.util.ValidateArgument;
 import org.sagebionetworks.util.csv.CSVReaderIterator;
@@ -337,14 +332,14 @@ public class TableViewManagerImpl implements TableViewManager {
 	 * @param idAndVersion
 	 */
 	void createOrUpdateViewIndexHoldingLock(IdAndVersion idAndVersion) {
-		// Is the index out-of-synch?
-		if (!tableManagerSupport.isIndexWorkRequired(idAndVersion)) {
-			// nothing to do
-			return;
-		}
-		// Start the worker
-		final String token = tableManagerSupport.startTableProcessing(idAndVersion);
 		try {
+			// Is the index out-of-synch?
+			if (!tableManagerSupport.isIndexWorkRequired(idAndVersion)) {
+				// nothing to do
+				return;
+			}
+			// Start the worker
+			final String token = tableManagerSupport.startTableProcessing(idAndVersion);
 			TableIndexManager indexManager = connectionFactory.connectToTableIndex(idAndVersion);
 			// Since this worker re-builds the index, start by deleting it.
 			indexManager.deleteTableIndex(idAndVersion);
@@ -376,7 +371,7 @@ public class TableViewManagerImpl implements TableViewManager {
 			tableManagerSupport.attemptToSetTableStatusToAvailable(idAndVersion, token, DEFAULT_ETAG);
 		} catch (Exception e) {
 			// failed.
-			tableManagerSupport.attemptToSetTableStatusToFailed(idAndVersion, token, e);
+			tableManagerSupport.attemptToSetTableStatusToFailed(idAndVersion, e);
 			throw e;
 		}
 	}
@@ -494,6 +489,8 @@ public class TableViewManagerImpl implements TableViewManager {
 		viewSnapshotDao.createSnapshot(new ViewSnapshot().withBucket(bucketAndKey.getBucket())
 				.withKey(bucketAndKey.getKey()).withCreatedBy(userInfo.getId()).withCreatedOn(new Date())
 				.withVersion(snapshotVersion).withViewId(idAndVersion.getId()));
+		// trigger an update (see: PLFM-5957)
+		tableManagerSupport.setTableToProcessingAndTriggerUpdate(resultingIdAndVersion);
 		return snapshotVersion;
 	}
 
