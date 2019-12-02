@@ -182,6 +182,9 @@ public class OpenIDConnectManagerImpl implements OpenIDConnectManager {
 		if (AuthorizationUtils.isUserAnonymous(userInfo)) {
 			throw new UnauthorizedException("Anonymous users may not provide access to OAuth clients.");
 		}
+		if (userInfo.isAdmin() && !AuthorizationConstants.SYNAPSE_OAUTH_CLIENT_ID.equals(authorizationRequest.getClientId())) {
+			throw new UnauthorizedException("Administrative accounts may not authorize access to external applications.");
+		}
 
 		OAuthClient client;
 		try {

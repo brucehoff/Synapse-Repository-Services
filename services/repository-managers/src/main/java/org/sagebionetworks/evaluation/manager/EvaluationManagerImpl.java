@@ -23,6 +23,7 @@ import org.sagebionetworks.repo.model.evaluation.EvaluationDAO;
 import org.sagebionetworks.repo.model.evaluation.EvaluationSubmissionsDAO;
 import org.sagebionetworks.repo.model.jdo.KeyFactory;
 import org.sagebionetworks.repo.model.jdo.NameValidation;
+import org.sagebionetworks.repo.model.oauth.OAuthScope;
 import org.sagebionetworks.repo.model.util.AccessControlListUtil;
 import org.sagebionetworks.repo.transactions.WriteTransaction;
 import org.sagebionetworks.repo.web.NotFoundException;
@@ -105,25 +106,28 @@ public class EvaluationManagerImpl implements EvaluationManager {
 			throws DatastoreException, NotFoundException {
 		EvaluationUtils.ensureNotNull(id, "Entity ID");
 		ValidateArgument.required(userAuthorization, "User Authorization");
-		
+		evaluationPermissionsManager.canReadEvaluations(userAuthorization).checkAuthorizationOrElseThrow();
 		Long now = activeOnly ? System.currentTimeMillis() : null;
-		return evaluationDAO.getAccessibleEvaluationsForProject(id, userAuthorization, ACCESS_TYPE.READ, now, limit, offset);
+		return evaluationDAO.getAccessibleEvaluationsForProject(id, new ArrayList<Long>(userAuthorization.getUserInfo().getGroups()), 
+				ACCESS_TYPE.READ, now, limit, offset);
 	}
 
 	@Override
 	public List<Evaluation> getInRange(UserAuthorization userAuthorization, boolean activeOnly, long limit, long offset)
 			throws DatastoreException, NotFoundException {
 		Long now = activeOnly ? System.currentTimeMillis() : null;
-		return evaluationDAO.getAccessibleEvaluations(userAuthorization, ACCESS_TYPE.READ, now,
-				limit, offset, null);
+		return evaluationDAO.getAccessibleEvaluations(new ArrayList<Long>(userAuthorization.getUserInfo().getGroups()), 
+				ACCESS_TYPE.READ, now, limit, offset, null);
 	}
+
 
 	@Override
 	public List<Evaluation> getAvailableInRange(UserAuthorization userAuthorization, boolean activeOnly, long limit, long offset, List<Long> evaluationIds)
 			throws DatastoreException, NotFoundException {
+		evaluationPermissionsManager.canReadEvaluations(userAuthorization);
 		Long now = activeOnly ? System.currentTimeMillis() : null;
-		return evaluationDAO.getAccessibleEvaluations(nuserAuthorization, ACCESS_TYPE.SUBMIT, now,
-				limit, offset, evaluationIds);
+		return evaluationDAO.getAccessibleEvaluations(new ArrayList<Long>(userAuthorization.getUserInfo().getGroups()), 
+				ACCESS_TYPE.SUBMIT, now, limit, offset, evaluationIds);
 	}
 
 	@Override
@@ -132,7 +136,7 @@ public class EvaluationManagerImpl implements EvaluationManager {
 		EvaluationUtils.ensureNotNull(name, "Name");
 		String evalId = evaluationDAO.lookupByName(name);
 		Evaluation eval = evaluationDAO.get(evalId);
-		if (!evaluationPermissionsManager.hasAccess(userInfo, evalId, ACCESS_TYPE.READ).isAuthorized()) {
+		if (!evaluationPermissionsManager.hasAccess(userAuthorization, evalId, ACCESS_TYPE.READ).isAuthorized()) {
 			eval = null;
 		}
 		if (eval == null) {
@@ -151,8 +155,8 @@ public class EvaluationManagerImpl implements EvaluationManager {
 		final String evalId = eval.getId();
 		
 		// validate permissions
-		if (!evaluationPermissionsManager.hasAccess(userInfo, evalId, ACCESS_TYPE.UPDATE).isAuthorized()) {
-			throw new UnauthorizedException("User " + userInfo.getId().toString() +
+		if (!evaluationPermissionsManager.hasAccess(userAuthorization, evalId, ACCESS_TYPE.UPDATE).isAuthorized()) {
+			throw new UnauthorizedException("User " + userAuthorization.getUserInfo().getId().toString() +
 					" is not authorized to update evaluation " + evalId +
 					" (" + eval.getName() + ")");
 		}
@@ -183,8 +187,8 @@ public class EvaluationManagerImpl implements EvaluationManager {
 		ValidateArgument.required(userAuthorization, "User Authorization");
 		Evaluation eval = evaluationDAO.get(id);
 		if (eval == null) throw new NotFoundException("No Evaluation found with id " + id);
-		evaluationPermissionsManager.hasAccess(userInfo, id, ACCESS_TYPE.DELETE).checkAuthorizationOrElseThrow();
-		evaluationPermissionsManager.deleteAcl(userInfo, id);
+		evaluationPermissionsManager.hasAccess(userAuthorization, id, ACCESS_TYPE.DELETE).checkAuthorizationOrElseThrow();
+		evaluationPermissionsManager.deleteAcl(userAuthorization, id);
 		// lock out multi-submission access (e.g. batch updates)
 		evaluationSubmissionsDAO.deleteForEvaluation(Long.parseLong(id));
 		evaluationDAO.delete(id);
@@ -202,7 +206,7 @@ public class EvaluationManagerImpl implements EvaluationManager {
 	@Override
 	public TeamSubmissionEligibility getTeamSubmissionEligibility(UserAuthorization userAuthorization, String evalId, String teamId) throws NumberFormatException, DatastoreException, NotFoundException
 	{
-		evaluationPermissionsManager.canCheckTeamSubmissionEligibility(userInfo,  evalId,  teamId).checkAuthorizationOrElseThrow();
+		evaluationPermissionsManager.canCheckTeamSubmissionEligibility(userAuthorization,  evalId,  teamId).checkAuthorizationOrElseThrow();
 		return submissionEligibilityManager.getTeamSubmissionEligibility(evaluationDAO.get(evalId), teamId);
 	}
 

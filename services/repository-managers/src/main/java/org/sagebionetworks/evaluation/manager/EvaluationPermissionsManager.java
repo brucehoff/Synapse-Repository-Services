@@ -44,6 +44,8 @@ public interface EvaluationPermissionsManager {
 	 */
 	public AccessControlList getAcl(UserAuthorization userAuthorization, String evalId)
 			throws NotFoundException, DatastoreException;
+	
+	public AuthorizationStatus canReadEvaluations(UserAuthorization userAuthorization);
 
 	/**
 	 * Whether the user has the access to the specified evaluation.

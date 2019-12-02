@@ -531,7 +531,7 @@ public class NodeDAOImplTest {
 		String id = nodeDao.createNew(toCreate);
 		toDelete.add(id);
 		// add an acl for this node.
-		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(id, adminUser, new Date());
+		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(id, creatorUserGroupId, new Date());
 		accessControlListDAO.create(acl, ObjectType.ENTITY);
 		Long nodeId = KeyFactory.stringToKey(id);
 		// call under test.
@@ -1446,7 +1446,7 @@ public class NodeDAOImplTest {
 		toDelete.add(parentId);
 		assertNotNull(parentId);
 		// add an acl for the parent
-		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(parentId, adminUser, new Date());
+		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(parentId, creatorUserGroupId, new Date());
 		accessControlListDAO.create(acl, ObjectType.ENTITY);
 		
 		Node child = privateCreateNew("child");
@@ -2714,7 +2714,7 @@ public class NodeDAOImplTest {
 		project = nodeDao.createNewNode(project);
 		toDelete.add(project.getId());
 		// Add an ACL at the project
-		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(project.getId(), adminUser, new Date());
+		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(project.getId(), creatorUserGroupId, new Date());
 		accessControlListDAO.create(acl, ObjectType.ENTITY);
 		
 		Node file = NodeTestUtils.createNew("folder", creatorUserGroupId);
@@ -2885,7 +2885,7 @@ public class NodeDAOImplTest {
 		fileId = nodeDao.createNew(file);
 		resutls.add(nodeDao.getNode(fileId));
 		// Set file2 to be its own benefactor
-		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(fileId, adminUser, new Date());
+		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(fileId, creatorUserGroupId, new Date());
 		accessControlListDAO.create(acl, ObjectType.ENTITY);
 		toDelete.add(fileId);
 		
@@ -3077,7 +3077,7 @@ public class NodeDAOImplTest {
 		
 		Node project = nodes.get(0);
 		// Add an ACL to the project for the benefactor
-		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(project.getId(), adminUser, new Date());
+		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(project.getId(), creatorUserGroupId, new Date());
 		accessControlListDAO.create(acl, ObjectType.ENTITY);
 		
 		Node folder1 = nodes.get(1);
@@ -3390,7 +3390,7 @@ public class NodeDAOImplTest {
 		}catch(NotFoundException expected){
 			// expected
 		}
-		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(grandparent.getId(), adminUser, new Date());
+		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(grandparent.getId(), creatorUserGroupId, new Date());
 		// create an ACL with the same ID but wrong type.
 		accessControlListDAO.create(acl, ObjectType.EVALUATION);
 		try{
@@ -3431,7 +3431,7 @@ public class NodeDAOImplTest {
 			// expected
 		}
 		// add an ACL on the grandparent.
-		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(grandparent.getId(), adminUser, new Date());
+		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(grandparent.getId(), creatorUserGroupId, new Date());
 		accessControlListDAO.create(acl, ObjectType.ENTITY);
 		// The benefactor of each should the grandparent.
 		assertEquals(grandparent.getId(), nodeDao.getBenefactor(child.getId()));
@@ -3500,7 +3500,7 @@ public class NodeDAOImplTest {
 		toDelete.add(parent.getId());
 		
 		// add an acl for the parent
-		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(""+parentId, adminUser, new Date());
+		AccessControlList acl = AccessControlListUtil.createACLToGrantEntityAdminAccess(""+parentId, creatorUserGroupId, new Date());
 		accessControlListDAO.create(acl, ObjectType.ENTITY);
 		
 		// child

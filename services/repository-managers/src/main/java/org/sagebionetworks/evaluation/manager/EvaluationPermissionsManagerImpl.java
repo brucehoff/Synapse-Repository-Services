@@ -9,6 +9,7 @@ import static org.sagebionetworks.repo.model.ACCESS_TYPE.SUBMIT;
 import static org.sagebionetworks.repo.model.ACCESS_TYPE.UPDATE;
 import static org.sagebionetworks.repo.model.ACCESS_TYPE.UPDATE_SUBMISSION;
 
+import java.util.Collections;
 import java.util.Set;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -33,8 +34,10 @@ import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.evaluation.EvaluationDAO;
 import org.sagebionetworks.repo.model.evaluation.SubmissionDAO;
 import org.sagebionetworks.repo.model.jdo.KeyFactory;
+import org.sagebionetworks.repo.model.oauth.OAuthScope;
 import org.sagebionetworks.repo.model.util.ModelConstants;
 import org.sagebionetworks.repo.web.NotFoundException;
+import org.sagebionetworks.util.ValidateArgument;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class EvaluationPermissionsManagerImpl implements EvaluationPermissionsManager {
@@ -49,29 +52,24 @@ public class EvaluationPermissionsManagerImpl implements EvaluationPermissionsMa
 	private SubmissionDAO submissionDAO;
 
 	@Override
-	public AccessControlList createAcl(UserInfo userInfo, AccessControlList acl)
+	public AccessControlList createAcl(UserAuthorization userAuthorization, AccessControlList acl)
 			throws NotFoundException, DatastoreException, InvalidModelException,
 			UnauthorizedException, ConflictingUpdateException {
 
-		if (userInfo == null) {
-			throw new IllegalArgumentException("User info cannot be null.");
-		}
-		if (acl == null) {
-			throw new IllegalArgumentException("ACL cannot be null.");
-		}
-
+		ValidateArgument.required(userAuthorization, "User authorization");
+		ValidateArgument.required(acl, "ACL");
+		ValidateArgument.required(acl.getId(), "ACL");
 		final String evalId = acl.getId();
-		if (evalId == null || evalId.isEmpty()) {
-			throw new IllegalArgumentException("ACL's evaluation ID must not be null or empty.");
-		}
+		ValidateArgument.requiredNotBlank(evalId, "\"ACL's evaluation ID");
+
 
 		final Evaluation eval = getEvaluation(evalId);
-		if (!isEvalOwner(userInfo, eval)) {
+		if (!isEvalOwner(userAuthorization.getUserInfo().getId(), eval)) {
 			throw new UnauthorizedException("Only the owner of evaluation " + evalId + " can create ACL.");
 		}
 
 		final String evalOwerId = eval.getOwnerId();
-		PermissionsManagerUtils.validateACLContent(acl, userInfo, Long.parseLong(evalOwerId));
+		PermissionsManagerUtils.validateACLContent(acl, userAuthorization.getUserInfo(), Long.parseLong(evalOwerId));
 
 		final String aclId = aclDAO.create(acl, ObjectType.EVALUATION);
 		acl = aclDAO.get(aclId, ObjectType.EVALUATION);
@@ -79,16 +77,12 @@ public class EvaluationPermissionsManagerImpl implements EvaluationPermissionsMa
 	}
 
 	@Override
-	public AccessControlList updateAcl(UserInfo userInfo, AccessControlList acl)
+	public AccessControlList updateAcl(UserAuthorization userAuthorization, AccessControlList acl)
 			throws NotFoundException, DatastoreException, InvalidModelException,
 			UnauthorizedException, ConflictingUpdateException {
 
-		if (userInfo == null) {
-			throw new IllegalArgumentException("User info cannot be null.");
-		}
-		if (acl == null) {
-			throw new IllegalArgumentException("ACL cannot be null.");
-		}
+		ValidateArgument.required(userAuthorization, "User authorization");
+		ValidateArgument.required(acl, "ACL");
 
 		final String evalId = acl.getId();
 		if (evalId == null || evalId.isEmpty()) {
@@ -96,10 +90,10 @@ public class EvaluationPermissionsManagerImpl implements EvaluationPermissionsMa
 		}
 
 		final Evaluation eval = getEvaluation(evalId);
-		hasAccess(userInfo, evalId, CHANGE_PERMISSIONS).checkAuthorizationOrElseThrow();
+		hasAccess(userAuthorization, evalId, CHANGE_PERMISSIONS).checkAuthorizationOrElseThrow();
 
 		final Long evalOwnerId = KeyFactory.stringToKey(eval.getOwnerId());
-		PermissionsManagerUtils.validateACLContent(acl, userInfo, evalOwnerId);
+		PermissionsManagerUtils.validateACLContent(acl, userAuthorization.getUserInfo(), evalOwnerId);
 
 		validateUserGroupPermissions(acl.getResourceAccess());
 
@@ -108,28 +102,24 @@ public class EvaluationPermissionsManagerImpl implements EvaluationPermissionsMa
 	}
 
 	@Override
-	public void deleteAcl(UserInfo userInfo, String evalId)
+	public void deleteAcl(UserAuthorization userAuthorization, String evalId)
 			throws NotFoundException, DatastoreException, InvalidModelException,
 			UnauthorizedException, ConflictingUpdateException {
-		if (userInfo == null) {
-			throw new IllegalArgumentException("User info cannot be null.");
-		}
+		ValidateArgument.required(userAuthorization, "User authorization");
 		if (evalId == null || evalId.isEmpty()) {
 			throw new IllegalArgumentException("Evaluation Id cannot be null or empty.");
 		}
-		if (!hasAccess(userInfo, evalId, CHANGE_PERMISSIONS).isAuthorized()) {
-			throw new UnauthorizedException("User " + userInfo.getId().toString()
+		if (!hasAccess(userAuthorization, evalId, CHANGE_PERMISSIONS).isAuthorized()) {
+			throw new UnauthorizedException("User " + userAuthorization.getUserInfo().getId().toString()
 					+ " not authorized to change permissions on evaluation " + evalId);
 		}
 		aclDAO.delete(evalId, ObjectType.EVALUATION);
 	}
 
 	@Override
-	public AccessControlList getAcl(UserInfo userInfo, String evalId)
+	public AccessControlList getAcl(UserAuthorization userAuthorization, String evalId)
 			throws NotFoundException, DatastoreException {
-		if (userInfo == null) {
-			throw new IllegalArgumentException("User info cannot be null.");
-		}
+		ValidateArgument.required(userAuthorization, "User authorization");
 		if (evalId == null || evalId.isEmpty()) {
 			throw new IllegalArgumentException("Evaluation ID cannot be null or empty.");
 		}
@@ -138,50 +128,37 @@ public class EvaluationPermissionsManagerImpl implements EvaluationPermissionsMa
 		return acl;
 	}
 
+	
 	/**
 	 * Whether the user has the access to the specified evaluation.
-	 * Has the same logic as 'hasAccess' but throws informative exception if the answer is false.
 	 */
 	@Override
 	public AuthorizationStatus hasAccess(UserAuthorization userAuthorization, String evalId, ACCESS_TYPE accessType)
 			throws NotFoundException, DatastoreException {
-		return AuthorizationStatus.accessDenied("TODO"); // TODO
-	}
-	
-	/**
-	 * Whether the user has the access to the specified evaluation.
-	 * Has the same logic as 'hasAccess' but throws informative exception if the answer is false.
-	 */
-	@Override
-	public AuthorizationStatus hasAccess(UserInfo userInfo, String evalId, ACCESS_TYPE accessType)
-			throws NotFoundException, DatastoreException {
-		if (userInfo == null) {
-			throw new IllegalArgumentException("User info cannot be null.");
-		}
+		ValidateArgument.required(userAuthorization, "User authorization");
 		if (evalId == null || evalId.isEmpty()) {
 			throw new IllegalArgumentException("Evaluation ID cannot be null or empty.");
 		}
 		if (accessType == null) {
 			throw new IllegalArgumentException("Access type cannot be null.");
 		}
-		if (userInfo.isAdmin()) return AuthorizationStatus.authorized();
+		if (userAuthorization.getUserInfo().isAdmin()) return AuthorizationStatus.authorized();
 
-		if (isAnonymousWithNonReadAccess(userInfo, accessType))
+		if (isAnonymousWithNonReadAccess(userAuthorization, accessType))
 			return AuthorizationStatus.accessDenied("Anonymous user is not allowed to access Evaluation.");
 		
-		if (!aclDAO.canAccess(userInfo.getGroups(), evalId, ObjectType.EVALUATION, accessType))
+		if (!aclDAO.canAccess(userAuthorization.getUserInfo().getGroups(), evalId, ObjectType.EVALUATION, accessType)
+				|| ! userAuthorization.getScopes().contains(OAuthScope.view)) // TODO how to map ACCESS_TYPE to OAuthScope?
 			return AuthorizationStatus.accessDenied("User lacks "+accessType+" access to Evaluation "+evalId);
 		
 		return AuthorizationStatus.authorized();
 	}
 
 	@Override
-	public UserEvaluationPermissions getUserPermissionsForEvaluation(UserInfo userInfo, String evalId)
+	public UserEvaluationPermissions getUserPermissionsForEvaluation(UserAuthorization userAuthorization, String evalId)
 			throws NotFoundException, DatastoreException {
 
-		if (userInfo == null) {
-			throw new IllegalArgumentException("User info cannot be null.");
-		}
+		ValidateArgument.required(userAuthorization, "User authorization");
 		if (evalId == null || evalId.isEmpty()) {
 			throw new IllegalArgumentException("Evaluation ID cannot be null or empty.");
 		}
@@ -193,17 +170,20 @@ public class EvaluationPermissionsManagerImpl implements EvaluationPermissionsMa
 
 		// Public read
 		UserInfo anonymousUser = userManager.getUserInfo(BOOTSTRAP_PRINCIPAL.ANONYMOUS_USER.getPrincipalId());
-		permission.setCanPublicRead(hasAccess(anonymousUser, evalId, READ).isAuthorized());
+		UserAuthorization anonymousAuthorization = new UserAuthorization();
+		anonymousAuthorization.setUserInfo(anonymousUser);
+		anonymousAuthorization.setScopes(Collections.singletonList(OAuthScope.view));
+		permission.setCanPublicRead(hasAccess(anonymousAuthorization, evalId, READ).isAuthorized());
 
 		// Other permissions
-		permission.setCanView(hasAccess(userInfo, evalId, READ).isAuthorized());
-		permission.setCanEdit(hasAccess(userInfo, evalId, UPDATE).isAuthorized());
-		permission.setCanDelete(hasAccess(userInfo, evalId, DELETE).isAuthorized());
-		permission.setCanChangePermissions(hasAccess(userInfo, evalId, CHANGE_PERMISSIONS).isAuthorized());
-		permission.setCanSubmit(hasAccess(userInfo, evalId, SUBMIT).isAuthorized());
-		permission.setCanViewPrivateSubmissionStatusAnnotations(hasAccess(userInfo, evalId, READ_PRIVATE_SUBMISSION).isAuthorized());
-		permission.setCanEditSubmissionStatuses(hasAccess(userInfo, evalId, UPDATE_SUBMISSION).isAuthorized());
-		permission.setCanDeleteSubmissions(hasAccess(userInfo, evalId, DELETE_SUBMISSION).isAuthorized());
+		permission.setCanView(hasAccess(userAuthorization, evalId, READ).isAuthorized());
+		permission.setCanEdit(hasAccess(userAuthorization, evalId, UPDATE).isAuthorized());
+		permission.setCanDelete(hasAccess(userAuthorization, evalId, DELETE).isAuthorized());
+		permission.setCanChangePermissions(hasAccess(userAuthorization, evalId, CHANGE_PERMISSIONS).isAuthorized());
+		permission.setCanSubmit(hasAccess(userAuthorization, evalId, SUBMIT).isAuthorized());
+		permission.setCanViewPrivateSubmissionStatusAnnotations(hasAccess(userAuthorization, evalId, READ_PRIVATE_SUBMISSION).isAuthorized());
+		permission.setCanEditSubmissionStatuses(hasAccess(userAuthorization, evalId, UPDATE_SUBMISSION).isAuthorized());
+		permission.setCanDeleteSubmissions(hasAccess(userAuthorization, evalId, DELETE_SUBMISSION).isAuthorized());
 
 		return permission;
 	}
@@ -229,14 +209,13 @@ public class EvaluationPermissionsManagerImpl implements EvaluationPermissionsMa
 		}
 	}
 	
-	private static boolean isAnonymousWithNonReadAccess(UserInfo userInfo, ACCESS_TYPE accessType) {
-		return AuthorizationUtils.isUserAnonymous(userInfo) && !READ.equals(accessType);
+	private static boolean isAnonymousWithNonReadAccess(UserAuthorization userAuthorization, ACCESS_TYPE accessType) {
+		return AuthorizationUtils.isUserAnonymous(userAuthorization.getUserInfo()) && !READ.equals(accessType);
 	}
 
-	private boolean isEvalOwner(final UserInfo userInfo, final Evaluation eval) {
-		String userId = userInfo.getId().toString();
+	private boolean isEvalOwner(Long userId, final Evaluation eval) {
 		String evalOwnerId = eval.getOwnerId();
-		if (userId != null && evalOwnerId != null && userId.equals(evalOwnerId)) {
+		if (userId != null && evalOwnerId != null && userId.toString().equals(evalOwnerId)) {
 			return true;
 		}
 		return false;
@@ -262,17 +241,22 @@ public class EvaluationPermissionsManagerImpl implements EvaluationPermissionsMa
 	 * @throws DatastoreException 
 	 */
 	@Override
-	public AuthorizationStatus canCheckTeamSubmissionEligibility(UserInfo userInfo, String evaluationId, String teamId) throws DatastoreException, NotFoundException {
-		if (userInfo.isAdmin()) return AuthorizationStatus.authorized();
-		if (!userInfo.getGroups().contains(Long.parseLong(teamId))) {
+	public AuthorizationStatus canCheckTeamSubmissionEligibility(UserAuthorization userAuthorization, String evaluationId, String teamId) throws DatastoreException, NotFoundException {
+		if (userAuthorization.getUserInfo().isAdmin()) return AuthorizationStatus.authorized();
+		if (!userAuthorization.getUserInfo().getGroups().contains(Long.parseLong(teamId))) {
 			return AuthorizationStatus.accessDenied("Requester is not a member of the Submission Team.");
 		}
-		return hasAccess(userInfo, evaluationId, ACCESS_TYPE.SUBMIT);
+		return hasAccess(userAuthorization, evaluationId, ACCESS_TYPE.SUBMIT);
 	}
 	
 	@Override
 	public boolean isDockerRepoNameInEvaluationWithAccess(String dockerRepoName, Set<Long> principalIds, ACCESS_TYPE accessType) {
 		return submissionDAO.isDockerRepoNameInAnyEvaluationWithAccess(dockerRepoName, principalIds, accessType);
+	}
+
+	@Override
+	public AuthorizationStatus canReadEvaluations(UserAuthorization userAuthorization) {
+		return AuthorizationStatus.accessDenied("TODO");
 	}
 
 }
