@@ -5,7 +5,6 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -36,6 +35,7 @@ import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2Utils;
 import org.sagebionetworks.repo.model.bootstrap.EntityBootstrapper;
 import org.sagebionetworks.repo.model.dbo.dao.NodeUtils;
 import org.sagebionetworks.repo.model.entity.Direction;
+import org.sagebionetworks.repo.model.entity.NameIdType;
 import org.sagebionetworks.repo.model.entity.SortBy;
 import org.sagebionetworks.repo.model.file.ChildStatsRequest;
 import org.sagebionetworks.repo.model.file.ChildStatsResponse;
@@ -49,9 +49,10 @@ import org.sagebionetworks.repo.model.table.TableConstants;
 import org.sagebionetworks.repo.model.util.AccessControlListUtil;
 import org.sagebionetworks.repo.transactions.WriteTransaction;
 import org.sagebionetworks.repo.web.NotFoundException;
-import org.sagebionetworks.schema.ObjectSchema;
 import org.sagebionetworks.util.ValidateArgument;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * The Sage business logic for node management.
@@ -262,9 +263,11 @@ public class NodeManagerImpl implements NodeManager {
 		String userName = userAuthorization.getUserInfo().getId().toString();
 		authorizationManager.canAccess(userAuthorization, nodeId, ObjectType.ENTITY, ACCESS_TYPE.DELETE).checkAuthorizationOrElseThrow();
 		nodeDao.delete(nodeId);
-		if(log.isDebugEnabled()){
+				
+		if (log.isDebugEnabled()) {
 			log.debug("username "+userName+" deleted node: "+nodeId);
 		}
+		
 		aclDAO.delete(nodeId, ObjectType.ENTITY);
 	}
 	
@@ -482,13 +485,13 @@ public class NodeManagerImpl implements NodeManager {
 			throws NotFoundException, DatastoreException, UnauthorizedException {
 		ValidateArgument.required(userAuthorization, "user authorization information");
 		authorizationManager.canAccess(userAuthorization, nodeId, ObjectType.ENTITY, ACCESS_TYPE.READ).checkAuthorizationOrElseThrow();
-		return nodeDao.getEntityPath(nodeId);
+		return NameIdType.toEntityHeader(nodeDao.getEntityPath(nodeId));
 	}
 
 	@Override
 	public List<EntityHeader> getNodePathAsAdmin(String nodeId)	throws NotFoundException, DatastoreException {
 		// This version does not require authorization.
-		return nodeDao.getEntityPath(nodeId);
+		return NameIdType.toEntityHeader(nodeDao.getEntityPath(nodeId));
 	}
 
 	@WriteTransaction
@@ -506,11 +509,11 @@ public class NodeManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public EntityHeader getNodeHeader(UserAuthorization userAuthorization, String entityId, Long versionNumber)
+	public EntityHeader getNodeHeader(UserAuthorization userAuthorization, String entityId)
 			throws NotFoundException, DatastoreException, UnauthorizedException {
-		ValidateArgument.required(userAuthorization, "user authorization information");
+	ValidateArgument.required(userAuthorization, "user authorization information");
 		authorizationManager.canAccess(userAuthorization, entityId, ObjectType.ENTITY, ACCESS_TYPE.READ).checkAuthorizationOrElseThrow();
-		return nodeDao.getEntityHeader(entityId, versionNumber);
+		return nodeDao.getEntityHeader(entityId);
 	}
 	
 	@Override
@@ -695,18 +698,19 @@ public class NodeManagerImpl implements NodeManager {
 	}
 
 	@Override
+	public boolean isEntityEmpty(String entityId) {
+		ChildStatsRequest childStatsRequest = new ChildStatsRequest()
+				.withParentId(entityId)
+				.withIncludeTypes(ImmutableList.copyOf(EntityType.values()))
+				.withIncludeTotalChildCount(true);
+		ChildStatsResponse childStatsResponse = getChildrenStats(childStatsRequest);
+		return childStatsResponse.getTotalChildCount() == 0;
+	}
+
+	@Override
 	public String lookupChild(String parentId, String entityName) {
 		// EntityManager handles all of the business logic for this call.
 		return nodeDao.lookupChild(parentId, entityName);
-	}
-
-
-	private static void deleteConcreteTypeAnnotation(org.sagebionetworks.repo.model.Annotations annotation){
-		Map<String, List<String>> stringAnnotations = annotation.getStringAnnotations();
-		List<String> annoValue = stringAnnotations.get(ObjectSchema.CONCRETE_TYPE);
-		if(annoValue != null && annoValue.size() == 1 && annoValue.get(0).startsWith("org.sage")){
-			stringAnnotations.remove(ObjectSchema.CONCRETE_TYPE);
-		}
 	}
 
 	@WriteTransaction
@@ -742,6 +746,13 @@ public class NodeManagerImpl implements NodeManager {
 	@Override
 	public long getCurrentRevisionNumber(String entityId) {
 		return nodeDao.getCurrentRevisionNumber(entityId);
+	}
+
+	@Override
+	public String getNodeName(UserInfo userInfo, String nodeId) {
+		// Validate that the user has download permission.
+		authorizationManager.canAccess(userInfo, nodeId, ObjectType.ENTITY, ACCESS_TYPE.READ).checkAuthorizationOrElseThrow();
+		return nodeDao.getNodeName(nodeId);
 	}
 
 }

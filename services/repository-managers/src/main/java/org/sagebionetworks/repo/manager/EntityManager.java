@@ -117,13 +117,12 @@ public interface EntityManager {
 	 * 
 	 * @param userAuthorization
 	 * @param entityId
-	 * @param versionNumber (optional) null means current version.
 	 * @return
 	 * @throws NotFoundException
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public EntityHeader getEntityHeader(UserAuthorization userAuthorization, String entityId, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public EntityHeader getEntityHeader(UserAuthorization userAuthorization, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * Get an entity header for each reference.
@@ -139,7 +138,7 @@ public interface EntityManager {
 
 
 	/**
-	 * Delete an existing dataset.
+	 * Delete an existing entity. This is deprecated and should never be exposed from the API (The cascade of container deletion is limited to 15 levels of depth).
 	 * 
 	 * @param userAuthorization
 	 * @param entityId
@@ -147,6 +146,7 @@ public interface EntityManager {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
+@Deprecated
 	public void deleteEntity(UserAuthorization userAuthorization, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**

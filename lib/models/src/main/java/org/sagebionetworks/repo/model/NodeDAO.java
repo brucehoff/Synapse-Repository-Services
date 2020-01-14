@@ -7,6 +7,7 @@ import java.util.Set;
 
 import org.sagebionetworks.repo.model.annotation.v2.Annotations;
 import org.sagebionetworks.repo.model.entity.Direction;
+import org.sagebionetworks.repo.model.entity.NameIdType;
 import org.sagebionetworks.repo.model.entity.SortBy;
 import org.sagebionetworks.repo.model.entity.query.SortDirection;
 import org.sagebionetworks.repo.model.file.ChildStatsRequest;
@@ -85,22 +86,24 @@ public interface NodeDAO {
 	public Node getNodeForVersion(String id, Long versionNumber);
 	
 	/**
-	 * Delete a node using its id.
-	 * @param id
-	 * @return boolean
-	 * @throws NotFoundException 
-	 * @throws DatastoreException 
-	 */
-	public boolean delete(String id) throws DatastoreException;
-	
-	/**
-	 * Delete all nodes within a list of IDs. All nodes in the list must have < 14 levels of children.
-	 * @param IDs list of IDs to remove
-	 * @return int number of nodes deleted
+	 * Deletes the node with the given id. If the node is a container the sub-tree must have less than 15 levels of depth.
+	 * 
+	 * @param id The if of a node
+	 * @throws NotFoundException
 	 * @throws DatastoreException
 	 */
-	public int delete(List<Long> IDs) throws DatastoreException;
+	public void delete(String id) throws DatastoreException;
 	
+	/**
+	 * Deletes the tree of nodes rooted in the node with the given id starting from the leaves of the sub-tree. Deletes
+	 * a maximum of subTreeLimit nodes in the sub-tree. This method runs in a new transaction.
+	 * 
+	 * @param id The if of the root node
+	 * @return True if the whole sub-tree along with the node was deleted, false if the sub-tree has more than the given
+	 * number of nodes and additional calls are needed in order to delete the node.
+	 */
+	public boolean deleteTree(String id, int subTreeLimit);
+		
 	/**
 	 * Delete a specific version.
 	 * @param id
@@ -223,7 +226,7 @@ public interface NodeDAO {
 	 * @throws DatastoreException 
 	 * @throws NotFoundException 
 	 */
-	public EntityHeader getEntityHeader(String nodeId, Long versionNumber) throws DatastoreException, NotFoundException;
+	public EntityHeader getEntityHeader(String nodeId) throws DatastoreException, NotFoundException;
 	
 	/**
 	 * Get a list of entity headers from a list of references.
@@ -261,7 +264,27 @@ public interface NodeDAO {
 	 * @throws DatastoreException
 	 * @throws NotFoundException
 	 */
-	public List<EntityHeader> getEntityPath(String nodeId) throws DatastoreException, NotFoundException;
+	public List<NameIdType> getEntityPath(String nodeId) throws DatastoreException, NotFoundException;
+	
+	/**
+	 * Get the IDs of the entities in the provided entityId's path.
+	 * @param nodeId
+	 * @return Result order will be from root to leaf. The results will include the requested entity (as the last item).
+	 * Results will also include the root folder as the first item.
+	 */
+	public List<Long> getEntityPathIds(String nodeId);
+	
+	/**
+	 * @deprecated Use: {@link #getEntityPathIds(String)}.
+	 * <p>
+	 * Get the IDs of the entities in the provided entityId's path.
+	 * 
+	 * @param entityId
+	 * @param includeSelf When true, the passed entityId will be included in the results.
+	 * @return Result order will be from root to leaf.
+	 */
+	@Deprecated 
+	List<Long> getEntityPathIds(String entityId, boolean includeSelf);
 	
 	/**
 	 * Lookup a node id using its unique path.
@@ -442,6 +465,16 @@ public interface NodeDAO {
 	Set<Long> getAllContainerIds(String parentId, int maxNumberIds) throws LimitExceededException;
 	
 	/**
+	 * Return all the nodes in the sub tree of the node with the given id ordered (decreasing) by their distance from
+	 * the input node.
+	 *  
+	 * @param parentId The id of a (container) node
+	 * @param limit The max number of nodes to be fetched
+	 * @return The list of nodes in the sub-tree of the node with the given id, does not include the input node id
+	 */
+	List<Long> getSubTreeNodeIdsOrderByDistanceDesc(Long parentId, int limit);
+	
+	/**
 	 * Lookup a nodeId using its alias.
 	 * @param alias
 	 * @return
@@ -574,4 +607,12 @@ public interface NodeDAO {
 	 * @return The version number of the the snapshot (will always be the current version number).
 	 */
 	public long snapshotVersion(Long userId, String nodeId, SnapshotRequest request);
+
+	/**
+	 * Get the name of the given Node.
+	 * @param projectId
+	 * @return
+	 */
+	public String getNodeName(String nodeId);
+
 }

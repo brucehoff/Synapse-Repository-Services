@@ -1,22 +1,25 @@
 package org.sagebionetworks.table.worker;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.sagebionetworks.repo.model.table.TableConstants.ROW_ETAG;
 import static org.sagebionetworks.repo.model.table.TableConstants.ROW_ID;
 import static org.sagebionetworks.repo.model.table.TableConstants.ROW_VERSION;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.apache.commons.io.IOUtils;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sagebionetworks.common.util.progress.ProgressCallback;
@@ -27,6 +30,7 @@ import org.sagebionetworks.repo.model.table.CsvTableDescriptor;
 import org.sagebionetworks.repo.model.table.Row;
 import org.sagebionetworks.repo.model.table.UploadToTablePreviewRequest;
 import org.sagebionetworks.repo.model.table.UploadToTablePreviewResult;
+import org.sagebionetworks.table.cluster.utils.CSVUtils;
 
 import au.com.bytecode.opencsv.CSVReader;
 
@@ -35,7 +39,7 @@ public class UploadPreviewBuilderTest {
 	@Mock
 	ProgressCallback mockProgressCallback;
 	
-	@Before
+	@BeforeEach
 	public void before(){
 		MockitoAnnotations.initMocks(this);
 	}
@@ -385,12 +389,13 @@ public class UploadPreviewBuilderTest {
 		StringReader sReader = new StringReader(eachTypeCSV);
 		CSVReader reader = new CSVReader(sReader);
 		UploadPreviewBuilder builder = new UploadPreviewBuilder(reader, mockProgressCallback, request);
-		try {
+		
+		IllegalArgumentException e = Assertions.assertThrows(IllegalArgumentException.class, ()-> {
 			builder.buildResult();
-			fail();
-		} catch (IllegalArgumentException e) {
-			assertEquals("Row number 3 has 4 column(s).  Expected each row to have 3 columns or less.", e.getMessage());
-		}
+		});
+	
+		assertEquals("Row number 3 has 4 column(s).  Expected each row to have 3 columns or less.", e.getMessage());
+		
 	}
 	
 	@Test
@@ -583,6 +588,28 @@ public class UploadPreviewBuilderTest {
 		List<String> names = getColumnNames(result.getSuggestedColumns());
 		//The first two should not be changed.
 		assertEquals(Arrays.asList("Date", "all", "avg", "quote", "col", "okay", "all1", "col1"), names);
+	}
+	
+	@Test
+	public void testNullHeaders() throws IOException{
+		List<String[]> input = new ArrayList<String[]>(3);
+		input.add(null);
+		String eachTypeCSV = TableModelTestUtils.createCSVString(input);
+		
+		UploadToTablePreviewRequest request = new UploadToTablePreviewRequest();
+		
+		StringReader sReader = new StringReader(eachTypeCSV);
+		CSVReader reader = new CSVReader(sReader);
+		UploadPreviewBuilder builder = new UploadPreviewBuilder(reader, mockProgressCallback, request);
+		// Set the max beyond the number of rows we have.
+		builder.setMaxRowsInpartialScan(input.size()-1);
+		
+		IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> {
+			builder.buildResult();
+		});
+		
+		assertEquals("Expected the first line to be the header but was empty.", ex.getMessage());
+		
 	}
 	
 	@Test
@@ -837,6 +864,42 @@ public class UploadPreviewBuilderTest {
 		assertEquals(null, UploadPreviewBuilder.parseAsLong(null));
 		assertEquals(null, UploadPreviewBuilder.parseAsLong(""));
 		assertEquals(new Long(123), UploadPreviewBuilder.parseAsLong("123"));
+	}
+	
+	@Test
+	public void testPLFM_5989() throws IOException {
+		String fileName = "testPLFM_5989.csv";
+		String csvString = null;
+		
+		try(InputStream in = UploadPreviewBuilderTest.class.getClassLoader().getResourceAsStream(fileName)){
+			assertNotNull(in, "Cannot find: "+fileName+" on classpath");
+			csvString = IOUtils.toString(in, StandardCharsets.UTF_8);
+		}
+		
+		CsvTableDescriptor descriptor = new CsvTableDescriptor();
+		descriptor.setIsFirstLineHeader(true);
+		UploadToTablePreviewRequest request = new UploadToTablePreviewRequest();
+		request.setCsvTableDescriptor(descriptor);
+		
+		StringReader sReader = new StringReader(csvString);
+		Long linesToSkip = 0L;
+		CSVReader reader = CSVUtils.createCSVReader(sReader, descriptor, linesToSkip);
+		
+		UploadPreviewBuilder builder = new UploadPreviewBuilder(reader, mockProgressCallback, request);
+		// call under test
+		UploadToTablePreviewResult result = builder.buildResult();
+		assertNotNull(result);
+		assertNotNull(result.getSuggestedColumns());
+		assertEquals(2, result.getSuggestedColumns().size());
+		// one
+		ColumnModel cm = result.getSuggestedColumns().get(0);
+		assertEquals(ColumnType.STRING, cm.getColumnType());
+		assertEquals("column1", cm.getName());
+		assertEquals(new Long(5), cm.getMaximumSize());
+		// two
+		cm = result.getSuggestedColumns().get(1);
+		assertEquals(ColumnType.DOUBLE, cm.getColumnType());
+		assertEquals("column2", cm.getName());
 	}
 	
 	public static List<String> getColumnNames(List<ColumnModel> models){

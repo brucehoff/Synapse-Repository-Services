@@ -57,6 +57,7 @@ import org.sagebionetworks.table.cluster.utils.TableModelUtils;
 import org.sagebionetworks.table.model.Grouping;
 import org.sagebionetworks.table.model.SparseChangeSet;
 import org.sagebionetworks.table.query.ParseException;
+import org.sagebionetworks.table.query.util.ColumnTypeListMappings;
 import org.sagebionetworks.table.query.util.SimpleAggregateQueryException;
 import org.sagebionetworks.table.query.util.SqlElementUntils;
 import org.sagebionetworks.util.Callback;
@@ -2451,5 +2452,88 @@ public class TableIndexDAOImplTest {
 		assertEquals(numRows * 2, tableIndexDAO.countQuery("SELECT COUNT(*) FROM `" + listColumnindexTableName + "`", Collections.emptyMap()));
 
 		listColumnIndexTablesToDrop.add(listColumnindexTableName);
+	}
+
+	//See PLFM-5999
+	@Test
+	public void testCreateAndPopulateListColumnIndexTables__StringListDataTooLarge(){
+
+		ColumnModel stringListColumn = new ColumnModel();
+		stringListColumn.setId("15");
+		stringListColumn.setName("myList");
+		// initial size needs to be large to allow initial values to be inserted into table
+		// in a view, values are replicated from
+		stringListColumn.setMaximumSize(54L);
+		stringListColumn.setColumnType(ColumnType.STRING_LIST);
+
+
+		List<ColumnModel> schema = Lists.newArrayList(stringListColumn);
+
+		createOrUpdateTable(schema, tableId, isView);
+
+		int numRows = 5;
+		List<Row> rows = TableModelTestUtils.createRows(schema, numRows);
+		createOrUpdateOrDeleteRows(tableId, rows, schema);
+
+		// make size a very small value to replicate annotation values
+		// larger than the defined max size being inserted copied into a view
+		stringListColumn.setMaximumSize(1L);
+		createOrUpdateTable(schema, tableId, isView);
+
+
+		List<DatabaseColumnInfo> infoList = getAllColumnInfo(tableId);
+		String message = assertThrows(IllegalArgumentException.class, ()-> {
+			//method under test
+			tableIndexDAO.populateListColumnIndexTables(tableId, schema);
+		}).getMessage();
+
+		assertEquals("The size of the column 'myList' is too small." +
+				" Unable to automatically determine the necessary size to fit all values in a STRING_LIST column", message);
+
+		String listColumnindexTableName = SQLUtils.getTableNameForMultiValueColumnIndex(tableId, stringListColumn.getId());
+		listColumnIndexTablesToDrop.add(listColumnindexTableName);
+	}
+
+	//See PLFM-5999
+	@Test
+	public void testCreateAndPopulateListColumnIndexTables__DefaultValue() throws ParseException {
+		ColumnModel intColumn = new ColumnModel();
+		intColumn.setId("12");
+		intColumn.setName("foo");
+		intColumn.setColumnType(ColumnType.INTEGER);
+
+		ColumnModel intListColumn = new ColumnModel();
+		intListColumn.setId("16");
+		intListColumn.setName("intList");
+		intListColumn.setColumnType(ColumnType.INTEGER_LIST);
+		intListColumn.setDefaultValue("[1,2,3]");
+
+		List<ColumnModel> schema = Arrays.asList(intColumn, intListColumn);
+
+		createOrUpdateTable(schema, tableId, isView);
+
+		Row row = new Row();
+		row.setValues(Arrays.asList("1", null));
+		List<Row> rows = Collections.singletonList(row);
+		createOrUpdateOrDeleteRows(tableId, rows, schema);
+
+
+		List<DatabaseColumnInfo> infoList = getAllColumnInfo(tableId);
+		tableIndexDAO.populateListColumnIndexTables(tableId, schema);
+
+
+		SqlQuery query = new SqlQueryBuilder("select * from " + tableId, schema).build();
+		// Now query for the results
+		RowSet results = tableIndexDAO.query(mockProgressCallback, query);
+		assertNotNull(results);
+		assertNotNull(results.getRows());
+		//expect a single row result
+		assertEquals(1, results.getRows().size());
+		assertEquals(tableId.toString(), results.getTableId());
+		//each row has 2 columns
+		assertEquals(2, results.getRows().get(0).getValues().size());
+		assertEquals("1", results.getRows().get(0).getValues().get(0));
+		//mysql adds spaces between the commas on returned results
+		assertEquals("[1, 2, 3]", results.getRows().get(0).getValues().get(1));
 	}
 }

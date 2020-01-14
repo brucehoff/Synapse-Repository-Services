@@ -1,20 +1,24 @@
 package org.sagebionetworks.repo.model.dbo.dao.table;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.sagebionetworks.repo.model.table.TableConstants.ROW_ID;
 import static org.sagebionetworks.repo.model.table.TableConstants.ROW_VERSION;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Test;
+import org.apache.commons.io.IOUtils;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.sagebionetworks.repo.model.table.ColumnModel;
 import org.sagebionetworks.repo.model.table.ColumnType;
 import org.sagebionetworks.repo.model.table.SparseRowDto;
@@ -67,6 +71,30 @@ public class CSVToRowIteratorTest {
 		assertEquals(3, row.getValues().size());
 		assertEquals(inputTranslate.get(2), row.getValues());
 	}
+	
+	@Test
+	public void testCSVToRowIteratorNullHeaders() throws IOException {
+		List<String[]> input = new ArrayList<String[]>();
+		
+		input.add(null);
+		
+		CSVReader reader = TableModelTestUtils.createReader(input);
+		
+		// Create some columns
+		List<ColumnModel> columns = TableModelTestUtils.createColumsWithNames(
+				"a", "b", "c");
+		
+		columns.get(0).setColumnType(ColumnType.STRING);
+		columns.get(1).setColumnType(ColumnType.INTEGER);
+		columns.get(2).setColumnType(ColumnType.BOOLEAN);
+		
+		IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> {
+			new CSVToRowIterator(columns, reader, true, null);
+		});
+		
+		assertEquals("Expected the first line to be the header but was empty.", ex.getMessage());
+		
+	}
 
 	@Test
 	public void testCSVToRowIteratorWithHeaderSameOrder() throws IOException {
@@ -89,8 +117,7 @@ public class CSVToRowIteratorTest {
 		// Create the iterator.
 		Iterator<SparseRowDto> iterator = new CSVToRowIterator(columns, reader, isFirstLineHeader, null);
 		List<SparseRowDto> asList = readAll(iterator);
-		assertEquals("The header should not be included in the results", 3,
-				asList.size());
+		assertEquals(3, asList.size(), "The header should not be included in the results");
 		// zero
 		SparseRowDto row = asList.get(0);
 		assertNull(row.getRowId());
@@ -108,7 +135,7 @@ public class CSVToRowIteratorTest {
 	}
 	
 
-	@Test (expected=IllegalArgumentException.class)
+	@Test
 	public void testCSVToRowIteratorWithHeadersMissing() throws IOException {
 		// Create a reader with some data.
 		List<String[]> input = new ArrayList<String[]>(3);
@@ -123,8 +150,13 @@ public class CSVToRowIteratorTest {
 		columns.get(0).setColumnType(ColumnType.STRING);
 		columns.get(1).setColumnType(ColumnType.INTEGER);
 		columns.get(2).setColumnType(ColumnType.BOOLEAN);
-		// Should throw an exception since the headers are missing.
-		new CSVToRowIterator(columns, reader, true, null);
+		
+		IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class, () -> {
+			// Should throw an exception since the headers are missing.
+			new CSVToRowIterator(columns, reader, true, null);
+		});
+		
+		assertEquals("The first line is expected to be a header but the values do not match the names of of the columns of the table (AAA is not a valid column name or id). Header row: AAA,2,true", ex.getMessage());
 	}
 
 	@Test
@@ -147,8 +179,7 @@ public class CSVToRowIteratorTest {
 		// Create the iterator.
 		Iterator<SparseRowDto> iterator = new CSVToRowIterator(columns, reader, true, null);
 		List<SparseRowDto> asList = readAll(iterator);
-		assertEquals("The header should not be included in the results", 3,
-				asList.size());
+		assertEquals(3, asList.size(), "The header should not be included in the results");
 		// zero
 		SparseRowDto row = asList.get(0);
 		assertNull(row.getRowId());
@@ -185,26 +216,25 @@ public class CSVToRowIteratorTest {
 		// Create the iterator.
 		Iterator<SparseRowDto> iterator = new CSVToRowIterator(columns, reader, true, null);
 		List<SparseRowDto> asList = readAll(iterator);
-		assertEquals("The header should not be included in the results", 3,
-				asList.size());
+		assertEquals(3, asList.size(), "The header should not be included in the results");
 		// zero
 		SparseRowDto row = asList.get(0);
-		assertEquals("RowId should have been set.", new Long(1), row.getRowId());
-		assertEquals("RowVersion should have been set.",new Long(11), row.getVersionNumber());
+		assertEquals(new Long(1), row.getRowId(), "RowId should have been set.");
+		assertEquals(new Long(11), row.getVersionNumber(), "RowVersion should have been set.");
 		assertNotNull(row.getValues());
 		assertEquals(3, row.getValues().size());
 
 		// middle
 		row = asList.get(1);
-		assertEquals("RowId should have been set.", null, row.getRowId());
-		assertEquals("RowVersion should have been set.",null, row.getVersionNumber());
+		assertEquals(null, row.getRowId(), "RowId should have been set.");
+		assertEquals(null, row.getVersionNumber(), "RowVersion should have been set.");
 		assertNotNull(row.getValues());
 		assertEquals(3, row.getValues().size());
 		
 		// last
 		row = asList.get(2);
-		assertEquals("RowId should have been set.", new Long(3), row.getRowId());
-		assertEquals("RowVersion should have been set.",new Long(10), row.getVersionNumber());
+		assertEquals(new Long(3), row.getRowId(), "RowId should have been set.");
+		assertEquals(new Long(10), row.getVersionNumber(), "RowVersion should have been set.");
 		assertNotNull(row.getValues());
 		assertEquals(3, row.getValues().size());
 	}
@@ -358,6 +388,36 @@ public class CSVToRowIteratorTest {
 		assertEquals(2, rows.size());
 		assertEquals(TableModelTestUtils.createSparseRow(1L, 11L, "etag1", columns, "AAA"), rows.get(0));
 		assertEquals(TableModelTestUtils.createSparseRow(2L, 11L, "etag2", columns, "BBB"), rows.get(1));
+	}
+	
+	/**
+	 * The file used for this test was generated by Excel as a CSV UTF-8 export. The
+	 * first three bytes of the resulting file match the UTF-8 byte order marker (0xEF,0xBB,0xBF).
+	 * The CSV parser was not ignoring the marker so the first header name 'a' was prefixed with the
+	 * marker so it did not match the headers of the table. 
+	 * @throws IOException
+	 */
+	@Test
+	public void testPLFM_5989() throws IOException{
+		String fileName = "PLFM-5989.csv";
+		String csvString = null;
+		try(InputStream in = CSVToRowIteratorTest.class.getClassLoader().getResourceAsStream(fileName)){
+			assertNotNull(in, "Cannot find: "+fileName+" on classpath");
+			csvString = IOUtils.toString(in, StandardCharsets.UTF_8);
+		}
+		
+		CSVReader reader = new CSVReader(new StringReader(csvString));
+		// Create some columns
+		List<ColumnModel> columns = TableModelTestUtils.createColumsWithNames("a","b");
+		boolean isFirstLineHeader = true;
+		Long linesToSkip = 0L;
+		 
+		// Create the iterator.
+		Iterator<SparseRowDto> iterator = new CSVToRowIterator(columns, reader, isFirstLineHeader, linesToSkip);
+		List<SparseRowDto> rows = readAll(iterator);
+
+		assertEquals(1, rows.size());
+		assertEquals(TableModelTestUtils.createSparseRow(null, null, null, columns, "alsdjfsldkjflwdjf","3.3"), rows.get(0));
 	}
 
 	/**

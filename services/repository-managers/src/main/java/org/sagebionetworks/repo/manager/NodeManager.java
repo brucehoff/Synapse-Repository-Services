@@ -57,7 +57,10 @@ public interface NodeManager {
 	public Node createNewNode(Node newNode, org.sagebionetworks.repo.model.Annotations entityPropertyAnnotations, UserAuthorization userAuthorization) throws DatastoreException, InvalidModelException, NotFoundException, UnauthorizedException;
 	
 	/**
-	 * Delete a node using its id.
+	 * Delete a node using its id. For internal use only. This method should never be exposed from the API directly or indirectly.
+	 * If the node is a container with more than 15 level of depth it would fail with a DB exception.
+	 *  
+	 * 
 	 * @param userName
 	 * @param nodeId
 	 * @throws UnauthorizedException 
@@ -176,13 +179,12 @@ public interface NodeManager {
 	 * 
 	 * @param userAuthorization
 	 * @param entityId
-	 * @param versionNumber
 	 * @return
 	 * @throws NotFoundException
 	 * @throws DatastoreException
 	 * @throws UnauthorizedException
 	 */
-	public EntityHeader getNodeHeader(UserAuthorization userAuthorization, String entityId, Long versionNumber) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public EntityHeader getNodeHeader(UserAuthorization userAuthorization, String entityId) throws NotFoundException, DatastoreException, UnauthorizedException;
 	
 	/**
 	 * Get an entity header for each reference.
@@ -327,7 +329,9 @@ public interface NodeManager {
 	 * @return
 	 */
 	public ChildStatsResponse getChildrenStats(ChildStatsRequest request);
-	
+
+	/** True if the entity has no children, false otherwise. */
+	boolean isEntityEmpty(String entityId);
 
 	/**
 	 * Retrieve the entityId for a given parentId and entityName
@@ -360,5 +364,13 @@ public interface NodeManager {
 	 * @return
 	 */
 	long getCurrentRevisionNumber(String entityId);
+
+	/**
+	 * Get the name of the given node.
+	 * @param userInfo
+	 * @param nodeId
+	 * @return
+	 */
+	public String getNodeName(UserInfo userInfo, String nodeId);
 
 }

@@ -113,9 +113,6 @@
 		</property>
 
 	</bean>
-
-	<!-- Trash manager -->
-	<bean id="trashManager" class="org.sagebionetworks.repo.manager.trash.TrashManagerImpl" />
 	
 	<bean id="multipartManager" class="org.sagebionetworks.repo.manager.file.MultipartManagerImpl" />
 	
@@ -218,7 +215,7 @@
 				</entry>
 				<entry key="VerificationSubmission">
 					<bean
-						class="org.sagebionetworks.repo.manager.VerificationFileHandleAssociationProvider" />
+						class="org.sagebionetworks.repo.manager.verification.VerificationFileHandleAssociationProvider" />
 				</entry>
 				<entry key="FileEntity">
 					<bean
@@ -300,7 +297,7 @@
 		factory-method="createAmazonSimpleEmailServiceClient"/>
     
 	<bean id="sesClient" class="org.sagebionetworks.repo.manager.principal.SynapseEmailServiceImpl"/>
-			
+
 	<bean id="messageManager" class="org.sagebionetworks.repo.manager.MessageManagerImpl" />
 	
 	<bean id="backupFileStream" class="org.sagebionetworks.repo.manager.migration.BackupFileStreamImpl" scope="singleton"/>
@@ -518,8 +515,6 @@
     
 	<bean id="challengeManager" class="org.sagebionetworks.repo.manager.ChallengeManagerImpl" scope="singleton"/>
     
-	<bean id="verificationManager" class="org.sagebionetworks.repo.manager.VerificationManagerImpl" scope="singleton"/>
-	
 	<bean id="tableEntityTransactionManager"
 		class="org.sagebionetworks.repo.manager.table.TableEntityTransactionManager"
 		scope="singleton"/>

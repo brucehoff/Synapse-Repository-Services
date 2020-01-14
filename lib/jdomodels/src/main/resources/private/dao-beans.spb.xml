@@ -193,11 +193,6 @@
 	<bean id="changeDAO" class="org.sagebionetworks.repo.model.dbo.dao.DBOChangeDAOImpl"
 		scope="singleton">
 	</bean>
-
-	<bean id="trashCanDao"
-		class="org.sagebionetworks.repo.model.dbo.dao.DBOTrashCanDaoImpl"
-		scope="singleton">
-	</bean>
 	
 	<bean id="v2wikiPageDAO"
 		class="org.sagebionetworks.repo.model.dbo.wikiV2.V2DBOWikiPageDaoImpl"
@@ -287,8 +282,6 @@
 		class="org.sagebionetworks.evaluation.dao.AnnotationsDAOImpl" />
 	<bean id="quizResponseDao"
 		class="org.sagebionetworks.repo.model.dbo.dao.DBOQuizResponseDAOImpl" />
-	<bean id="verificationDao"
-		class="org.sagebionetworks.repo.model.dbo.dao.DBOVerificationDAOImpl" />
 
 	<bean id="broadcastMessageDao" class="org.sagebionetworks.repo.model.message.BroadcastMessageDaoImpl"/>
 	

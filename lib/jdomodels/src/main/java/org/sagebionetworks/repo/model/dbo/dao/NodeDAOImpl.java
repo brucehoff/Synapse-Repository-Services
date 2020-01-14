@@ -41,6 +41,7 @@ import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.TABLE_PROJEC
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.TABLE_REVISION;
 
 import java.io.IOException;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -85,6 +86,7 @@ import org.sagebionetworks.repo.model.dbo.persistence.DBONode;
 import org.sagebionetworks.repo.model.dbo.persistence.DBORevision;
 import org.sagebionetworks.repo.model.dbo.persistence.NodeMapper;
 import org.sagebionetworks.repo.model.entity.Direction;
+import org.sagebionetworks.repo.model.entity.NameIdType;
 import org.sagebionetworks.repo.model.entity.SortBy;
 import org.sagebionetworks.repo.model.entity.query.SortDirection;
 import org.sagebionetworks.repo.model.file.ChildStatsRequest;
@@ -101,6 +103,7 @@ import org.sagebionetworks.repo.model.query.QueryTools;
 import org.sagebionetworks.repo.model.table.EntityDTO;
 import org.sagebionetworks.repo.model.table.SnapshotRequest;
 import org.sagebionetworks.repo.transactions.MandatoryWriteTransaction;
+import org.sagebionetworks.repo.transactions.NewWriteTransaction;
 import org.sagebionetworks.repo.transactions.WriteTransaction;
 import org.sagebionetworks.repo.web.NotFoundException;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
@@ -112,6 +115,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.BadSqlGrammarException;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
@@ -128,6 +132,16 @@ import com.google.common.collect.Sets;
  *
  */
 public class NodeDAOImpl implements NodeDAO, InitializingBean {
+	
+	/**
+	 * MySQL have a default limit on the maximum recursion calls that can be made on a recursive CTE
+	 */
+	private static final int MAX_PATH_RECURSION = 1000;
+	
+	/**
+	 * Max path depth for a node hierarchy.
+	 */
+	private static final int MAX_PATH_DEPTH = 100;
 
 	private static final String SQL_CREATE_SNAPSHOT_VERSION = "UPDATE " + TABLE_REVISION + " SET "
 			+ COL_REVISION_COMMENT + " = ?, " + COL_REVISION_LABEL + " = ?, " + COL_REVISION_ACTIVITY_ID + " = ?, "
@@ -300,15 +314,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 			" ON (N."+COL_NODE_ID+" = R."+COL_REVISION_OWNER_NODE+" AND N."+COL_CURRENT_REV+" = R."+COL_REVISION_NUMBER+")"+
 			" WHERE "+COL_NODE_ID+" IN (:nodeIds)";
 	
-	private static final String IDS_PARAM_NAME = "ids_param";
-
-	private static final String SQL_SELECT_CONTAINERS_WITH_PARENT_IDS_IN_CLAUSE = 
-			"SELECT "+COL_NODE_ID
-			+" FROM "+TABLE_NODE
-			+" WHERE "
-				+ COL_NODE_PARENT_ID+" IN (:"+IDS_PARAM_NAME+")"
-				+ " AND "+COL_NODE_TYPE+" IN ('"+EntityType.folder.name()+"', '"+EntityType.project.name()+"')"
-						+ " ORDER BY "+COL_NODE_ID+" ASC LIMIT :"+BIND_LIMIT;
+	private static final String PARAM_NAME_IDS = "ids_param";
 
 	private static final String SQL_SELECT_REV_FILE_HANDLE_ID = "SELECT "+COL_REVISION_FILE_HANDLE_ID+" FROM "+TABLE_REVISION+" WHERE "+COL_REVISION_OWNER_NODE+" = ? AND "+COL_REVISION_NUMBER+" = ?";
 	private static final String SELECT_ANNOTATIONS_ONLY_SELECT_CLAUSE_PREFIX = "SELECT N."+COL_NODE_ID+", N."+COL_NODE_ETAG+", N."+COL_NODE_CREATED_ON+", N."+COL_NODE_CREATED_BY+", R.";
@@ -388,6 +394,24 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 			+ " WHERE R."+COL_REVISION_OWNER_NODE+" = N."+COL_NODE_ID+" AND  R." + COL_REVISION_FILE_HANDLE_ID + " = F." + COL_FILES_ID
 			+ " AND F." + COL_FILES_CONTENT_MD5 + " = :" + COL_FILES_CONTENT_MD5
 			+ " LIMIT " + (NODE_VERSION_LIMIT_BY_FILE_MD5 + 1);
+	
+	/**
+	 * A recursive sql call to get the full path of a given entity id (?). The limit
+	 * on the distance prevents an infinite loop for a circular path. To be used a
+	 * string template to set which columns should be selected. The ORDER BY clause
+	 * ensures the order is from root to leaf. Note: The results will include the
+	 * requested node as the last element.
+	 * 
+	 */
+	public static final String PATH_QUERY_TEMPLATE = "WITH RECURSIVE PATH (" + COL_NODE_ID + ", " + COL_NODE_NAME + ", "
+			+ COL_NODE_TYPE + ", " + COL_NODE_PARENT_ID + ", DISTANCE) AS " + "(SELECT " + COL_NODE_ID + ", "
+			+ COL_NODE_NAME + ", " + COL_NODE_TYPE + ", " + COL_NODE_PARENT_ID + ", 1 FROM " + TABLE_NODE
+			+ " AS N WHERE " + COL_NODE_ID + " = ?" + " UNION ALL" + " SELECT N." + COL_NODE_ID + ", N."
+			+ COL_NODE_NAME + ", N." + COL_NODE_TYPE + ", N." + COL_NODE_PARENT_ID + ", PATH.DISTANCE+ 1 FROM "
+			+ TABLE_NODE + " AS N JOIN PATH ON (N." + COL_NODE_ID + " = PATH." + COL_NODE_PARENT_ID + ")" + " WHERE N."
+			+ COL_NODE_ID + " IS NOT NULL AND DISTANCE < "+MAX_PATH_DEPTH+" )" + " SELECT %1s FROM PATH ORDER BY DISTANCE DESC";
+	
+	private static final String SQL_STRING_CONTAINERS_TYPES = String.join(",", "'" + EntityType.project.name() + "'", "'" + EntityType.folder.name() + "'");
 
 	// Track the trash folder.
 	public static final Long TRASH_FOLDER_ID = Long.parseLong(StackConfigurationSingleton.singleton().getTrashFolderEntityId());
@@ -411,6 +435,17 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 			return header;
 		}
 	};
+	
+	private static final RowMapper<NameIdType> NAME_ID_TYPE_ROWMAPPER = (ResultSet rs, int rowNum) -> {
+		NameIdType header = new NameIdType();
+		Long entityId = rs.getLong(COL_NODE_ID);
+		header.withId(KeyFactory.keyToString(entityId));
+		EntityType type = EntityType.valueOf(rs.getString(COL_NODE_TYPE));
+		header.withType(EntityTypeUtils.getEntityTypeClassName(type));
+		header.withName(rs.getString(COL_NODE_NAME));
+		return header;
+	};
+
 
 	private static final RowMapper<Node> NODE_MAPPER = new NodeMapper();
 	
@@ -429,7 +464,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 
 	@Autowired
 	private DBOBasicDao dboBasicDao;
-
+	
 	private final Long ROOT_NODE_ID = Long.parseLong(StackConfigurationSingleton.singleton().getRootFolderEntityId());
 	
 	private static final String BIND_ID_KEY = "bindId";
@@ -449,7 +484,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 			+" FROM "+TABLE_REVISION
 			+" WHERE "+COL_REVISION_OWNER_NODE+" = ?";
 	
-	private static final String SQL_DELETE_BY_IDS = "DELETE FROM " + TABLE_NODE + " WHERE ID IN (:"+ IDS_PARAM_NAME+")";
+	private static final String SQL_DELETE_BY_ID = "DELETE FROM " + TABLE_NODE + " WHERE ID = ?";
 	
 	@WriteTransaction
 	@Override
@@ -576,7 +611,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 		if(id == null) throw new IllegalArgumentException("Id cannot be null");
 		if(versionNumber == null) throw new IllegalArgumentException("Version number cannot be null");
 		try {
-			return this.jdbcTemplate.queryForObject(SQL_SELECT_NODE_VERSION, NODE_MAPPER,versionNumber, KeyFactory.stringToKey(id));
+			return this.jdbcTemplate.queryForObject(SQL_SELECT_NODE_VERSION, NODE_MAPPER, versionNumber, KeyFactory.stringToKey(id));
 		} catch (EmptyResultDataAccessException e) {
 			throw new NotFoundException(ERROR_RESOURCE_NOT_FOUND);
 		}
@@ -584,30 +619,68 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 
 	@WriteTransaction
 	@Override
-	public boolean delete(String id) throws DatastoreException {
-		if(id == null) throw new IllegalArgumentException("NodeId cannot be null");
+	public void delete(String id) throws DatastoreException {
+		ValidateArgument.required(id, "NodeId");
+		
 		Long longId = KeyFactory.stringToKey(id);
-		MapSqlParameterSource prams = getNodeParameters(longId);
-		// Send a delete message
+		
+		deleteBatch(Collections.singletonList(longId));
+		
 		transactionalMessenger.sendDeleteMessageAfterCommit(id, ObjectType.ENTITY);
-		return dboBasicDao.deleteObjectByPrimaryKey(DBONode.class, prams);
 	}
 	
-	@WriteTransaction
+	@NewWriteTransaction
 	@Override
-	public int delete(List<Long> ids) throws DatastoreException{
-		ValidateArgument.required(ids, "ids");
-		if(ids.isEmpty()){
-			//no need to update database if not deleting anything
-			return 0;
+	public boolean deleteTree(String id, int subTreeLimit) {
+		ValidateArgument.required(id, "Id of the node");
+		ValidateArgument.requirement(subTreeLimit > 0, "The subTreeLimit must be greater than 0");
+		
+		Long longId = KeyFactory.stringToKey(id);
+		
+		List<Long> nodes = getSubTreeNodeIdsOrderByDistanceDesc(longId, subTreeLimit + 1);
+		
+		deleteBatch(nodes);
+		
+		boolean deleted = false;
+		
+		if (nodes.size() <= subTreeLimit) {
+			delete(id);
+			deleted = true;
 		}
 		
-		for(long id : ids){
-			String stringID = KeyFactory.keyToString(id);
-			transactionalMessenger.sendDeleteMessageAfterCommit(stringID, ObjectType.ENTITY);
+		return deleted;
+	}
+	
+	@Override
+	public List<Long> getSubTreeNodeIdsOrderByDistanceDesc(Long parentId, int limit) {
+		return jdbcTemplate.queryForList(
+				"WITH RECURSIVE NODES (ID, DISTANCE) AS (" 
+						+ " SELECT " + COL_NODE_ID + ", 1 FROM " + TABLE_NODE 
+						+ " WHERE " + COL_NODE_PARENT_ID + " = ?" 
+						+ " UNION" 
+						+ " SELECT N." + COL_NODE_ID + ", C.DISTANCE + 1" 
+						+ " FROM NODES AS C JOIN " + TABLE_NODE + " AS N ON C." + COL_NODE_ID + " = N." + COL_NODE_PARENT_ID
+						+ " AND C.DISTANCE < " + MAX_PATH_RECURSION
+				+ ")"
+				+ " SELECT ID FROM NODES ORDER BY DISTANCE DESC LIMIT ?", Long.class, parentId, limit);
+	}
+	
+	private void deleteBatch(List<Long> ids) {
+		if (ids.isEmpty()) {
+			return;
 		}
-		MapSqlParameterSource parameters = new MapSqlParameterSource(IDS_PARAM_NAME, ids);
-		return namedParameterJdbcTemplate.update(SQL_DELETE_BY_IDS, parameters);
+		jdbcTemplate.batchUpdate(SQL_DELETE_BY_ID, new BatchPreparedStatementSetter() {
+
+			@Override
+			public void setValues(PreparedStatement ps, int i) throws SQLException {
+				ps.setLong(1, ids.get(i));
+			}
+
+			@Override
+			public int getBatchSize() {
+				return ids.size();
+			}
+		});
 	}
 	
 	@WriteTransaction
@@ -665,12 +738,6 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 		MapSqlParameterSource params = new MapSqlParameterSource();
 		params.addValue("id", id);
 		return params;
-	}
-	
-
-	private DBORevision getCurrentRevision(DBONode node){
-		if(node == null) throw new IllegalArgumentException("Node cannot be null");
-		return getNodeRevisionById(node.getId(),  node.getCurrentRevNumber());
 	}
 	
 	private DBORevision getNodeRevisionById(Long id, Long revNumber){
@@ -1033,10 +1100,9 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 	}
 
 	@Override
-	public EntityHeader getEntityHeader(String nodeId, Long versionNumber) throws DatastoreException, NotFoundException {
+	public EntityHeader getEntityHeader(String nodeId) throws DatastoreException, NotFoundException {
 		Reference ref = new Reference();
 		ref.setTargetId(nodeId);
-		ref.setTargetVersionNumber(versionNumber);
 		LinkedList<Reference> list = new LinkedList<Reference>();
 		list.add(ref);
 		List<EntityHeader> header = getEntityHeader(list);
@@ -1103,23 +1169,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 		}
 		return rowList;
 	}
-
-	/**
-	 * Create a header for 
-	 * @param nodeId
-	 * @param ptn
-	 * @return the entity header
-	 */
-	public static EntityHeader createHeaderFromParentTypeName(ParentTypeName ptn, Long versionNumber, String versionLabel) {
-		EntityHeader header = new EntityHeader();
-		header.setId(KeyFactory.keyToString(ptn.getId()));
-		header.setName(ptn.getName());
-		header.setVersionNumber(versionNumber);
-		header.setVersionLabel(versionLabel);
-		EntityType type = ptn.getType();
-		header.setType(EntityTypeUtils.getEntityTypeClassName(type));
-		return header;
-	}
+	
 	/**
 	 * Fetch the Parent, Type, Name for a Node.
 	 * @param nodeId
@@ -1142,91 +1192,48 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 		}
 	}
 	
-	/**
-	 * returns up to n ancestors of nodeId, ordered from leaf to root and including the given node Id
-	 * 
-	 * @param nodeId
-	 * @param n
-	 * @return
-	 * @throws NotFoundException
-	 */
-	private List<ParentTypeName> getAncestorsPTN(Long nodeId, int depth) {
-		if(nodeId == null) throw new IllegalArgumentException("NodeId cannot be null");
-		Map<String, Object> row = null;
-		try {
-			row = jdbcTemplate.queryForMap(nodeAncestorSQL(depth), nodeId);
-		} catch (EmptyResultDataAccessException e) {
-			throw new NotFoundException("Entity " + nodeId + " is not found.");
-		}
-		List<ParentTypeName> result = new ArrayList<ParentTypeName>();
-		for (int i=0; i<depth; i++) {
-			Long id = (Long)row.get(COL_NODE_ID+"_"+i);
-			if (id==null) break;
-			ParentTypeName ptn = new ParentTypeName();
-			ptn.setId(id);
-			ptn.setName((String)row.get(COL_NODE_NAME+"_"+i));
-			ptn.setParentId((Long)row.get(COL_NODE_PARENT_ID+"_"+i));
-			ptn.setType(EntityType.valueOf((String)row.get(COL_NODE_TYPE+"_"+i)));
-			result.add(ptn);
-		}
-		return result;
-	}
-	
-	public static String nodeAncestorSQL(int depth) {
-		if (depth<2) throw new IllegalArgumentException("Depth must be at least 1");
-		StringBuilder sb = new StringBuilder("SELECT ");
-		for (int i=0; i<depth; i++) {
-			if (i>0) sb.append(", ");
-			sb.append("n"+i+"."+COL_NODE_ID+" as "+COL_NODE_ID+"_"+i+", ");
-			sb.append("n"+i+"."+COL_NODE_NAME+" as "+COL_NODE_NAME+"_"+i+", ");
-			sb.append("n"+i+"."+COL_NODE_PARENT_ID+" as "+COL_NODE_PARENT_ID+"_"+i+", ");
-			sb.append("n"+i+"."+COL_NODE_TYPE+" as "+COL_NODE_TYPE+"_"+i);
-		}
-		sb.append(" \nFROM ");
-		sb.append(outerJoinElement(depth-1));
-		sb.append(" \nWHERE \nn0."+COL_NODE_ID+"=?");
-		return sb.toString();
-	}
-	
-	private static String outerJoinElement(int i) {
-		if (i<0) throw new IllegalArgumentException(""+i);
-		if (i==0) return "JDONODE n0";
-		return "("+outerJoinElement(i-1)+") \nLEFT OUTER JOIN JDONODE n"+(i)+" ON n"+(i-1)+".parent_id=n"+(i)+".id";
+	@Override
+	public List<Long> getEntityPathIds(String nodeId) {
+		String selectColumns = COL_NODE_ID;
+		String sql = String.format(PATH_QUERY_TEMPLATE, selectColumns);
+		List<Long> path = jdbcTemplate.queryForList(sql, Long.class, KeyFactory.stringToKey(nodeId));
+		validatePath(nodeId, path);
+		return path;
 	}
 	
 	@Override
-	public List<EntityHeader> getEntityPath(String nodeId) throws DatastoreException, NotFoundException {
-		// Call the recursive method
-		LinkedList<EntityHeader> results = new LinkedList<EntityHeader>();
-		appendPathBatch(results, KeyFactory.stringToKey(nodeId));
-		return results;
+	public List<NameIdType> getEntityPath(String nodeId) throws DatastoreException, NotFoundException {
+		String selectColumns = COL_NODE_ID+","+COL_NODE_NAME+","+COL_NODE_TYPE;
+		String sql = String.format(PATH_QUERY_TEMPLATE, selectColumns);
+		List<NameIdType> path = jdbcTemplate.query(sql, NAME_ID_TYPE_ROWMAPPER, KeyFactory.stringToKey(nodeId));
+		validatePath(nodeId, path);
+		return path;
 	}
 	
-	public static final int BATCH_PATH_DEPTH = 5;
-
 	/**
-	 * A recursive method to build up the full path of of an entity, recursing in batch rather than one 
-	 * node at a time.
-	 * The first EntityHeader in the results will be the Root Node, and the last EntityHeader will be the requested Node.
-	 * @param results
+	 * Validate the provide path result is valid.
 	 * @param nodeId
-	 * @throws NotFoundException 
-	 * @throws DatastoreException 
+	 * @param path
 	 */
-	private void appendPathBatch(LinkedList<EntityHeader> results, Long nodeId){
-		List<ParentTypeName> ptns = getAncestorsPTN(nodeId, BATCH_PATH_DEPTH); // ordered from leaf to root, length always >=1
-		for (ParentTypeName ptn : ptns) {
-			EntityHeader header = createHeaderFromParentTypeName(ptn, null, null);
-			// Add at the front
-			results.add(0, header);
+	public static void validatePath(String nodeId, List<?> path) {
+		if(path.isEmpty()) {
+			throw new NotFoundException(CANNOT_FIND_A_NODE_WITH_ID+nodeId);
 		}
-		Long lastParentId = ptns.get(ptns.size()-1).getParentId();
-		if(lastParentId!= null){
-			// Recurse
-			appendPathBatch(results, lastParentId);
+		if(path.size() >= MAX_PATH_DEPTH) {
+			throw new IllegalStateException("Path depth limit of: "+MAX_PATH_DEPTH+" exceeded for: "+nodeId);
 		}
 	}
 	
+	@Override
+	public List<Long> getEntityPathIds(String nodeId, boolean includeSelf) {
+		List<Long> pathIds = getEntityPathIds(nodeId);
+		if (!includeSelf) {
+			// path automatically includes the self as the last item so it is removed.
+			pathIds.remove(pathIds.size()-1);
+		}
+		return pathIds;
+	}
+
 	@Override
 	public String getNodeIdForPath(String path) throws DatastoreException {
 		// Get the names
@@ -1558,42 +1565,38 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 			}
 		});
 	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see org.sagebionetworks.repo.model.NodeDAO#lockAllContainers(java.lang.Long)
+	
+	
+	/**
+	 * As part of PLFM-6061, the implementation of this method was changed from n number of SQL calls to a single
+	 * 'WITH RECURSIVE' call. The change eliminates sending intermediate results back and forth from the server and
+	 * database.
 	 */
 	@Override
 	public Set<Long> getAllContainerIds(Collection<Long> parentIds, int maxNumberIds) throws LimitExceededException {
 		ValidateArgument.required(parentIds, "parentIds");
-		// the parentIds are always included.
-		Set<Long> results = new LinkedHashSet<Long>(parentIds);
 		if(parentIds.isEmpty()){
-			return results;
+			return Collections.emptySet();
 		}
+		Set<Long> results = new LinkedHashSet<Long>(parentIds);
 		Map<String, Object> parameters = new HashMap<String, Object>(2);
-		parameters.put(IDS_PARAM_NAME, parentIds);
+		parameters.put(PARAM_NAME_IDS, parentIds);
 		parameters.put(BIND_LIMIT, maxNumberIds+1);
-		while(true){
-			// Get all children at this level.
-			List<Long> children = namedParameterJdbcTemplate.queryForList(SQL_SELECT_CONTAINERS_WITH_PARENT_IDS_IN_CLAUSE, parameters, Long.class);
-			if(children.isEmpty()){
-				// done
-				return results;
-			}
-			/*
-			 * If the children size is over the max then a single page exceeded
-			 * the max. If the children size + result size is over the max then
-			 * the total number exceed the max.
-			 */
-			if(children.size() > maxNumberIds
-					|| children.size()+results.size() > maxNumberIds){
-				throw new LimitExceededException(MAXIMUM_NUMBER_OF_IDS_EXCEEDED);
-			}
-			results.addAll(children);
-			// Children become the parents
-			parameters.put(IDS_PARAM_NAME, children);
+		List<Long> children = namedParameterJdbcTemplate.queryForList(
+				"WITH RECURSIVE CONTAINERS (ID) AS (" + 
+				" SELECT "+COL_NODE_ID+" FROM "+TABLE_NODE+" WHERE "+COL_NODE_ID+" IN (:"+PARAM_NAME_IDS+")"
+						+ " AND "+COL_NODE_TYPE+" IN (" + SQL_STRING_CONTAINERS_TYPES + ")" + 
+				" UNION DISTINCT" + 
+				" SELECT N."+COL_NODE_ID+" FROM CONTAINERS AS C JOIN "+TABLE_NODE+" AS N ON (C."+COL_NODE_ID+" = N."+COL_NODE_PARENT_ID
+					+" AND N."+COL_NODE_TYPE+" IN (" + SQL_STRING_CONTAINERS_TYPES + "))" + 
+				")" + 
+				"SELECT ID FROM CONTAINERS LIMIT :"+BIND_LIMIT, parameters, Long.class);
+		Set<Long> finalSet = new HashSet<>(children);
+		if(finalSet.size() > maxNumberIds
+				|| children.size()+results.size() > maxNumberIds){
+			throw new LimitExceededException(MAXIMUM_NUMBER_OF_IDS_EXCEEDED);
 		}
+		return finalSet;
 	}
 	
 	/*
@@ -1604,11 +1607,8 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 	public Set<Long> getAllContainerIds(String parentId, int maxNumberIds) throws LimitExceededException{
 		ValidateArgument.required(parentId, "parentId");
 		Long id = KeyFactory.stringToKey(parentId);
-		List<Long> ids = new LinkedList<>();
-		ids.add(id);
-		return getAllContainerIds(ids, maxNumberIds);
+		return getAllContainerIds(Collections.singletonList(id), maxNumberIds);
 	}
-
 
 	@Override
 	public String getNodeIdByAlias(String alias) {
@@ -1975,6 +1975,16 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 		this.jdbcTemplate.update(SQL_CREATE_SNAPSHOT_VERSION, request.getSnapshotComment(), label,
 				request.getSnapshotActivityId(), userId, modifiedOn, nodeId, revisionNumber);
 		return revisionNumber;
+	}
+
+	@Override
+	public String getNodeName(String nodeId) {
+		ValidateArgument.required(nodeId, "nodeId");
+		try {
+			return this.jdbcTemplate.queryForObject("SELECT "+COL_NODE_NAME+" FROM "+TABLE_NODE+" WHERE "+COL_NODE_ID+" =? ", String.class, KeyFactory.stringToKey(nodeId));
+		}catch (EmptyResultDataAccessException e) {
+			throw new NotFoundException();
+		}
 	}
 
 }

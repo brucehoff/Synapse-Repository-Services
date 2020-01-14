@@ -285,12 +285,6 @@ public interface StackConfiguration {
 	public String getWorkflowExecutionRetentionPeriodInDays();
 
 	/**
-	 * The maximum number of entities that can be moved into the trash can at one
-	 * time.
-	 */
-	public int getTrashCanMaxTrashable();
-
-	/**
 	 * Stack and instance: <stack>-<stack_instance>
 	 * 
 	 * @return
@@ -444,9 +438,9 @@ public interface StackConfiguration {
 	 * 
 	 * @return
 	 */
-	public String getJiraUserName();
+	public String getJiraUserEmail();
 
-	public String getJiraUserPassword();
+	public String getJiraUserApikey();
 
 	/**
 	 * Entity path for the root folder. This is to be bootstrapped.
@@ -807,5 +801,10 @@ public interface StackConfiguration {
 	 * @return The maximum number of months to process for monthly statistics
 	 */
 	public int getMaximumMonthsForMonthlyStatistics();
+	
+	/**
+	 * @return True if the purge of the trash can is enabled, false otherwise
+	 */
+	public boolean getTrashCanPurgeEnabled();
 
 }
