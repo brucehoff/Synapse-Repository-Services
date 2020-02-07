@@ -50,7 +50,7 @@ import org.sagebionetworks.repo.model.migration.MigrationType;
  * 
  * @author bkng
  */
-public class EvaluationDBO implements MigratableDatabaseObject<EvaluationDBO, EvaluationBackup>, ObservableEntity {
+public class EvaluationDBO implements MigratableDatabaseObject<EvaluationDBO, EvaluationDBO>, ObservableEntity {
 
 	private static FieldColumn[] FIELDS = new FieldColumn[] {
 			new FieldColumn(PARAM_EVALUATION_ID, COL_EVALUATION_ID, true).withIsBackupId(true),
@@ -248,8 +248,8 @@ public class EvaluationDBO implements MigratableDatabaseObject<EvaluationDBO, Ev
 	}
 
 	@Override
-	public Class<? extends EvaluationBackup> getBackupClass() {
-		return EvaluationBackup.class;
+	public Class<? extends EvaluationDBO> getBackupClass() {
+		return EvaluationDBO.class;
 	}
 	@Override
 	public Class<? extends EvaluationDBO> getDatabaseObjectClass() {
@@ -349,18 +349,22 @@ public class EvaluationDBO implements MigratableDatabaseObject<EvaluationDBO, Ev
 		return true;
 	}
 	@Override
-	public MigratableTableTranslation<EvaluationDBO, EvaluationBackup> getTranslator() {
-		return new MigratableTableTranslation<EvaluationDBO, EvaluationBackup>(){
+	public MigratableTableTranslation<EvaluationDBO, EvaluationDBO> getTranslator() {
+		return new MigratableTableTranslation<EvaluationDBO, EvaluationDBO>(){
 
 			@Override
 			public EvaluationDBO createDatabaseObjectFromBackup(
-					EvaluationBackup backup) {
-				return EvaluationTranslationUtil.createDatabaseObjectFromBackup(backup);
+					EvaluationDBO backup) {
+				// fill out start and end time stamps
+				Evaluation dto = new Evaluation();
+				EvaluationDBOUtil.copyDboToDto(backup, dto);
+				EvaluationDBOUtil.copyDtoToDbo(dto, backup);
+				return backup;
 			}
 
 			@Override
-			public EvaluationBackup createBackupFromDatabaseObject(EvaluationDBO dbo) {
-				return EvaluationTranslationUtil.createBackupFromDatabaseObject(dbo);
+			public EvaluationDBO createBackupFromDatabaseObject(EvaluationDBO dbo) {
+				return dbo;
 			}
 		};
 	}
