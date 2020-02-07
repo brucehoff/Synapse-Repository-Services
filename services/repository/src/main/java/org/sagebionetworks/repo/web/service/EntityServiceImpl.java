@@ -73,19 +73,19 @@ public class EntityServiceImpl implements EntityService {
 	public static final Integer DEFAULT_OFFSET = 0;
 	
 	@Autowired
-	EntityManager entityManager;
+	private EntityManager entityManager;
 	@Autowired
-	EntityPermissionsManager entityPermissionsManager;
+	private EntityPermissionsManager entityPermissionsManager;
 	@Autowired
-	UserManager userManager;
+	private UserManager userManager;
 	@Autowired
 	OpenIDConnectManager oidcManager;
 	@Autowired
-	MetadataProviderFactory metadataProviderFactory;
+	private MetadataProviderFactory metadataProviderFactory;
 	@Autowired
-	AllTypesValidator allTypesValidator;
+	private AllTypesValidator allTypesValidator;
 	@Autowired
-	FileHandleManager fileHandleManager;
+	private FileHandleManager fileHandleManager;
 	
 	@Override
 	public PaginatedResults<VersionInfo> getAllVersionsOfEntity(
