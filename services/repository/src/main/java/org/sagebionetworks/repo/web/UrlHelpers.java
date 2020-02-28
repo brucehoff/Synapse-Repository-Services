@@ -119,6 +119,9 @@ public class UrlHelpers {
 	 */
 	public static final String S3TOKEN = "/s3Token";
 
+	/** URL suffix for STS (Security Token Service). */
+	public static final String STS = "/sts";
+
 	/**
 	 * Used to get the path of a entity.
 	 */
@@ -216,6 +219,7 @@ public class UrlHelpers {
 	public static final String ENTITY_BUNDLE_V2_CREATE = ENTITY+BUNDLE_V2+CREATE;
 	public static final String ENTITY_ID_ACL = ENTITY_ID+ACL;
 	public static final String ENTITY_ID_ID_BENEFACTOR = ENTITY_ID+BENEFACTOR;
+	public static final String ENTITY_ID_STS = ENTITY_ID + STS;
 
 	public static final String FILE= "/file";
 	public static final String FILE_PREVIEW = "/filepreview";
@@ -578,6 +582,11 @@ public class UrlHelpers {
 	 * Storage usage summaries, aggregated by entities, for administrators.
 	 */
 	public static final String ADMIN_STORAGE_SUMMARY_PER_ENTITY = ADMIN_STORAGE_SUMMARY + "/perEntity";
+
+	/**
+	 * Principal/User information removal for administrators.
+	 */
+	public static final String ADMIN_REDACT_USER = ADMIN + "/redact/user/{principalId}";
 
 	/**
 	 * Public access for Synapse user and group info
@@ -951,7 +960,8 @@ public class UrlHelpers {
 	// verified user services
 	public static final String VERIFICATION_SUBMISSION = "/verificationSubmission";
 	public static final String VERIFICATION_SUBMISSION_ID = VERIFICATION_SUBMISSION+ID;
-	public static final String VERIFICATION_SUBMISSION_ID_STATE = "/verificationSubmission"+ID+"/state";
+	public static final String VERIFICATION_SUBMISSION_ID_STATE = VERIFICATION_SUBMISSION_ID+"/state";
+	public static final String VERIFICATION_SUBMISSION_NOTIFICATION_EMAIL = VERIFICATION_SUBMISSION+"/notificationEmail";
 
 	// Discussion Services
 	public static final String FORUM = "/forum";
