@@ -117,15 +117,15 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 	private FormManager formManager;
 	
 	@Override
-	public AuthorizationStatus canAccess(UserInfo userInfo, String objectId, ObjectType objectType, ACCESS_TYPE accessType)
+	public AuthorizationStatus canAccess(UserAuthorization userAuthorization, String objectId, ObjectType objectType, ACCESS_TYPE accessType)
 			throws DatastoreException, NotFoundException {
 		switch (objectType) {
 			case ENTITY:
-				return entityPermissionsManager.hasAccess(objectId, accessType, userInfo);
+				return entityPermissionsManager.hasAccess(objectId, accessType, userAuthorization);
 			case EVALUATION:
-				return evaluationPermissionsManager.hasAccess(userInfo, objectId, accessType);
+				return evaluationPermissionsManager.hasAccess(userAuthorization, objectId, accessType);
 			case ACCESS_REQUIREMENT:
-				if (isACTTeamMemberOrAdmin(userInfo)) {
+				if (isACTTeamMemberOrAdmin(userAuthorization.getUserInfo())) {
 					return AuthorizationStatus.authorized();
 				}
 				if (accessType==ACCESS_TYPE.READ || accessType==ACCESS_TYPE.DOWNLOAD) {
@@ -133,12 +133,12 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 				}
 				return AuthorizationStatus.accessDenied("Only ACT member can perform this action.");
 			case ACCESS_APPROVAL:
-				if (isACTTeamMemberOrAdmin(userInfo)) {
+				if (isACTTeamMemberOrAdmin(userAuthorization.getUserInfo())) {
 					return AuthorizationStatus.authorized();
 				}
 				return AuthorizationStatus.accessDenied("Only ACT member can perform this action.");
 			case TEAM:
-				if (userInfo.isAdmin()) {
+				if (userAuthorization.getUserInfo().isAdmin()) {
 					return AuthorizationStatus.authorized();
 				}
 				// everyone should be able to download the Team's Icon, even anonymous.
@@ -155,8 +155,8 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 				}
 			case VERIFICATION_SUBMISSION:
 				if (accessType==ACCESS_TYPE.DOWNLOAD) {
-					if (isACTTeamMemberOrAdmin(userInfo) ||
-							verificationDao.getVerificationSubmitter(Long.parseLong(objectId))==userInfo.getId()) {
+					if (isACTTeamMemberOrAdmin(userAuthorization.getUserInfo()) ||
+							verificationDao.getVerificationSubmitter(Long.parseLong(objectId))==userAuthorization.getUserInfo().getId()) {
 						return AuthorizationStatus.authorized();
 					} else {
 					return AuthorizationStatus.accessDenied(
@@ -173,7 +173,7 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 				}
 				WikiPageKey key = wikiPageDaoV2.lookupWikiKey(objectId);
 				// check against the wiki owner
-				return canAccess(userInfo, key.getOwnerObjectId(), key.getOwnerObjectType(), ownerAccessType);
+				return canAccess(userAuthorization, key.getOwnerObjectId(), key.getOwnerObjectType(), ownerAccessType);
 			}
 			case USER_PROFILE: {
 				// everyone should be able to download userProfile picture, even anonymous.
@@ -186,7 +186,7 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 			case EVALUATION_SUBMISSIONS:
 				if (accessType==ACCESS_TYPE.DOWNLOAD) {
 					Submission submission = submissionDAO.get(objectId);
-					return evaluationPermissionsManager.hasAccess(userInfo, submission.getEvaluationId(), ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
+					return evaluationPermissionsManager.hasAccess(userAuthorization, submission.getEvaluationId(), ACCESS_TYPE.READ_PRIVATE_SUBMISSION);
 				} else {
 					return AuthorizationStatus.accessDenied("Unexpected access type "+accessType);
 				}
@@ -194,7 +194,7 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 				if (accessType==ACCESS_TYPE.DOWNLOAD) {
 					try {
 						// if the user can get the message metadata, he/she can download the message
-						messageManager.getMessage(userInfo, objectId);
+						messageManager.getMessage(userAuthorization.getUserInfo(), objectId);
 						return AuthorizationStatus.authorized();
 					} catch (UnauthorizedException e) {
 						return AuthorizationStatus.accessDenied(e);
@@ -206,7 +206,7 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 			case DATA_ACCESS_REQUEST:
 			case DATA_ACCESS_SUBMISSION: {
 				if (accessType==ACCESS_TYPE.DOWNLOAD) {
-					if (isACTTeamMemberOrAdmin(userInfo)) {
+					if (isACTTeamMemberOrAdmin(userAuthorization.getUserInfo())) {
 						return AuthorizationStatus.authorized();
 					} else {
 						return AuthorizationStatus.accessDenied("Download not allowed");
@@ -279,11 +279,11 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 	}
 
 	@Override
-	public AuthorizationStatus canAccessRawFileHandleByCreator(UserInfo userInfo, String fileHandleId, String creator) {
-		if( isUserCreatorOrAdmin(userInfo, creator)) {
+	public AuthorizationStatus canAccessRawFileHandleByCreator(UserAuthorization userAuthorization, String fileHandleId, String creator) {
+		if( isUserCreatorOrAdmin(userAuthorization.getUserInfo(), creator)) {
 			return AuthorizationStatus.authorized();
 		} else {
-			return AuthorizationStatus.accessDenied(createFileHandleUnauthorizedMessage(fileHandleId, userInfo));
+			return AuthorizationStatus.accessDenied(createFileHandleUnauthorizedMessage(fileHandleId, userAuthorization.getUserInfo().getId()));
 		}
 	}
 	
@@ -294,8 +294,8 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 	 * @param userInfo
 	 * @return
 	 */
-	private String createFileHandleUnauthorizedMessage(String fileHandleId,	UserInfo userInfo) {
-		return String.format(FILE_HANDLE_UNAUTHORIZED_TEMPLATE, fileHandleId, userInfo.getId().toString());
+	private String createFileHandleUnauthorizedMessage(String fileHandleId,	Long userId) {
+		return String.format(FILE_HANDLE_UNAUTHORIZED_TEMPLATE, fileHandleId, userId.toString());
 	}
 	
 
@@ -337,6 +337,8 @@ public class AuthorizationManagerImpl implements AuthorizationManager {
 		}
 	}
 
+	// TODO we need to think about what it means to authorize based on admin access and ACT membership
+	// it might be that the user has to grant these scopes
 	@Override
 	public boolean isACTTeamMemberOrAdmin(UserInfo userInfo) throws DatastoreException, UnauthorizedException {
 		if (userInfo.isAdmin()) return true;

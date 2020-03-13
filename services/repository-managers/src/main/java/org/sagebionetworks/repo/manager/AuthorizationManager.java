@@ -190,7 +190,7 @@ public interface AuthorizationManager {
 	 * @throws DatastoreException
 	 * @throws NotFoundException
 	 */
-	AuthorizationStatus canCreateWiki(UserInfo userInfo, String objectId, ObjectType objectType) throws DatastoreException, NotFoundException;
+	AuthorizationStatus canCreateWiki(UserAuthorization userAuthorization, String objectId, ObjectType objectType) throws DatastoreException, NotFoundException;
 
 	/**
 	 *

@@ -15,6 +15,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sagebionetworks.reflection.model.PaginatedResults;
 import org.sagebionetworks.repo.manager.AuthorizationManager;
+import org.sagebionetworks.repo.manager.UserAuthorization;
 import org.sagebionetworks.repo.model.ACCESS_TYPE;
 import org.sagebionetworks.repo.model.ConflictingUpdateException;
 import org.sagebionetworks.repo.model.DatastoreException;
@@ -34,6 +35,7 @@ import org.sagebionetworks.repo.model.v2.wiki.V2WikiOrderHint;
 import org.sagebionetworks.repo.model.v2.wiki.V2WikiPage;
 import org.sagebionetworks.repo.transactions.WriteTransaction;
 import org.sagebionetworks.repo.web.NotFoundException;
+import org.sagebionetworks.util.ValidateArgument;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -81,18 +83,19 @@ public class V2WikiManagerImpl implements V2WikiManager {
 
 	@WriteTransaction
 	@Override
-	public V2WikiPage createWikiPage(UserInfo user, String objectId, ObjectType objectType, V2WikiPage wikiPage) throws NotFoundException, UnauthorizedException{
-		if(user == null) throw new IllegalArgumentException("user cannot be null");
+	public V2WikiPage createWikiPage(UserAuthorization userAuthorization, String objectId, ObjectType objectType, V2WikiPage wikiPage) throws NotFoundException, UnauthorizedException{
+		if(userAuthorization == null) throw new IllegalArgumentException("userAuthorization cannot be null");
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		if(objectId == null) throw new IllegalArgumentException("objectId cannot be null");
 		if(objectType == null) throw new IllegalArgumentException("objectType cannot be null");
 		if(wikiPage == null) throw new IllegalArgumentException("wikiPage cannot be null");
 		// Check that the user is allowed to perform this action
-		if(!authorizationManager.canCreateWiki(user, objectId, objectType).isAuthorized()){
+		if(!authorizationManager.canCreateWiki(userAuthorization, objectId, objectType).isAuthorized()){
 			throw new UnauthorizedException(String.format(USER_IS_NOT_AUTHORIZED_TEMPLATE, ACCESS_TYPE.CREATE.name(), objectId, objectType.name()));
 		}
 		
 		// Set created by and modified by
-		wikiPage.setCreatedBy(user.getId().toString());
+		wikiPage.setCreatedBy(userAuthorization.getUserInfo().getId().toString());
 		wikiPage.setModifiedBy(wikiPage.getCreatedBy());
 
 		// First build up the map of names to FileHandles
@@ -119,7 +122,7 @@ public class V2WikiManagerImpl implements V2WikiManager {
 		// Validate that the user can assign all file handles
 		for(FileHandle handle: fileHandlesToCheck){
 			// the user must have access to the raw FileHandle to assign it to an object.
-			authorizationManager.canAccessRawFileHandleByCreator(user, handle.getId(), handle.getCreatedBy()).checkAuthorizationOrElseThrow();
+			authorizationManager.canAccessRawFileHandleByCreator(userAuthorization, handle.getId(), handle.getCreatedBy()).checkAuthorizationOrElseThrow();
 		}
 		// pass to the DAO
 		return wikiPageDao.create(wikiPage, nameToHandleMap, objectId, objectType, newFileHandlesToInsert);
@@ -161,18 +164,18 @@ public class V2WikiManagerImpl implements V2WikiManager {
 	}
 	
 	@Override
-	public V2WikiPage getRootWikiPage(UserInfo user, String objectId,	ObjectType objectType) throws NotFoundException, UnauthorizedException {
+	public V2WikiPage getRootWikiPage(UserAuthorization userAuthorization, String objectId,	ObjectType objectType) throws NotFoundException, UnauthorizedException {
 		// Look up the root wiki
 		Long rootWikiId = wikiPageDao.getRootWiki(objectId, objectType);
 		WikiPageKey key = WikiPageKeyHelper.createWikiPageKey(objectId, objectType, rootWikiId.toString());
 		// The security check is done in the default method.
-		return getWikiPage(user, key, null);
+		return getWikiPage(userAuthorization, key, null);
 	}
 
 	@Override
-	public V2WikiPage getWikiPage(UserInfo user, WikiPageKey key, Long version) throws NotFoundException, UnauthorizedException {
+	public V2WikiPage getWikiPage(UserAuthorization userAuthorization, WikiPageKey key, Long version) throws NotFoundException, UnauthorizedException {
 		// Validate that the user has read access
-		validateReadAccess(user, key);
+		validateReadAccess(userAuthorization, key);
 		// Pass to the DAO
 		return wikiPageDao.get(key, version);
 	}
@@ -183,12 +186,12 @@ public class V2WikiManagerImpl implements V2WikiManager {
 	 * @param key
 	 * @throws NotFoundException
 	 */
-	private void validateReadAccess(UserInfo user, WikiPageKey key)
+	private void validateReadAccess(UserAuthorization userAuthorization, WikiPageKey key)
 			throws NotFoundException {
-		if(user == null) throw new IllegalArgumentException("UserInfo cannot be null");
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		if(key == null) throw new IllegalArgumentException("WikiPageKey cannot be null");
 		// Check that the user is allowed to perform this action
-		if(!authorizationManager.canAccess(user, key.getOwnerObjectId(), key.getOwnerObjectType(), ACCESS_TYPE.READ).isAuthorized()){
+		if(!authorizationManager.canAccess(userAuthorization, key.getOwnerObjectId(), key.getOwnerObjectType(), ACCESS_TYPE.READ).isAuthorized()){
 			throw new UnauthorizedException(String.format(USER_IS_NOT_AUTHORIZED_TEMPLATE, ACCESS_TYPE.READ.name(), key.getOwnerObjectId(), key.getOwnerObjectType().name()));
 		}
 	}
@@ -199,24 +202,24 @@ public class V2WikiManagerImpl implements V2WikiManager {
 	 * @param key
 	 * @throws NotFoundException
 	 */
-	private void validateUpdateAccess(UserInfo user, WikiPageKey key)
+	private void validateUpdateAccess(UserAuthorization userAuthorization, WikiPageKey key)
 			throws NotFoundException {
-		if(user == null) throw new IllegalArgumentException("UserInfo cannot be null");
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		if(key == null) throw new IllegalArgumentException("WikiPageKey cannot be null");
 		// Check that the user is allowed to perform this action
-		if(!authorizationManager.canAccess(user, key.getOwnerObjectId(), key.getOwnerObjectType(), ACCESS_TYPE.UPDATE).isAuthorized()){
+		if(!authorizationManager.canAccess(userAuthorization, key.getOwnerObjectId(), key.getOwnerObjectType(), ACCESS_TYPE.UPDATE).isAuthorized()){
 			throw new UnauthorizedException(String.format(USER_IS_NOT_AUTHORIZED_TEMPLATE, ACCESS_TYPE.READ.name(), key.getOwnerObjectId(), key.getOwnerObjectType().name()));
 		}
 	}
 
 	@WriteTransaction
 	@Override
-	public void deleteWiki(UserInfo user, WikiPageKey key) throws UnauthorizedException, DatastoreException{
-		if(user == null) throw new IllegalArgumentException("UserInfo cannot be null");
+	public void deleteWiki(UserAuthorization userAuthorization, WikiPageKey key) throws UnauthorizedException, DatastoreException{
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		if(key == null) throw new IllegalArgumentException("WikiPageKey cannot be null");
 		// Check that the user is allowed to perform this action
 		try {
-			if(!authorizationManager.canAccess(user, key.getOwnerObjectId(), key.getOwnerObjectType(), ACCESS_TYPE.DELETE).isAuthorized()){
+			if(!authorizationManager.canAccess(userAuthorization, key.getOwnerObjectId(), key.getOwnerObjectType(), ACCESS_TYPE.DELETE).isAuthorized()){
 				throw new UnauthorizedException(String.format(USER_IS_NOT_AUTHORIZED_TEMPLATE, ACCESS_TYPE.DELETE.name(), key.getOwnerObjectId(), key.getOwnerObjectType().name()));
 			}
 		} catch (NotFoundException e) {
@@ -229,13 +232,13 @@ public class V2WikiManagerImpl implements V2WikiManager {
 
 	@WriteTransaction
 	@Override
-	public V2WikiPage updateWikiPage(UserInfo user, String objectId, ObjectType objectType, V2WikiPage wikiPage) throws NotFoundException, UnauthorizedException, ConflictingUpdateException {
-		if(user == null) throw new IllegalArgumentException("UserInfo cannot be null");
+	public V2WikiPage updateWikiPage(UserAuthorization userAuthorization, String objectId, ObjectType objectType, V2WikiPage wikiPage) throws NotFoundException, UnauthorizedException, ConflictingUpdateException {
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		if(objectId == null) throw new IllegalArgumentException("ObjectType cannot be null");
 		if(objectType == null) throw new IllegalArgumentException("ObjectType cannot be null");
 		if(wikiPage == null) throw new IllegalArgumentException("wikiPage cannot be null");
 		// Check that the user is allowed to perform this action
-		if(!authorizationManager.canAccess(user, objectId,	objectType, ACCESS_TYPE.UPDATE).isAuthorized()){
+		if(!authorizationManager.canAccess(userAuthorization, objectId,	objectType, ACCESS_TYPE.UPDATE).isAuthorized()){
 			throw new UnauthorizedException(String.format(USER_IS_NOT_AUTHORIZED_TEMPLATE, ACCESS_TYPE.UPDATE.name(), objectId, objectType.name()));
 		}
 		
@@ -250,7 +253,7 @@ public class V2WikiManagerImpl implements V2WikiManager {
 		wikiPageDao.deleteWikiVersions(WikiPageKeyHelper.createWikiPageKey(objectId, objectType, wikiPage.getId()), versionAtMaxRank);
 		
 		// Set modified by
-		wikiPage.setModifiedBy(user.getId().toString());
+		wikiPage.setModifiedBy(userAuthorization.getUserInfo().getId().toString());
 		
 		// First build up the complete map of names to FileHandles of the wiki's attachments
 		Map<String, FileHandle> nameToHandleMap = buildFileNameMap(wikiPage);
@@ -278,7 +281,7 @@ public class V2WikiManagerImpl implements V2WikiManager {
 			// If this file handle is not in the wiki's reservation of attachments, check permissions
 			if(!existingFileHandleIds.contains(Long.valueOf(handle.getId()))){
 				// the user must have access to the raw FileHandle to assign it to an object.
-				authorizationManager.canAccessRawFileHandleByCreator(user, handle.getId(), handle.getCreatedBy()).checkAuthorizationOrElseThrow();
+				authorizationManager.canAccessRawFileHandleByCreator(userAuthorization, handle.getId(), handle.getCreatedBy()).checkAuthorizationOrElseThrow();
 				// Add this to the list of file handles to insert for this update
 				newFileHandlesToInsert.add(handle.getId());
 			}
@@ -290,8 +293,8 @@ public class V2WikiManagerImpl implements V2WikiManager {
 	}
 
 	@Override
-	public PaginatedResults<V2WikiHeader> getWikiHeaderTree(UserInfo user, String ownerId, ObjectType type, Long limit, Long offset) throws DatastoreException, NotFoundException {
-		if(user == null) throw new IllegalArgumentException("UserInfo cannot be null");
+	public PaginatedResults<V2WikiHeader> getWikiHeaderTree(UserAuthorization userAuthorization, String ownerId, ObjectType type, Long limit, Long offset) throws DatastoreException, NotFoundException {
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		if(ownerId == null) throw new IllegalArgumentException("ownerId cannot be null");
 		if(type == null) throw new IllegalArgumentException("ownerId cannot be null");
 		if(limit == null){
@@ -304,7 +307,7 @@ public class V2WikiManagerImpl implements V2WikiManager {
 			offset = 0L;
 		}
 		// Check that the user is allowed to perform this action
-		if(!authorizationManager.canAccess(user,ownerId, type, ACCESS_TYPE.READ).isAuthorized()){
+		if(!authorizationManager.canAccess(userAuthorization, ownerId, type, ACCESS_TYPE.READ).isAuthorized()){
 			throw new UnauthorizedException(String.format(USER_IS_NOT_AUTHORIZED_TEMPLATE, ACCESS_TYPE.READ.name(), ownerId, type.name()));
 		}
 		List<V2WikiHeader> list = wikiPageDao.getHeaderTree(ownerId, type, limit, offset);
@@ -312,8 +315,8 @@ public class V2WikiManagerImpl implements V2WikiManager {
 	}
 	
 	@Override
-	public V2WikiOrderHint getOrderHint(UserInfo user, String objectId,	ObjectType objectType) throws NotFoundException {
-		if(user == null) throw new IllegalArgumentException("UserInfo cannot be null");
+	public V2WikiOrderHint getOrderHint(UserAuthorization userAuthorization, String objectId,	ObjectType objectType) throws NotFoundException {
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		if(objectId == null) throw new IllegalArgumentException("ObjectId cannot be null");
 		if(objectType == null) throw new IllegalArgumentException("ObjectType cannot be null");
 		
@@ -322,15 +325,15 @@ public class V2WikiManagerImpl implements V2WikiManager {
 		WikiPageKey key = WikiPageKeyHelper.createWikiPageKey(objectId, objectType, rootWikiId.toString());
 		
 		// Check that user has read access.
-		validateReadAccess(user, key);
+		validateReadAccess(userAuthorization, key);
 		
 		return wikiPageDao.getWikiOrderHint(key);
 	}
 	
 	@WriteTransaction
 	@Override
-	public V2WikiOrderHint updateOrderHint(UserInfo user, V2WikiOrderHint orderHint) throws NotFoundException {
-		if(user == null) throw new IllegalArgumentException("UserInfo cannot be null");
+	public V2WikiOrderHint updateOrderHint(UserAuthorization userAuthorization, V2WikiOrderHint orderHint) throws NotFoundException {
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		if (orderHint == null) throw new IllegalArgumentException("OrderHint cannot be null");
 		
 		// Look up the root wiki
@@ -338,7 +341,7 @@ public class V2WikiManagerImpl implements V2WikiManager {
 		WikiPageKey key = WikiPageKeyHelper.createWikiPageKey(orderHint.getOwnerId(), orderHint.getOwnerObjectType(), rootWikiId.toString());
 		
 		// Check that user has update access.
-		validateUpdateAccess(user, key);
+		validateUpdateAccess(userAuthorization, key);
 		
 		// Before we can update the Wiki we need to lock.
 		String currentEtag = wikiPageDao.lockWikiOwnersForUpdate(key.getWikiPageId());
@@ -353,32 +356,32 @@ public class V2WikiManagerImpl implements V2WikiManager {
 
 
 	@Override
-	public FileHandleResults getAttachmentFileHandles(UserInfo user, WikiPageKey key, Long version) throws NotFoundException {
+	public FileHandleResults getAttachmentFileHandles(UserAuthorization userAuthorization, WikiPageKey key, Long version) throws NotFoundException {
 		// Validate that the user has read access
-		validateReadAccess(user, key);
+		validateReadAccess(userAuthorization, key);
 		List<String> handleIds = wikiPageDao.getWikiFileHandleIds(key, version);
 		return fileMetadataDao.getAllFileHandles(handleIds, true);
 	}
 
 	@Override
-	public String getFileHandleIdForFileName(UserInfo user, WikiPageKey wikiPageKey, String fileName, Long version) throws NotFoundException, UnauthorizedException {
+	public String getFileHandleIdForFileName(UserAuthorization userAuthorization, WikiPageKey wikiPageKey, String fileName, Long version) throws NotFoundException, UnauthorizedException {
 		// Validate that the user has read access
-		validateReadAccess(user, wikiPageKey);
+		validateReadAccess(userAuthorization, wikiPageKey);
 		// Look-up the fileHandle ID
 		return wikiPageDao.getWikiAttachmentFileHandleForFileName(wikiPageKey, fileName, version);
 	}
 
 	@WriteTransaction
 	@Override
-	public V2WikiPage restoreWikiPage(UserInfo user, String objectId,
+	public V2WikiPage restoreWikiPage(UserAuthorization userAuthorization, String objectId,
 			ObjectType objectType, Long version, String wikiId) throws NotFoundException,
 			UnauthorizedException {
-		if(user == null) throw new IllegalArgumentException("UserInfo cannot be null");
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		if(objectId == null) throw new IllegalArgumentException("ObjectType cannot be null");
 		if(objectType == null) throw new IllegalArgumentException("ObjectType cannot be null");
 		if(wikiId == null) throw new IllegalArgumentException("Wiki id cannot be null");
 		// Check that the user is allowed to perform this action
-		if(!authorizationManager.canAccess(user, objectId, objectType, ACCESS_TYPE.UPDATE).isAuthorized()){
+		if(!authorizationManager.canAccess(userAuthorization, objectId, objectType, ACCESS_TYPE.UPDATE).isAuthorized()){
 			throw new UnauthorizedException(String.format(USER_IS_NOT_AUTHORIZED_TEMPLATE, ACCESS_TYPE.UPDATE.name(), objectId, objectType.name()));
 		}
 		
@@ -401,20 +404,20 @@ public class V2WikiManagerImpl implements V2WikiManager {
 		newWikiVersion.setAttachmentFileHandleIds(versionOfContents.getAttachmentFileHandleIds());
 		newWikiVersion.setTitle(versionOfContents.getTitle());
 		// Update the page with these changes
-		return updateWikiPage(user, objectId, objectType, newWikiVersion);
+		return updateWikiPage(userAuthorization, objectId, objectType, newWikiVersion);
 	}
 
 	@Override
 	public PaginatedResults<V2WikiHistorySnapshot> getWikiHistory(
-			UserInfo user, String ownerId, ObjectType type, WikiPageKey wikiPageKey, Long limit, Long offset)
+			UserAuthorization userAuthorization, String ownerId, ObjectType type, WikiPageKey wikiPageKey, Long limit, Long offset)
 			throws NotFoundException, DatastoreException {
-		if(user == null) throw new IllegalArgumentException("UserInfo cannot be null");
+		ValidateArgument.required(userAuthorization, "User Authorization");
 		if(ownerId == null) throw new IllegalArgumentException("ownerId cannot be null");
 		if(type == null) throw new IllegalArgumentException("ownerId cannot be null");
 		if(limit == null) throw new IllegalArgumentException("limit cannot be null");
 		if(offset == null) throw new IllegalArgumentException("offset cannot be null");
 		// Check that the user is allowed to perform this action
-		if(!authorizationManager.canAccess(user,ownerId, type, ACCESS_TYPE.READ).isAuthorized()){
+		if(!authorizationManager.canAccess(userAuthorization, ownerId, type, ACCESS_TYPE.READ).isAuthorized()){
 			throw new UnauthorizedException(String.format(USER_IS_NOT_AUTHORIZED_TEMPLATE, ACCESS_TYPE.READ.name(), ownerId, type.name()));
 		}
 		List<V2WikiHistorySnapshot> snapshots = wikiPageDao.getWikiHistory(wikiPageKey, limit, offset);
@@ -422,22 +425,22 @@ public class V2WikiManagerImpl implements V2WikiManager {
 	}
 	
 	@Override
-	public String getMarkdownFileHandleId(UserInfo user,
+	public String getMarkdownFileHandleId(UserAuthorization userAuthorization,
 			WikiPageKey wikiPageKey, Long version) throws NotFoundException,
 			UnauthorizedException {
 		// Validate that the user has read access
-		validateReadAccess(user, wikiPageKey);
+		validateReadAccess(userAuthorization, wikiPageKey);
 		// Look-up the fileHandle ID
 		return wikiPageDao.getMarkdownHandleId(wikiPageKey, version);
 	}
 
 	@Override
-	public WikiPageKey getRootWikiKey(UserInfo user, String ownerId,
+	public WikiPageKey getRootWikiKey(UserAuthorization userAuthorization, String ownerId,
 			ObjectType type) throws NotFoundException {
 		Long rootWikiId = wikiPageDao.getRootWiki(ownerId, type);
 		WikiPageKey key = WikiPageKeyHelper.createWikiPageKey(ownerId, type, rootWikiId.toString());
 		// Validate that the user has read access
-		validateReadAccess(user, key);
+		validateReadAccess(userAuthorization, key);
 		return key;
 	}
 }
