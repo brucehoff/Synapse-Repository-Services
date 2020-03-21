@@ -23,6 +23,7 @@ import org.sagebionetworks.evaluation.model.SubmissionEligibility;
 import org.sagebionetworks.evaluation.model.SubmissionQuota;
 import org.sagebionetworks.evaluation.model.SubmissionStatusEnum;
 import org.sagebionetworks.evaluation.model.TeamSubmissionEligibility;
+import org.sagebionetworks.repo.manager.UserAuthorization;
 import org.sagebionetworks.repo.model.Challenge;
 import org.sagebionetworks.repo.model.ChallengeDAO;
 import org.sagebionetworks.repo.model.ChallengeTeamDAO;
@@ -247,9 +248,9 @@ public class SubmissionEligibilityManagerImpl implements
 	 * - is a given user a contributor to some team submission?
 	 */
 	@Override
-	public AuthorizationStatus isIndividualEligible(String evalId, UserInfo userInfo, Date now) throws DatastoreException, NotFoundException {
+	public AuthorizationStatus isIndividualEligible(String evalId, UserAuthorization userAuthorization, Date now) throws DatastoreException, NotFoundException {
 		Evaluation evaluation = evaluationDAO.get(evalId);
-		SubmissionQuota quota = evaluation.getQuota();
+		UserInfo userInfo = userAuthorization.getUserInfo();
 		String principalId = userInfo.getId().toString();
 		// check whether registered
 		{

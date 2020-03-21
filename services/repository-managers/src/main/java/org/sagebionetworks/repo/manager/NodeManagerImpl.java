@@ -803,9 +803,9 @@ public class NodeManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public String getNodeName(UserInfo userInfo, String nodeId) {
+	public String getNodeName(UserAuthorization userAuthorization, String nodeId) {
 		// Validate that the user has download permission.
-		authorizationManager.canAccess(userInfo, nodeId, ObjectType.ENTITY, ACCESS_TYPE.READ)
+		authorizationManager.canAccess(userAuthorization, nodeId, ObjectType.ENTITY, ACCESS_TYPE.READ)
 				.checkAuthorizationOrElseThrow();
 		return nodeDao.getNodeName(nodeId);
 	}

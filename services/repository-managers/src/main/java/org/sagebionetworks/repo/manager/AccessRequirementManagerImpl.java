@@ -89,32 +89,32 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 		}
 	}
 
-	public static void populateCreationFields(UserInfo userInfo, AccessRequirement a) {
+	public static void populateCreationFields(String userId, AccessRequirement a) {
 		Date now = new Date();
-		a.setCreatedBy(userInfo.getId().toString());
+		a.setCreatedBy(userId);
 		a.setCreatedOn(now);
-		populateModifiedFields(userInfo, a);
+		populateModifiedFields(userId, a);
 	}
 
-	public static void populateModifiedFields(UserInfo userInfo, AccessRequirement a) {
+	public static void populateModifiedFields(String userId, AccessRequirement a) {
 		Date now = new Date();
-		a.setModifiedBy(userInfo.getId().toString());
+		a.setModifiedBy(userId);
 		a.setModifiedOn(now);
 	}
 
 	@WriteTransaction
 	@Override
-	public <T extends AccessRequirement> T createAccessRequirement(UserInfo userInfo, T accessRequirement) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException {
+	public <T extends AccessRequirement> T createAccessRequirement(UserAuthorization userAuthorization, T accessRequirement) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException {
 		validateAccessRequirement(accessRequirement);
-		if (!authorizationManager.isACTTeamMemberOrAdmin(userInfo)) {
+		if (!authorizationManager.isACTTeamMemberOrAdmin(userAuthorization.getUserInfo())) {
 			throw new UnauthorizedException("Only ACT member can create an AccessRequirement.");
 		}
-		populateCreationFields(userInfo, accessRequirement);
+		populateCreationFields(userAuthorization.getUserInfo().getId().toString(), accessRequirement);
 		return (T) accessRequirementDAO.create(setDefaultValues(accessRequirement));
 	}
 
-	public static LockAccessRequirement newLockAccessRequirement(UserInfo userInfo, String entityId, String jiraKey) {
-		ValidateArgument.required(userInfo, "userInfo");
+	public static LockAccessRequirement newLockAccessRequirement(String userId, String entityId, String jiraKey) {
+		ValidateArgument.required(userId, "userId");
 		ValidateArgument.required(entityId, "entityId");
 		ValidateArgument.required(jiraKey, "jiraKey");
 
@@ -125,19 +125,19 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 		accessRequirement.setAccessType(ACCESS_TYPE.DOWNLOAD);
 		accessRequirement.setSubjectIds(Arrays.asList(new RestrictableObjectDescriptor[]{subjectId}));
 		accessRequirement.setJiraKey(jiraKey);
-		populateCreationFields(userInfo, accessRequirement);
+		populateCreationFields(userId, accessRequirement);
 		return accessRequirement;
 	}
 
 	@WriteTransaction
 	@Override
-	public LockAccessRequirement createLockAccessRequirement(UserInfo userInfo, String entityId) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException {
-		ValidateArgument.required(userInfo, "userInfo");
+	public LockAccessRequirement createLockAccessRequirement(UserAuthorization userAuthorization, String entityId) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException {
+		ValidateArgument.required(userAuthorization, "userAuthorization");
 		ValidateArgument.required(entityId, "entityId");
 
 		// check authority
-		authorizationManager.canAccess(userInfo, entityId, ObjectType. ENTITY, ACCESS_TYPE.CREATE).checkAuthorizationOrElseThrow();
-		authorizationManager.canAccess(userInfo, entityId, ObjectType. ENTITY, ACCESS_TYPE.UPDATE).checkAuthorizationOrElseThrow();
+		authorizationManager.canAccess(userAuthorization, entityId, ObjectType. ENTITY, ACCESS_TYPE.CREATE).checkAuthorizationOrElseThrow();
+		authorizationManager.canAccess(userAuthorization, entityId, ObjectType. ENTITY, ACCESS_TYPE.UPDATE).checkAuthorizationOrElseThrow();
 
 		RestrictableObjectDescriptor subjectId = new RestrictableObjectDescriptor();
 		subjectId.setId(entityId);
@@ -148,13 +148,13 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 		AccessRequirementStats stats = accessRequirementDAO.getAccessRequirementStats(subjectIds, RestrictableObjectType.ENTITY);
 		ValidateArgument.requirement(stats.getRequirementIdSet().isEmpty(), "Entity "+entityId+" is already restricted.");
 
-		String emailString = notificationEmailDao.getNotificationEmailForPrincipal(userInfo.getId());
+		String emailString = notificationEmailDao.getNotificationEmailForPrincipal(userAuthorization.getUserInfo().getId());
 		String jiraKey = JRJCHelper.createRestrictIssue(jiraClient,
-				userInfo.getId().toString(),
+				userAuthorization.getUserInfo().getId().toString(),
 				emailString,
 				entityId);
 
-		LockAccessRequirement accessRequirement = newLockAccessRequirement(userInfo, entityId, jiraKey);
+		LockAccessRequirement accessRequirement = newLockAccessRequirement(userAuthorization.getUserInfo().getId().toString(), entityId, jiraKey);
 		return (LockAccessRequirement) accessRequirementDAO.create(setDefaultValues(accessRequirement));
 	}
 
@@ -165,7 +165,7 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 
 	@Deprecated
 	@Override
-	public List<AccessRequirement> getAllUnmetAccessRequirements(UserInfo userInfo,
+	public List<AccessRequirement> getAllUnmetAccessRequirements(UserAuthorization userAuthorization,
 			RestrictableObjectDescriptor rod, ACCESS_TYPE accessType)
 					throws DatastoreException, NotFoundException {
 		// first check if there *are* any unmet requirements.  (If not, no further queries will be executed.)
@@ -178,7 +178,7 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 			if (accessType==null || accessType==ACCESS_TYPE.DOWNLOAD) {
 				subjectIds.addAll(nodeAncestorIds);
 				unmetARIds.addAll(AccessRequirementUtil.unmetDownloadAccessRequirementIdsForEntity(
-						userInfo, rod.getId(), nodeAncestorIds, nodeDao, accessRequirementDAO));
+						userAuthorization.getUserInfo(), rod.getId(), nodeAncestorIds, nodeDao, accessRequirementDAO));
 			} else {
 				throw new IllegalArgumentException("Unexpected access type "+accessType);
 			}
@@ -191,7 +191,7 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 				}
 			}
 			unmetARIds = accessRequirementDAO.getAllUnmetAccessRequirements(
-					Collections.singletonList(KeyFactory.stringToKey(rod.getId())), rod.getType(), userInfo.getGroups(), 
+					Collections.singletonList(KeyFactory.stringToKey(rod.getId())), rod.getType(), userAuthorization.getUserInfo().getGroups(), 
 					Collections.singletonList(accessType));
 		}
 		
@@ -210,7 +210,7 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 
 	@Deprecated
 	@Override
-	public List<AccessRequirement> getAccessRequirementsForSubject(UserInfo userInfo,
+	public List<AccessRequirement> getAccessRequirementsForSubject(UserAuthorization userAuthorization,
 			RestrictableObjectDescriptor rod, Long limit, Long offset)
 					throws DatastoreException, NotFoundException {
 		if (limit == null) {
@@ -233,15 +233,15 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 	
 	@WriteTransaction
 	@Override
-	public <T extends AccessRequirement> T updateAccessRequirement(UserInfo userInfo, String accessRequirementId, T toUpdate) throws NotFoundException, UnauthorizedException, ConflictingUpdateException, InvalidModelException, DatastoreException {
-		ValidateArgument.required(userInfo, "userInfo");
+	public <T extends AccessRequirement> T updateAccessRequirement(UserAuthorization userAuthorization, String accessRequirementId, T toUpdate) throws NotFoundException, UnauthorizedException, ConflictingUpdateException, InvalidModelException, DatastoreException {
+		ValidateArgument.required(userAuthorization, "userAuthorization");
 		ValidateArgument.required(accessRequirementId, "accessRequirementId");
 		ValidateArgument.required(toUpdate, "toUpdate");
 		ValidateArgument.requirement(accessRequirementId.equals(toUpdate.getId().toString()),
 			"Update specified ID "+accessRequirementId+" but object contains id: "+toUpdate.getId());
 		validateAccessRequirement(toUpdate);
 
-		authorizationManager.canAccess(userInfo, toUpdate.getId().toString(), ObjectType.ACCESS_REQUIREMENT, ACCESS_TYPE.UPDATE)
+		authorizationManager.canAccess(userAuthorization, toUpdate.getId().toString(), ObjectType.ACCESS_REQUIREMENT, ACCESS_TYPE.UPDATE)
 				.checkAuthorizationOrElseThrow();
 
 		AccessRequirementInfoForUpdate current = accessRequirementDAO.getForUpdate(accessRequirementId);
@@ -253,19 +253,19 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 		ValidateArgument.requirement(current.getConcreteType().equals(toUpdate.getConcreteType()), "Cannot change "+current.getConcreteType()+" to "+toUpdate.getConcreteType());
 
 		toUpdate.setVersionNumber(current.getCurrentVersion()+1);
-		populateModifiedFields(userInfo, toUpdate);
+		populateModifiedFields(userAuthorization.getUserInfo().getId().toString(), toUpdate);
 		return (T) accessRequirementDAO.update(setDefaultValues(toUpdate));
 	}
 
 
 	@WriteTransaction
 	@Override
-	public void deleteAccessRequirement(UserInfo userInfo,
+	public void deleteAccessRequirement(UserAuthorization userAuthorization,
 			String accessRequirementId) throws NotFoundException,
 			DatastoreException, UnauthorizedException {
-		ValidateArgument.required(userInfo, "userInfo");
+		ValidateArgument.required(userAuthorization, "userAuthorization");
 		ValidateArgument.required(accessRequirementId, "accessRequirementId");
-		if (!authorizationManager.isACTTeamMemberOrAdmin(userInfo)) {
+		if (!authorizationManager.isACTTeamMemberOrAdmin(userAuthorization.getUserInfo())) {
 			throw new UnauthorizedException("Only ACT member can delete an AccessRequirement.");
 		}
 		accessRequirementDAO.delete(accessRequirementId);
@@ -326,8 +326,8 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 	}
 
 	@Override
-	public RestrictionInformationResponse getRestrictionInformation(UserInfo userInfo, RestrictionInformationRequest request) {
-		ValidateArgument.required(userInfo, "userInfo");
+	public RestrictionInformationResponse getRestrictionInformation(UserAuthorization userAuthorization, RestrictionInformationRequest request) {
+		ValidateArgument.required(userAuthorization, "userAuthorization");
 		ValidateArgument.required(request, "request");
 		ValidateArgument.required(request.getObjectId(), "RestrictionInformationRequest.objectId");
 		ValidateArgument.required(request.getRestrictableObjectType(), "RestrictionInformationRequest.restrictableObjectType");
@@ -352,20 +352,20 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 			} else {
 				throw new IllegalStateException("Access Requirement does not contain either ACT or ToU: "+stats.getRequirementIdSet().toString());
 			}
-			info.setHasUnmetAccessRequirement(accessApprovalDAO.hasUnmetAccessRequirement(stats.getRequirementIdSet(), userInfo.getId().toString()));
+			info.setHasUnmetAccessRequirement(accessApprovalDAO.hasUnmetAccessRequirement(stats.getRequirementIdSet(), userAuthorization.getUserInfo().getId().toString()));
 		}
 		return info;
 	}
 
 	@WriteTransaction
 	@Override
-	public AccessRequirement convertAccessRequirement(UserInfo userInfo, AccessRequirementConversionRequest request) throws NotFoundException, UnauthorizedException, ConflictingUpdateException {
-		ValidateArgument.required(userInfo, "userInfo");
+	public AccessRequirement convertAccessRequirement(UserAuthorization userAuthorization, AccessRequirementConversionRequest request) throws NotFoundException, UnauthorizedException, ConflictingUpdateException {
+		ValidateArgument.required(userAuthorization, "userAuthorization");
 		ValidateArgument.required(request, "request");
 		ValidateArgument.required(request.getAccessRequirementId(), "requirementId");
 		ValidateArgument.required(request.getEtag(), "etag");
 		ValidateArgument.required(request.getCurrentVersion(), "currentVersion");
-		if (!authorizationManager.isACTTeamMemberOrAdmin(userInfo)) {
+		if (!authorizationManager.isACTTeamMemberOrAdmin(userAuthorization.getUserInfo())) {
 			throw new UnauthorizedException("Only ACT member can perform this action.");
 		}
 
@@ -377,7 +377,7 @@ public class AccessRequirementManagerImpl implements AccessRequirementManager {
 			throw new ConflictingUpdateException("Access Requirement was updated since you last fetched it, retrieve it again and reapply the update.");
 		}
 
-		ManagedACTAccessRequirement toUpdate = convert((ACTAccessRequirement) current, userInfo.getId().toString());
+		ManagedACTAccessRequirement toUpdate = convert((ACTAccessRequirement) current, userAuthorization.getUserInfo().getId().toString());
 		return accessRequirementDAO.update(setDefaultValues(toUpdate));
 	}
 

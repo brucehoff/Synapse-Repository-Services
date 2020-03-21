@@ -55,31 +55,31 @@ public class AccessApprovalManagerImpl implements AccessApprovalManager {
 	@Autowired
 	private NodeDAO nodeDao;
 
-	public static void populateCreationFields(UserInfo userInfo, AccessApproval a) {
+	public static void populateCreationFields(String userId, AccessApproval a) {
 		Date now = new Date();
 		a.setState(ApprovalState.APPROVED);
-		a.setCreatedBy(userInfo.getId().toString());
+		a.setCreatedBy(userId);
 		a.setCreatedOn(now);
-		populateModifiedFields(userInfo, a);
+		populateModifiedFields(userId, a);
 	}
 
-	public static void populateModifiedFields(UserInfo userInfo, AccessApproval a) {
+	public static void populateModifiedFields(String userId, AccessApproval a) {
 		Date now = new Date();
-		a.setModifiedBy(userInfo.getId().toString());
+		a.setModifiedBy(userId);
 		a.setModifiedOn(now);
 	}
 
 	@Override
-	public AccessApproval getAccessApproval(UserInfo userInfo, String approvalId) 
+	public AccessApproval getAccessApproval(UserAuthorization userAuthorization, String approvalId) 
 			throws DatastoreException, NotFoundException {
 		return accessApprovalDAO.get(approvalId);
 	}
 
 	@WriteTransaction
 	@Override
-	public AccessApproval createAccessApproval(UserInfo userInfo, AccessApproval accessApproval) throws DatastoreException,
+	public AccessApproval createAccessApproval(UserAuthorization userAuthorization, AccessApproval accessApproval) throws DatastoreException,
 			UnauthorizedException, NotFoundException {
-		ValidateArgument.required(userInfo, "userInfo");
+		ValidateArgument.required(userAuthorization, "userAuthorization");
 		ValidateArgument.required(accessApproval, "accessApproval");
 		ValidateArgument.required(accessApproval.getRequirementId(), "accessRequirementId");
 		AccessRequirement ar = accessRequirementDAO.get(accessApproval.getRequirementId().toString());
@@ -87,8 +87,8 @@ public class AccessApprovalManagerImpl implements AccessApprovalManager {
 		ValidateArgument.requirement(!(ar instanceof LockAccessRequirement)
 				&& !(ar instanceof PostMessageContentAccessRequirement), "Cannot apply an approval to a "+ar.getConcreteType());
 		if (ar instanceof SelfSignAccessRequirementInterface) {
-			accessApproval.setAccessorId(userInfo.getId().toString());
-		} else if (!authorizationManager.isACTTeamMemberOrAdmin(userInfo)) {
+			accessApproval.setAccessorId(userAuthorization.getUserInfo().getId().toString());
+		} else if (!authorizationManager.isACTTeamMemberOrAdmin(userAuthorization.getUserInfo())) { // TODO check scope too
 			throw new UnauthorizedException("User is not an ACT Member.");
 		}
 
@@ -106,16 +106,16 @@ public class AccessApprovalManagerImpl implements AccessApprovalManager {
 		if (accessApproval.getSubmitterId() == null) {
 			accessApproval.setSubmitterId(accessApproval.getAccessorId());
 		}
-		populateCreationFields(userInfo, accessApproval);
+		populateCreationFields(userAuthorization.getUserInfo().getId().toString(), accessApproval);
 		return accessApprovalDAO.create(accessApproval);
 	}
 
 	@Deprecated
 	@Override
-	public List<AccessApproval> getAccessApprovalsForSubject(UserInfo userInfo,
+	public List<AccessApproval> getAccessApprovalsForSubject(UserAuthorization userAuthorization,
 			RestrictableObjectDescriptor rod, Long limit, Long offset)
 			throws DatastoreException, NotFoundException, UnauthorizedException {
-		authorizationManager.canAccessAccessApprovalsForSubject(userInfo, rod, ACCESS_TYPE.READ).checkAuthorizationOrElseThrow();
+		authorizationManager.canAccessAccessApprovalsForSubject(userAuthorization, rod, ACCESS_TYPE.READ).checkAuthorizationOrElseThrow();
 
 		if (limit == null) {
 			limit = DEFAULT_LIMIT;
@@ -138,10 +138,10 @@ public class AccessApprovalManagerImpl implements AccessApprovalManager {
 	@Deprecated
 	@WriteTransaction
 	@Override
-	public void deleteAccessApproval(UserInfo userInfo, String accessApprovalId)
+	public void deleteAccessApproval(UserAuthorization userAuthorization, String accessApprovalId)
 			throws NotFoundException, DatastoreException, UnauthorizedException {
 		AccessApproval accessApproval = accessApprovalDAO.get(accessApprovalId);
-		authorizationManager.canAccess(userInfo, accessApproval.getId().toString(),
+		authorizationManager.canAccess(userAuthorization, accessApproval.getId().toString(),
 						ObjectType.ACCESS_APPROVAL, ACCESS_TYPE.DELETE)
 				.checkAuthorizationOrElseThrow();
 			
@@ -151,25 +151,25 @@ public class AccessApprovalManagerImpl implements AccessApprovalManager {
 	@Deprecated
 	@WriteTransaction
 	@Override
-	public void revokeAccessApprovals(UserInfo userInfo, String accessRequirementId, String accessorId)
+	public void revokeAccessApprovals(UserAuthorization userAuthorization, String accessRequirementId, String accessorId)
 			throws UnauthorizedException {
-		ValidateArgument.required(userInfo, "userInfo");
+		ValidateArgument.required(userAuthorization, "userAuthorization");
 		ValidateArgument.required(accessRequirementId, "accessRequirementId");
 		ValidateArgument.required(accessorId, "accessorId");
-		if (!authorizationManager.isACTTeamMemberOrAdmin(userInfo)) {
+		if (!authorizationManager.isACTTeamMemberOrAdmin(userAuthorization.getUserInfo())) {
 			throw new UnauthorizedException("Only ACT member may delete access approvals.");
 		}
 		AccessRequirement accessRequirement = accessRequirementDAO.get(accessRequirementId);
 		ValidateArgument.requirement(accessRequirement.getConcreteType().equals(ACTAccessRequirement.class.getName()),
 				"Do not support access approval deletion for access requirement type: "+accessRequirement.getConcreteType());
-		accessApprovalDAO.revokeAll(accessRequirementId, accessorId, userInfo.getId().toString());
+		accessApprovalDAO.revokeAll(accessRequirementId, accessorId, userAuthorization.getUserInfo().getId().toString());
 	}
 
 	@Override
-	public AccessorGroupResponse listAccessorGroup(UserInfo userInfo, AccessorGroupRequest request){
-		ValidateArgument.required(userInfo, "userInfo");
+	public AccessorGroupResponse listAccessorGroup(UserAuthorization userAuthorization, AccessorGroupRequest request){
+		ValidateArgument.required(userAuthorization, "userAuthorization");
 		ValidateArgument.required(request, "request");
-		if (!authorizationManager.isACTTeamMemberOrAdmin(userInfo)) {
+		if (!authorizationManager.isACTTeamMemberOrAdmin(userAuthorization.getUserInfo())) {
 			throw new UnauthorizedException("Only ACT member can perform this action.");
 		}
 		NextPageToken nextPageToken = new NextPageToken(request.getNextPageToken());
@@ -185,20 +185,20 @@ public class AccessApprovalManagerImpl implements AccessApprovalManager {
 
 	@WriteTransaction
 	@Override
-	public void revokeGroup(UserInfo userInfo, AccessorGroupRevokeRequest request) {
-		ValidateArgument.required(userInfo, "userInfo");
+	public void revokeGroup(UserAuthorization userAuthorization, AccessorGroupRevokeRequest request) {
+		ValidateArgument.required(userAuthorization, "userAuthorization");
 		ValidateArgument.required(request, "request");
 		ValidateArgument.required(request.getAccessRequirementId(), "requirementId");
 		ValidateArgument.required(request.getSubmitterId(), "submitterId");
-		if (!authorizationManager.isACTTeamMemberOrAdmin(userInfo)) {
+		if (!authorizationManager.isACTTeamMemberOrAdmin(userAuthorization.getUserInfo())) {
 			throw new UnauthorizedException("Only ACT member can perform this action.");
 		}
-		accessApprovalDAO.revokeGroup(request.getAccessRequirementId(), request.getSubmitterId(), userInfo.getId().toString());
+		accessApprovalDAO.revokeGroup(request.getAccessRequirementId(), request.getSubmitterId(), userAuthorization.getUserInfo().getId().toString());
 	}
 
 	@Override
-	public BatchAccessApprovalInfoResponse getAccessApprovalInfo(UserInfo userInfo, BatchAccessApprovalInfoRequest request) {
-		ValidateArgument.required(userInfo, "userInfo");
+	public BatchAccessApprovalInfoResponse getAccessApprovalInfo(UserAuthorization userAuthorization, BatchAccessApprovalInfoRequest request) {
+		ValidateArgument.required(userAuthorization, "userAuthorization");
 		ValidateArgument.required(request, "request");
 		ValidateArgument.required(request.getUserId(), "BatchAccessApprovalInfoRequest.userId");
 		ValidateArgument.required(request.getAccessRequirementIds(), "BatchAccessApprovalInfoRequest.accessRequirementIds");

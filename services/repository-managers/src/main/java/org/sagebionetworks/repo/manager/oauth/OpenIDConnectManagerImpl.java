@@ -387,9 +387,11 @@ public class OpenIDConnectManagerImpl implements OpenIDConnectManager {
 
 		// userId is used to retrieve the user info
 		String userId = getUserIdFromPPID(ppid, oauthClientId);
+		
+		boolean adminAccessAllowed = oauthClientId.equals(AuthorizationConstants.SYNAPSE_OAUTH_CLIENT_ID);
 
 		UserAuthorization result = new UserAuthorization();
-		UserInfo userInfo = userManager.getUserInfo(Long.parseLong(userId));
+		UserInfo userInfo = userManager.getUserInfo(Long.parseLong(userId), adminAccessAllowed);
 		result.setOidcClaims(oidcClaims);
 		result.setScopes(scopes);
 		result.setUserInfo(userInfo);

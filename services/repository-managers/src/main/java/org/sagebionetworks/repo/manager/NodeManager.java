@@ -364,10 +364,10 @@ public interface NodeManager {
 
 	/**
 	 * Get the name of the given node.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param nodeId
 	 * @return
 	 */
-	public String getNodeName(UserInfo userInfo, String nodeId);
+	public String getNodeName(UserAuthorization userAuthorization, String nodeId);
 
 }

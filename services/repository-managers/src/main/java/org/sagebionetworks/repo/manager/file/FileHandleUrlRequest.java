@@ -2,21 +2,21 @@ package org.sagebionetworks.repo.manager.file;
 
 import java.util.Objects;
 
-import org.sagebionetworks.repo.model.UserInfo;
+import org.sagebionetworks.repo.manager.UserAuthorization;
 import org.sagebionetworks.repo.model.file.FileHandleAssociateType;
 import org.sagebionetworks.util.ValidateArgument;
 
 public class FileHandleUrlRequest {
 
-	private UserInfo userInfo;
+	private UserAuthorization userAuthorization;
 	private FileHandleAssociateType associationType;
 	private String associationId;
 	private String fileHandleId;
 
-	public FileHandleUrlRequest(UserInfo userInfo, String fileHandleId) {
-		ValidateArgument.required(userInfo, "userInfo");
+	public FileHandleUrlRequest(UserAuthorization userAuthorization, String fileHandleId) {
+		ValidateArgument.required(userAuthorization, "userInfo");
 		ValidateArgument.required(fileHandleId, "fileHandleId");
-		this.userInfo = userInfo;
+		this.userAuthorization = userAuthorization;
 		this.fileHandleId = fileHandleId;
 	}
 
@@ -28,8 +28,13 @@ public class FileHandleUrlRequest {
 		return this;
 	}
 
-	public UserInfo getUserInfo() {
-		return userInfo;
+
+	public UserAuthorization getUserAuthorization() {
+		return userAuthorization;
+	}
+
+	public void setUserAuthorization(UserAuthorization userAuthorization) {
+		this.userAuthorization = userAuthorization;
 	}
 
 	public boolean hasAssociation() {
@@ -50,7 +55,7 @@ public class FileHandleUrlRequest {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(associationId, associationType, fileHandleId, userInfo);
+		return Objects.hash(associationId, associationType, fileHandleId, userAuthorization);
 	}
 
 	@Override
@@ -67,7 +72,7 @@ public class FileHandleUrlRequest {
 		FileHandleUrlRequest other = (FileHandleUrlRequest) obj;
 		return Objects.equals(associationId, other.associationId) && associationType == other.associationType
 				&& Objects.equals(fileHandleId, other.fileHandleId)
-				&& Objects.equals(userInfo, other.userInfo);
+				&& Objects.equals(userAuthorization, other.userAuthorization);
 	}
 
 }

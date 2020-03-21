@@ -21,9 +21,12 @@ public interface UserManager {
 	/**
 	 * Get the User and UserGroup information for the given user ID.  
 	 * 
-	 * @param principalId the ID of the user of interest
+	 * @param principalId
+	 * @param adminAccessAllowed set UserInfo.isAdmin() to true only if this is true
+	 * @return
+	 * @throws NotFoundException
 	 */
-	public UserInfo getUserInfo(Long principalId) throws NotFoundException;
+	public UserInfo getUserInfo(Long principalId, boolean adminAccessAllowed) throws NotFoundException;
 	
 	/**
 	 * Creates a new user

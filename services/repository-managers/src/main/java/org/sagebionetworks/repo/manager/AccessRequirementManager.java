@@ -22,7 +22,7 @@ public interface AccessRequirementManager {
 	/**
 	 *  create access requirement
 	 */
-	public <T extends AccessRequirement> T  createAccessRequirement(UserInfo userInfo, T AccessRequirement) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException;
+	public <T extends AccessRequirement> T  createAccessRequirement(UserAuthorization userAuthorization, T AccessRequirement) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException;
 	
 	/**
 	 * 
@@ -36,18 +36,18 @@ public interface AccessRequirementManager {
 	/**
 	 *  get a page of the access requirements for an entity
 	 */
-	public List<AccessRequirement> getAccessRequirementsForSubject(UserInfo userInfo, RestrictableObjectDescriptor subjectId, Long limit, Long offset) throws DatastoreException, NotFoundException, UnauthorizedException;
+	public List<AccessRequirement> getAccessRequirementsForSubject(UserAuthorization userAuthorization, RestrictableObjectDescriptor subjectId, Long limit, Long offset) throws DatastoreException, NotFoundException, UnauthorizedException;
 	
 	/**
 	 *  update an access requirement
 	 *
 	 */
-	public <T extends AccessRequirement> T  updateAccessRequirement(UserInfo userInfo, String acccessRequirementId, T accessRequirement) throws NotFoundException, UnauthorizedException, ConflictingUpdateException, InvalidModelException, DatastoreException;
+	public <T extends AccessRequirement> T  updateAccessRequirement(UserAuthorization userAuthorization, String acccessRequirementId, T accessRequirement) throws NotFoundException, UnauthorizedException, ConflictingUpdateException, InvalidModelException, DatastoreException;
 	
 	/*
 	 *  delete an access requirement
 	 */
-	public void deleteAccessRequirement(UserInfo userInfo, String accessRequirementId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public void deleteAccessRequirement(UserAuthorization userAuthorization, String accessRequirementId) throws NotFoundException, DatastoreException, UnauthorizedException;
 
 	/**
 	 * Create an LockAccessRequirement on an entity
@@ -59,12 +59,12 @@ public interface AccessRequirementManager {
 	 * @throws UnauthorizedException
 	 * @throws NotFoundException
 	 */
-	public LockAccessRequirement createLockAccessRequirement(UserInfo userInfo,
+	public LockAccessRequirement createLockAccessRequirement(UserAuthorization userAuthorization,
 			String entityId) throws DatastoreException, InvalidModelException,
 			UnauthorizedException, NotFoundException;
 
 	// will be removed after the ACT feature
-	public List<AccessRequirement> getAllUnmetAccessRequirements(UserInfo userInfo, RestrictableObjectDescriptor subjectId,
+	public List<AccessRequirement> getAllUnmetAccessRequirements(UserAuthorization userAuthorization, RestrictableObjectDescriptor subjectId,
 			ACCESS_TYPE accessType) throws DatastoreException, NotFoundException;
 
 	/**
@@ -74,7 +74,7 @@ public interface AccessRequirementManager {
 	 * @param request
 	 * @return
 	 */
-	public RestrictionInformationResponse getRestrictionInformation(UserInfo userInfo, RestrictionInformationRequest request);
+	public RestrictionInformationResponse getRestrictionInformation(UserAuthorization userAuthorization, RestrictionInformationRequest request);
 
 	/**
 	 * Convert an ACTAccessRequirement to a ManagedACTAccessRequirement
@@ -86,7 +86,7 @@ public interface AccessRequirementManager {
 	 * @throws UnauthorizedException
 	 * @throws ConflictingUpdateException
 	 */
-	public AccessRequirement convertAccessRequirement(UserInfo userInfo, AccessRequirementConversionRequest request)
+	public AccessRequirement convertAccessRequirement(UserAuthorization userAuthorization, AccessRequirementConversionRequest request)
 			throws NotFoundException, UnauthorizedException, ConflictingUpdateException;
 
 	/**

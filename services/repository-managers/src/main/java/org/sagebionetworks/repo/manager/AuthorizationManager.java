@@ -23,21 +23,6 @@ import org.sagebionetworks.repo.model.subscription.SubscriptionObjectType;
 import org.sagebionetworks.repo.web.NotFoundException;
 
 public interface AuthorizationManager {
-	
-	/**
-	 * Check user access to an object
-	 * 
-	 * @param userInfo
-	 * @param objectId
-	 * @param objectType
-	 * @param accessType
-	 * @return whether access is granted and, if not, a String giving the reason why
-	 * @throws NotFoundException 
-	 * @throws DatastoreException 
-	 */
-	@Deprecated
-	AuthorizationStatus canAccess(UserInfo userInfo, String objectId, ObjectType objectType, ACCESS_TYPE accessType) throws DatastoreException, NotFoundException;
-
 	/**
 	 * Check user access to an object
 	 * 
@@ -85,7 +70,7 @@ public interface AuthorizationManager {
 	
 	/**
 	 * The raw FileHandle can only be accessed by the user that created it.
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param fileHandleId
 	 * @param creator
 	 * @return whether access is granted and, if not, a String giving the reason why
@@ -102,17 +87,6 @@ public interface AuthorizationManager {
 	
 	/**
 	 * 
-	 * @param userInfo
-	 * @param fileHandleId
-	 * @return whether access is granted and, if not, a String giving the reason why
-	 * @throws NotFoundException 
-	 */
-	@Deprecated
-	AuthorizationStatus canAccessRawFileHandleById(UserInfo userInfo, String fileHandleId) throws NotFoundException;
-
-	
-	/**
-	 * 
 	 * @param userAuthorization
 	 * @param fileHandleId
 	 * @return whether access is granted and, if not, a String giving the reason why
@@ -122,13 +96,13 @@ public interface AuthorizationManager {
 
 	/**
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param fileHandleId
 	 * @return whether access is granted and, if not, a String giving the reason why
 	 * @throws NotFoundException
 	 */
 	@Deprecated
-	void canAccessRawFileHandlesByIds(UserInfo userInfo, List<String> fileHandleId, Set<String> allowed, Set<String> disallowed)
+	void canAccessRawFileHandlesByIds(UserAuthorization userAuthorization, List<String> fileHandleId, Set<String> allowed, Set<String> disallowed)
 			throws NotFoundException;
 	
 	/**
@@ -145,22 +119,24 @@ public interface AuthorizationManager {
 	 * </ol>
 	 * </ul>
 	 * 
-	 * @param user
-	 * @param associations
-	 * @return Map key
+	 * @param userAuthorization
+	 * @param fileHandleId
+	 * @param associatedObjectId
+	 * @param associationType
+	 * @return
 	 */
-	List<FileHandleAuthorizationStatus> canDownloadFile(UserInfo user, List<String> fileHandleId, String associatedObjectId, FileHandleAssociateType associationType);
+	List<FileHandleAuthorizationStatus> canDownloadFile(UserAuthorization userAuthorization, List<String> fileHandleId, String associatedObjectId, FileHandleAssociateType associationType);
 
 
 	/**
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param subjectId
 	 * @param accessType
 	 * @return whether access is granted and, if not, a String giving the reason why
 	 * @throws NotFoundException
 	 */
-	AuthorizationStatus canAccessAccessApprovalsForSubject(UserInfo userInfo, RestrictableObjectDescriptor subjectId, ACCESS_TYPE accessType) throws NotFoundException;
+	AuthorizationStatus canAccessAccessApprovalsForSubject(UserAuthorization userAuthorization, RestrictableObjectDescriptor subjectId, ACCESS_TYPE accessType) throws NotFoundException;
 	
 	/**
 	 * Is this the AnonymousUser?
@@ -223,7 +199,7 @@ public interface AuthorizationManager {
 	/**
 	 * Check user access to an subscribable object
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param objectId
 	 * @param objectType
 	 * @param accessType
@@ -231,7 +207,7 @@ public interface AuthorizationManager {
 	 * @throws NotFoundException 
 	 * @throws DatastoreException 
 	 */
-	AuthorizationStatus canSubscribe(UserInfo userInfo, String objectId, SubscriptionObjectType objectType) throws DatastoreException, NotFoundException;
+	AuthorizationStatus canSubscribe(UserAuthorization userAuthorization, String objectId, SubscriptionObjectType objectType) throws DatastoreException, NotFoundException;
 
 	/**
 	 * Get the set of project IDs that that are visible to the passed set of
@@ -244,14 +220,14 @@ public interface AuthorizationManager {
 	
 	/**
 	 * 
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param service
 	 * @param type
 	 * @param name
 	 * @param actionTypes
 	 * @return the permitted actions for the given user on the given repository
 	 */
-	public Set<String> getPermittedDockerActions(UserInfo userInfo, String service, String type, String name, String actionTypes);
+	public Set<String> getPermittedDockerActions(UserAuthorization userAuthorization, String service, String type, String name, String actionTypes);
 
 	/**
 	 * Validate and throw exception for HasAccessorRequirement
@@ -264,12 +240,12 @@ public interface AuthorizationManager {
 	/**
 	 * Check whether a user has access to a MembershipInvitation
 	 *
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param mis
 	 * @param accessType
 	 * @return whether access is granted and, if not, a String giving the reason why
 	 */
-	AuthorizationStatus canAccessMembershipInvitation(UserInfo userInfo, MembershipInvitation mis, ACCESS_TYPE accessType);
+	AuthorizationStatus canAccessMembershipInvitation(UserAuthorization userAuthorization, MembershipInvitation mis, ACCESS_TYPE accessType);
 
 	/**
 	 * Check whether the token is valid for the access_type
@@ -293,10 +269,10 @@ public interface AuthorizationManager {
 	/**
 	 * Check whether a user has access to a MembershipRequest
 	 *
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @param mr
 	 * @param accessType
 	 * @return
 	 */
-	AuthorizationStatus canAccessMembershipRequest(UserInfo userInfo, MembershipRequest mr, ACCESS_TYPE accessType);
+	AuthorizationStatus canAccessMembershipRequest(UserAuthorization userAuthorization, MembershipRequest mr, ACCESS_TYPE accessType);
 }

@@ -81,11 +81,11 @@ public interface EntityPermissionsManager {
 	 * Use case:  Need to find out if a user can access a resource.
 	 * 
 	 * @param resourceId the ID of the resource of interest
-	 * @param user
+	 * @param userAuthorization
 	 * @param accessType
 	 * @return
 	 */
-	public AuthorizationStatus hasAccess(String resourceId, ACCESS_TYPE  accessType, UserInfo userInfo) throws NotFoundException, DatastoreException;
+	public AuthorizationStatus hasAccess(String resourceId, ACCESS_TYPE  accessType, UserAuthorization userAuthorization) throws NotFoundException, DatastoreException;
 
 	/**
 	 * Get the user permission for an entity.
@@ -109,32 +109,32 @@ public interface EntityPermissionsManager {
 	/**
 	 * 
 	 * @param entityId
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @return
 	 * @throws NotFoundException 
 	 * @throws DatastoreException 
 	 */
-	public AuthorizationStatus canCreate(String parentId, EntityType nodeType, UserInfo userInfo) throws DatastoreException, NotFoundException;
+	public AuthorizationStatus canCreate(String parentId, EntityType nodeType, UserAuthorization userAuthorization) throws DatastoreException, NotFoundException;
 
 	/**
 	 * 
 	 * @param entityId
-	 * @param userInfo
+	 * @param userAuthorization
 	 * @return
 	 * @throws NotFoundException
 	 * @throws DatastoreException
 	 */
-	public AuthorizationStatus canChangeSettings(Node node, UserInfo userInfo) throws DatastoreException, NotFoundException;
+	public AuthorizationStatus canChangeSettings(Node node, UserAuthorization userAuthorization) throws DatastoreException, NotFoundException;
 
 	/**
 	 * 
-	 * @param user
 	 * @param entityId
+	 * @param userAuthorization
 	 * @return
 	 * @throws NotFoundException
 	 * @throws DatastoreException
 	 */
-	public AuthorizationStatus canCreateWiki(String entityId, UserInfo userInfo) throws DatastoreException, NotFoundException;
+	public AuthorizationStatus canCreateWiki(String entityId, UserAuthorization userAuthorization) throws DatastoreException, NotFoundException;
 
 	/**
 	 * Get the set of children IDs that the caller does not have read access for a given parentId.

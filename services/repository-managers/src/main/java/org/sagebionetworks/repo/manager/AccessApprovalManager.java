@@ -20,7 +20,7 @@ public interface AccessApprovalManager {
 	/**
 	 *  create access approval
 	 */
-	public AccessApproval createAccessApproval(UserInfo userInfo, AccessApproval accessApproval) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException;
+	public AccessApproval createAccessApproval(UserAuthorization userAuthorization, AccessApproval accessApproval) throws DatastoreException, InvalidModelException, UnauthorizedException, NotFoundException;
 	
 	/**
 	 * 
@@ -30,17 +30,17 @@ public interface AccessApprovalManager {
 	 * @throws DatastoreException
 	 * @throws NotFoundException
 	 */
-	public AccessApproval getAccessApproval(UserInfo userInfo, String approvalId) throws DatastoreException, NotFoundException;
+	public AccessApproval getAccessApproval(UserAuthorization userAuthorization, String approvalId) throws DatastoreException, NotFoundException;
 
 	/**
 	 *  get all the access approvals for an entity
 	 */
-	public List<AccessApproval> getAccessApprovalsForSubject(UserInfo userInfo, RestrictableObjectDescriptor subjectId, Long limit, Long offset) throws DatastoreException, NotFoundException, UnauthorizedException;
+	public List<AccessApproval> getAccessApprovalsForSubject(UserAuthorization userAuthorization, RestrictableObjectDescriptor subjectId, Long limit, Long offset) throws DatastoreException, NotFoundException, UnauthorizedException;
 	
 	/*
 	 *  delete an access approval
 	 */
-	public void deleteAccessApproval(UserInfo userInfo, String AccessApprovalId) throws NotFoundException, DatastoreException, UnauthorizedException;
+	public void deleteAccessApproval(UserAuthorization userAuthorization, String AccessApprovalId) throws NotFoundException, DatastoreException, UnauthorizedException;
 
 	/**
 	 * Delete all access approvals that gives accessorId access to subject(s) that requires access requirement accessRequirementId
@@ -50,7 +50,7 @@ public interface AccessApprovalManager {
 	 * @param accessorId - the user whose access is being revoked
 	 * @throws UnauthorizedException - if the user is not an admin or an ACT member
 	 */
-	public void revokeAccessApprovals(UserInfo userInfo, String accessRequirementId, String accessorId) throws UnauthorizedException;
+	public void revokeAccessApprovals(UserAuthorization userAuthorization, String accessRequirementId, String accessorId) throws UnauthorizedException;
 
 	/**
 	 * List a page of accessor groups.
@@ -59,7 +59,7 @@ public interface AccessApprovalManager {
 	 * @param request
 	 * @return
 	 */
-	public AccessorGroupResponse listAccessorGroup(UserInfo userInfo, AccessorGroupRequest request);
+	public AccessorGroupResponse listAccessorGroup(UserAuthorization userAuthorization, AccessorGroupRequest request);
 
 	/**
 	 * Revoke a group of accessors
@@ -67,7 +67,7 @@ public interface AccessApprovalManager {
 	 * @param userInfo
 	 * @param request
 	 */
-	public void revokeGroup(UserInfo userInfo, AccessorGroupRevokeRequest request);
+	public void revokeGroup(UserAuthorization userAuthorization, AccessorGroupRevokeRequest request);
 
 	/**
 	 * Retrieve a batch of AccessApprovalInfo.
@@ -76,5 +76,5 @@ public interface AccessApprovalManager {
 	 * @param request
 	 * @return
 	 */
-	public BatchAccessApprovalInfoResponse getAccessApprovalInfo(UserInfo userInfo, BatchAccessApprovalInfoRequest request);
+	public BatchAccessApprovalInfoResponse getAccessApprovalInfo(UserAuthorization userAuthorization, BatchAccessApprovalInfoRequest request);
 }
