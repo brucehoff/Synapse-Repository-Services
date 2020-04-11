@@ -1,5 +1,6 @@
 package org.sagebionetworks.repo.web.service.subscription;
 
+import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.subscription.SortByType;
 import org.sagebionetworks.repo.model.subscription.SortDirection;
 import org.sagebionetworks.repo.model.subscription.SubscriberCount;
@@ -15,16 +16,14 @@ public interface SubscriptionService {
 	/**
 	 * Subscribe to a topic
 	 * 
-	 * @param userId
 	 * @param topic
 	 * @return
 	 */
-	public Subscription create(Long userId, Topic topic);
+	public Subscription create(UserInfo userInfo, Topic topic);
 
 	/**
 	 * retrieve all subscriptions one has
 	 * 
-	 * @param userId
 	 * @param limit
 	 * @param offset
 	 * @param objectType
@@ -34,67 +33,60 @@ public interface SubscriptionService {
 	 * @param sortByType 
 	 * @return
 	 */
-	public SubscriptionPagedResults getAll(Long userId, Long limit, Long offset, SubscriptionObjectType objectType, SortByType sortByType, SortDirection sortDirection);
+	public SubscriptionPagedResults getAll(UserInfo userInfo, Long limit, Long offset, SubscriptionObjectType objectType, SortByType sortByType, SortDirection sortDirection);
 
 	/**
 	 * retrieve subscriptions one has based on a list of provided topics
 	 * 
-	 * @param userId
 	 * @param request
 	 * @return
 	 */
-	public SubscriptionPagedResults getList(Long userId, SubscriptionRequest request);
+	public SubscriptionPagedResults getList(UserInfo userInfo, SubscriptionRequest request);
 
 	/**
 	 * unsubscribe to a topic
 	 * 
-	 * @param userId
 	 * @param subscriptionId
 	 */
-	public void delete(Long userId, String subscriptionId);
+	public void delete(UserInfo userInfo, String subscriptionId);
 
 	/**
 	 * unsubscribe to all topic
 	 * 
-	 * @param userId
 	 */
-	public void deleteAll(Long userId);
+	public void deleteAll(UserInfo userInfo);
 
 	/**
 	 * retrieve a subscription given its ID
 	 * 
-	 * @param userId
 	 * @param id
 	 * @return
 	 */
-	public Subscription get(Long userId, String id);
+	public Subscription get(UserInfo userInfo, String id);
 
 	/**
 	 * retrieve a page of subscribers for a given topic
 	 * 
-	 * @param userId
 	 * @param topic
 	 * @param nextPageToken
 	 * @return
 	 */
-	public SubscriberPagedResults getSubscribers(Long userId, Topic topic, String nextPageToken);
+	public SubscriberPagedResults getSubscribers(UserInfo userInfo, Topic topic, String nextPageToken);
 
 	/**
 	 * retrieve number of subscribers for a given topic
 	 * 
-	 * @param userId
 	 * @param topic
 	 * @return
 	 */
-	public SubscriberCount getSubscriberCount(Long userId, Topic topic);
+	public SubscriberCount getSubscriberCount(UserInfo userInfo, Topic topic);
 
 	/**
 	 * Subscribe to all topic of the same SubscriptionObjectType
 	 * 
-	 * @param userId
 	 * @param objectType
 	 * @return
 	 */
-	public Subscription subscribeAll(Long userId, SubscriptionObjectType objectType);
+	public Subscription subscribeAll(UserInfo userInfo, SubscriptionObjectType objectType);
 
 }

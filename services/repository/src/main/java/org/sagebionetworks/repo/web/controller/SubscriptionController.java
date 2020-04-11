@@ -2,6 +2,7 @@ package org.sagebionetworks.repo.web.controller;
 
 import org.sagebionetworks.repo.model.AuthorizationConstants;
 import org.sagebionetworks.repo.model.ServiceConstants;
+import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.subscription.SortByType;
 import org.sagebionetworks.repo.model.subscription.SortDirection;
 import org.sagebionetworks.repo.model.subscription.SubscriberCount;
@@ -45,14 +46,13 @@ public class SubscriptionController{
 	 * <br/>
 	 * Target users: anyone who has READ permission on the object.
 	 * 
-	 * @param userId - The ID of the user who is making the request
 	 * @param topic - Topic to subscribe to
 	 * @return
 	 */
 	@ResponseStatus(HttpStatus.CREATED)
 	@RequestMapping(value = UrlHelpers.SUBSCRIPTION, method = RequestMethod.POST)
 	public @ResponseBody Subscription create(
-			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
+			UserInfo userInfo,
 			@RequestBody Topic topic) {
 		return serviceProvider.getSubscriptionService().create(userId, topic);
 	}
@@ -63,14 +63,13 @@ public class SubscriptionController{
 	 * Only the following SubscriptionObjectType are allowed in this API:
 	 * <ul><li>DATA_ACCESS_SUBMISSION</li></ul>
 	 * 
-	 * @param userId - The ID of the user who is making the request
 	 * @param objectType - SubscriptionObjectType to subscribe to
 	 * @return
 	 */
 	@ResponseStatus(HttpStatus.CREATED)
 	@RequestMapping(value = UrlHelpers.SUBSCRIPTION_ALL, method = RequestMethod.POST)
 	public @ResponseBody Subscription subscribeAll(
-			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
+			UserInfo userInfo,
 			@RequestParam(value = ServiceConstants.SUBSCRIPTION_OBJECT_TYPE_PARAM) SubscriptionObjectType objectType){
 		return serviceProvider.getSubscriptionService().subscribeAll(userId, objectType);
 	}
@@ -81,14 +80,13 @@ public class SubscriptionController{
 	 * <br/>
 	 * Target users: all Synapse users.
 	 * 
-	 * @param userId - The ID of the user who is making the request
 	 * @param request - This object defines what topics the user is asking for
 	 * @return
 	 */
 	@ResponseStatus(HttpStatus.OK)
 	@RequestMapping(value = UrlHelpers.SUBSCRIPTION_LIST, method = RequestMethod.POST)
 	public @ResponseBody SubscriptionPagedResults getList(
-			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
+			UserInfo userInfo,
 			@RequestBody SubscriptionRequest request) {
 		return serviceProvider.getSubscriptionService().getList(userId, request);
 	}
@@ -98,14 +96,13 @@ public class SubscriptionController{
 	 * <br/>
 	 * Target users: Synapse user who created this subscription.
 	 * 
-	 * @param userId - The ID of the user who is making the request
 	 * @param id - the ID of the subscription that is created when the user subscribed to the topic
 	  * @return
 	 */
 	@ResponseStatus(HttpStatus.OK)
 	@RequestMapping(value = UrlHelpers.SUBSCRIPTION_ID, method = RequestMethod.GET)
 	public @ResponseBody Subscription get(
-			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
+			UserInfo userInfo,
 			@PathVariable String id) {
 		return serviceProvider.getSubscriptionService().get(userId, id);
 	}
@@ -115,7 +112,6 @@ public class SubscriptionController{
 	 * <br/>
 	 * Target users: all Synapse users.
 	 * 
-	 * @param userId - The ID of the user who is making the request
 	 * @param limit - Limits the size of the page returned. For example, a page size of 10 require limit = 10. The maximum Limit for this call is 100.
 	 * @param offset - The index of the pagination offset. For a page size of 10, the first page would be at offset = 0, and the second page would be at offset = 10.
 	 * @param objectType - User can use this param to filter the results by the type of object they subscribed to.
@@ -126,7 +122,7 @@ public class SubscriptionController{
 	@ResponseStatus(HttpStatus.OK)
 	@RequestMapping(value = UrlHelpers.SUBSCRIPTION_ALL, method = RequestMethod.GET)
 	public @ResponseBody SubscriptionPagedResults getAll(
-			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
+			UserInfo userInfo,
 			@RequestParam(value = ServiceConstants.PAGINATION_LIMIT_PARAM) Long limit,
 			@RequestParam(value = ServiceConstants.PAGINATION_OFFSET_PARAM) Long offset,
 			@RequestParam(value = ServiceConstants.SUBSCRIPTION_OBJECT_TYPE_PARAM) SubscriptionObjectType objectType,
@@ -140,13 +136,12 @@ public class SubscriptionController{
 	 * <br/>
 	 * Target users: Synapse user who created this subscription.
 	 * 
-	 * @param userId - the ID of the user who is making the request
 	 * @param id - the ID of the subscription that is created when the user subscribed to the topic
 	 */
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@RequestMapping(value = UrlHelpers.SUBSCRIPTION_ID, method = RequestMethod.DELETE)
 	public void delete(
-			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
+			UserInfo userInfo,
 			@PathVariable String id) {
 		serviceProvider.getSubscriptionService().delete(userId, id);
 	}
@@ -156,26 +151,24 @@ public class SubscriptionController{
 	 * <br/>
 	 * Target users: Synapse users
 	 * 
-	 * @param userId - the ID of the user who is making the request
 	 */
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@RequestMapping(value = UrlHelpers.SUBSCRIPTION_ALL, method = RequestMethod.DELETE)
 	public void deleteAll(
-			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId) {
+			UserInfo userInfo) {
 		serviceProvider.getSubscriptionService().deleteAll(userId);
 	}
 
 	/**
 	 * Retrieve subscribers for a given topic.
 	 * 
-	 * @param userId
 	 * @param topic
 	 * @return
 	 */
 	@ResponseStatus(HttpStatus.OK)
 	@RequestMapping(value = UrlHelpers.SUBSCRIPTION_SUBSCRIBERS, method = RequestMethod.POST)
 	public @ResponseBody SubscriberPagedResults getSubscribers(
-			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
+			UserInfo userInfo,
 			@RequestBody Topic topic,
 			@RequestParam(value = UrlHelpers.NEXT_PAGE_TOKEN_PARAM, required = false) String nextPageToken) {
 		return serviceProvider.getSubscriptionService().getSubscribers(userId, topic, nextPageToken);
@@ -184,14 +177,13 @@ public class SubscriptionController{
 	/**
 	 * Retrieve number of subscribers for a given topic.
 	 * 
-	 * @param userId
 	 * @param topic
 	 * @return
 	 */
 	@ResponseStatus(HttpStatus.OK)
 	@RequestMapping(value = UrlHelpers.SUBSCRIPTION_SUBSCRIBER_COUNT, method = RequestMethod.POST)
 	public @ResponseBody SubscriberCount getSubscriberCount(
-			@RequestParam(value = AuthorizationConstants.USER_ID_PARAM) Long userId,
+			UserInfo userInfo,
 			@RequestBody Topic topic) {
 		return serviceProvider.getSubscriptionService().getSubscriberCount(userId, topic);
 	}

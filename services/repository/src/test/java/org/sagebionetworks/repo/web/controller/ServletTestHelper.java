@@ -2150,9 +2150,9 @@ public class ServletTestHelper {
 		return objectMapper.readValue(response.getContentAsString(), EntityThreadCounts.class);
 	}
 
-	public PaginatedIds getModerators(DispatcherServlet dispatchServlet, Long adminUserId, String forumId, Long limit, Long offset) throws Exception {
-		MockHttpServletRequest request = ServletTestHelperUtils.initRequest(
-				HTTPMODE.GET, UrlHelpers.REPO_PATH, UrlHelpers.FORUM+"/"+forumId+UrlHelpers.MODERATORS, userId, null);
+	public PaginatedIds getModerators(DispatcherServlet dispatchServlet, String accessToken, String forumId, Long limit, Long offset) throws Exception {
+		MockHttpServletRequest request = ServletTestHelperUtils.initRequestWithAccessTokenAuth(
+				HTTPMODE.GET, UrlHelpers.FORUM+"/"+forumId+UrlHelpers.MODERATORS, accessToken, null);
 		request.addParameter("limit", limit.toString());
 		request.addParameter("offset", offset.toString());
 		MockHttpServletResponse response = ServletTestHelperUtils.dispatchRequest(dispatchServlet, request,

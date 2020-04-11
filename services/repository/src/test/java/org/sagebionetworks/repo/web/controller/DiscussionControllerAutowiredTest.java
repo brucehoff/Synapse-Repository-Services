@@ -344,7 +344,7 @@ public class DiscussionControllerAutowiredTest extends AbstractAutowiredControll
 	@Test
 	public void testGetModeratorsForForum() throws Exception {
 		Forum forum = servletTestHelper.getForumByProjectId(dispatchServlet, project.getId(), accessToken);
-		PaginatedIds moderators = servletTestHelper.getModerators(dispatchServlet, adminUserId, forum.getId(), 10L, 0L);
+		PaginatedIds moderators = servletTestHelper.getModerators(dispatchServlet, accessToken, forum.getId(), 10L, 0L);
 		assertNotNull(moderators);
 		assertEquals((Long)1L, moderators.getTotalNumberOfResults());
 		assertTrue(moderators.getResults().contains(adminUserId.toString()));

@@ -2,6 +2,9 @@ package org.sagebionetworks.repo.web;
 
 import static org.sagebionetworks.repo.model.AuthorizationConstants.SYNAPSE_AUTHORIZATION_HEADER_NAME;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+
 import org.sagebionetworks.auth.HttpAuthUtil;
 import org.sagebionetworks.repo.manager.oauth.OpenIDConnectManager;
 import org.sagebionetworks.repo.model.UserInfo;
@@ -32,7 +35,15 @@ public class UserInfoMethodArgumentResolver implements HandlerMethodArgumentReso
 		String synapseAuthorizationHeader = webRequest.getHeader(SYNAPSE_AUTHORIZATION_HEADER_NAME);
 		ValidateArgument.required(synapseAuthorizationHeader, SYNAPSE_AUTHORIZATION_HEADER_NAME);
 		String accessToken = HttpAuthUtil.getBearerTokenFromAuthorizationHeader(synapseAuthorizationHeader);
+		
+		
+		Method method = parameter.getDeclaringClass().getDeclaredMethod(parameter.getMember().getName());
+		
+		Annotation[] annots = method.getAnnotations(); //TODO should be method.getAnnotationsByType(annotationClass);
+		Annotation annot = annots[0]; // TODO iterate through the array and find the annot
+		
 		return oidcManager.getUserAuthorization(accessToken);
+		
 	}
 
 }

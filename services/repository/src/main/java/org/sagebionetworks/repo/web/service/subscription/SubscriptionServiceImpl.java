@@ -16,60 +16,58 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 public class SubscriptionServiceImpl implements SubscriptionService {
 	@Autowired
-	private UserManager userManager;
-	@Autowired
 	private SubscriptionManager subscriptionManager;
 
 	@Override
-	public Subscription create(Long userId, Topic topic) {
+	public Subscription create(UserInfo userInfo, Topic topic) {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		return subscriptionManager.create(userInfo, topic);
 	}
 
 	@Override
-	public SubscriptionPagedResults getAll(Long userId, Long limit, Long offset, SubscriptionObjectType objectType, SortByType sortByType, SortDirection sortDirection) {
+	public SubscriptionPagedResults getAll(UserInfo userInfo, Long limit, Long offset, SubscriptionObjectType objectType, SortByType sortByType, SortDirection sortDirection) {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		return subscriptionManager.getAll(userInfo, limit, offset, objectType, sortByType, sortDirection);
 	}
 
 	@Override
-	public SubscriptionPagedResults getList(Long userId, SubscriptionRequest request) {
+	public SubscriptionPagedResults getList(UserInfo userInfo, SubscriptionRequest request) {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		return subscriptionManager.getList(userInfo, request);
 	}
 
 	@Override
-	public void delete(Long userId, String subscriptionId) {
+	public void delete(UserInfo userInfo, String subscriptionId) {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		subscriptionManager.delete(userInfo, subscriptionId);
 	}
 
 	@Override
-	public void deleteAll(Long userId) {
+	public void deleteAll(UserInfo userInfo) {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		subscriptionManager.deleteAll(userInfo);
 	}
 
 	@Override
-	public Subscription get(Long userId, String id) {
+	public Subscription get(UserInfo userInfo, String id) {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		return subscriptionManager.get(userInfo, id);
 	}
 
 	@Override
-	public SubscriberPagedResults getSubscribers(Long userId, Topic topic, String nextPageToken) {
+	public SubscriberPagedResults getSubscribers(UserInfo userInfo, Topic topic, String nextPageToken) {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		return subscriptionManager.getSubscribers(userInfo, topic, nextPageToken);
 	}
 
 	@Override
-	public SubscriberCount getSubscriberCount(Long userId, Topic topic) {
+	public SubscriberCount getSubscriberCount(UserInfo userInfo, Topic topic) {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		return subscriptionManager.getSubscriberCount(userInfo, topic);
 	}
 
 	@Override
-	public Subscription subscribeAll(Long userId, SubscriptionObjectType objectType) {
+	public Subscription subscribeAll(UserInfo userInfo, SubscriptionObjectType objectType) {
 		UserInfo userInfo = userManager.getUserInfo(userId);
 		return subscriptionManager.subscribeAll(userInfo, objectType);
 	}
