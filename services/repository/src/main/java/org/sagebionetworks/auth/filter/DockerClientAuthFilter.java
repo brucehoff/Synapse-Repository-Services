@@ -43,22 +43,33 @@ import com.amazonaws.services.cloudwatch.model.StandardUnit;
 
 @Component("dockerClientAuthFilter")
 public class DockerClientAuthFilter implements Filter {	
+
+	private static final String MISSING_CREDENTIALS_MSG = "Missing required credentials in the authorization header.";
+	private static final String INVALID_CREDENTIALS_MSG = "Invalid credentials.";
+	private static final String CLOUD_WATCH_NAMESPACE_PREFIX = "Authentication";
+	private static final String CLOUD_WATCH_METRIC_NAME = "BadCredentials";
+	private static final String CLOUD_WATCH_DIMENSION_FILTER = "filterClass";
+	private static final String CLOUD_WATCH_DIMENSION_MESSAGE = "message";
+	private static final String CLOUD_WATCH_UNIT_COUNT = StandardUnit.Count.toString();
+
+	private Log logger = LogFactory.getLog(getClass());
+	
+	private StackConfiguration config;
+	
+	private Consumer consumer;
+	
 	private AuthenticationService authenticationService;
 	
 	private OIDCTokenHelper oidcTokenHelper;
-
+	
 	private OpenIDConnectManager oidcManager;
 	
 	@Autowired
-	public DockerClientAuthFilter(
-			StackConfiguration config, 
-			Consumer consumer, 
-			AuthenticationService authenticationService,
-			OIDCTokenHelper oidcTokenHelper,
-			OpenIDConnectManager oidcManager) {
-			this.config = config;
-			this.consumer = consumer;
-		this.authenticationService = authenticationService;
+	public DockerClientAuthFilter(StackConfiguration config, Consumer consumer, AuthenticationService authenticationService,
+			OIDCTokenHelper oidcTokenHelper, OpenIDConnectManager oidcManager) {
+		this.config=config;
+		this.consumer=consumer;
+		this.authenticationService=authenticationService;
 		this.oidcTokenHelper=oidcTokenHelper;
 		this.oidcManager=oidcManager;
 	}
@@ -145,20 +156,6 @@ public class DockerClientAuthFilter implements Filter {
 		filterChain.doFilter(modRqst, response);
 	}
 	
-	
-
-	private static final String MISSING_CREDENTIALS_MSG = "Missing required credentials in the authorization header.";
-	private static final String INVALID_CREDENTIALS_MSG = "Invalid credentials.";
-	private static final String CLOUD_WATCH_NAMESPACE_PREFIX = "Authentication";
-	private static final String CLOUD_WATCH_METRIC_NAME = "BadCredentials";
-	private static final String CLOUD_WATCH_DIMENSION_FILTER = "filterClass";
-	private static final String CLOUD_WATCH_DIMENSION_MESSAGE = "message";
-	private static final String CLOUD_WATCH_UNIT_COUNT = StandardUnit.Count.toString();
-
-	private Log logger = LogFactory.getLog(getClass());
-	
-	private StackConfiguration config;
-	private Consumer consumer;
 	
 	@Override
 	public final void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
