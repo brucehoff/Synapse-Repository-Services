@@ -4,11 +4,17 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.servlet.Filter;
 import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.sagebionetworks.StackConfiguration;
 import org.sagebionetworks.auth.HttpAuthUtil;
 import org.sagebionetworks.auth.UserNameAndPassword;
@@ -21,39 +27,79 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component("oauthClientAuthFilter")
-public class OAuthClientAuthFilter extends BasicAuthenticationFilter {
+public class OAuthClientAuthFilter implements Filter {
+	private Log logger = LogFactory.getLog(getClass());
+	
 
 	private static final String INVALID_CREDENTIAL_MSG = "OAuth Client ID and secret must be passed via Basic Authentication. Credentials are missing or invalid.";
 
 	private OAuthClientManager oauthClientManager;
+	
+	private StackConfiguration config;
+	private Consumer consumer;
 
 	@Autowired
 	public OAuthClientAuthFilter(StackConfiguration config, Consumer consumer, OAuthClientManager oauthClientManager) {
-		super(config, consumer);
 		this.oauthClientManager = oauthClientManager;
+		this.config=config;
+		this.consumer=consumer;
+		
+		System.out.println("OAuthClientAuthFilter constructor: this: "+this+
+				" oauthClientManager: "+this.oauthClientManager+
+				" config: "+this.config+
+				" consumer: "+this.consumer);
+	}
+
+
+	@Override
+	public final void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
+			throws IOException, ServletException {
+		System.out.println("OAuthClientAuthFilter.doFilter: this: "+this+
+				" oauthClientManager: "+this.oauthClientManager+
+				" config: "+this.config+
+				" consumer: "+this.consumer);
+
+		if (!(request instanceof HttpServletRequest) || !(response instanceof HttpServletResponse)) {
+			throw new ServletException("Only HTTP requests are supported");
+		}
+
+		HttpServletRequest httpRequest = (HttpServletRequest) request;
+		HttpServletResponse httpResponse = (HttpServletResponse) response;
+
+		Optional<UserNameAndPassword> credentials;
+
+		try {
+			credentials = HttpAuthUtil.getBasicAuthenticationCredentials(httpRequest);
+		} catch (IllegalArgumentException e) {
+			(new FilterHelper(config, consumer)).rejectRequest(true, httpResponse, e);
+			return;
+		}
+
+		if (!credentials.isPresent()) {
+			(new FilterHelper(config, consumer)).rejectRequest(true, httpResponse, INVALID_CREDENTIAL_MSG);
+			return;
+		}
+
+		validateCredentialsAndDoFilterInternal(httpRequest, httpResponse, filterChain, credentials);
+	}
+		
+	@Override
+	public void init(FilterConfig filterConfig) throws ServletException {
+
 	}
 
 	@Override
-	protected boolean credentialsRequired() {
-		return true;
+	public void destroy() {
+
 	}
 
-	@Override
-	protected boolean reportBadCredentialsMetric() {
-		return true;
-	}
 
-	@Override
-	protected String getInvalidCredentialsMessage() {
-		return INVALID_CREDENTIAL_MSG;
-	}
-
-	@Override
-	protected void validateCredentialsAndDoFilterInternal(
+	private void validateCredentialsAndDoFilterInternal(
 			HttpServletRequest httpRequest, HttpServletResponse httpResponse, 
 			FilterChain filterChain, Optional<UserNameAndPassword> credentials) throws IOException, ServletException {
+
 		if (credentials.isPresent() && !validCredentials(credentials.get())) {
-			rejectRequest(httpResponse, getInvalidCredentialsMessage());
+			(new FilterHelper(config, consumer)).rejectRequest(true, httpResponse, INVALID_CREDENTIAL_MSG);
 			return;
 		}
 

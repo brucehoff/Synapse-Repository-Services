@@ -82,7 +82,8 @@ public class DockerClientAuthFilterTest {
 	@BeforeEach
 	public void before() {
 		header = AuthorizationConstants.BASIC_PREFIX + Base64.getEncoder().encodeToString((USERNAME+":"+PASSWORD).getBytes());
-
+		assertFalse(filter.credentialsRequired());
+		assertTrue(filter.reportBadCredentialsMetric());
 	}
 
 	@Test
