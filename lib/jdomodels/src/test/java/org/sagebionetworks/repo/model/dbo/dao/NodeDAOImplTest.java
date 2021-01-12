@@ -71,6 +71,7 @@ import org.sagebionetworks.repo.model.table.ObjectAnnotationDTO;
 import org.sagebionetworks.repo.model.table.ObjectDataDTO;
 import org.sagebionetworks.repo.model.table.SnapshotRequest;
 import org.sagebionetworks.repo.model.util.AccessControlListUtil;
+import org.sagebionetworks.repo.web.FileHandleLinkedException;
 import org.sagebionetworks.repo.web.NotFoundException;
 import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -2243,7 +2244,7 @@ public class NodeDAOImplTest {
 		try{
 			fileHandleDao.delete(fileHandle.getId());
 			fail("Should not be able to delete a file handle that has been assigned");
-		}catch(DataIntegrityViolationException e){
+		}catch(FileHandleLinkedException e){
 			// This is expected.
 		}catch(UnexpectedRollbackException e){
 			// This can also happen
@@ -4407,5 +4408,57 @@ public class NodeDAOImplTest {
 			// call under test
 			nodeDao.getEntityIdOfFirstBoundSchema(nodeId);
 		});
+	}
+	
+	@Test
+	public void testUpdateRevisionFileHandle() {
+		Node node = NodeTestUtils.createNew("Node", creatorUserGroupId);
+		node.setNodeType(EntityType.file);
+		node.setFileHandleId(fileHandle.getId());
+		node = nodeDao.createNewNode(node);
+		
+		toDelete.add(node.getId());
+		
+		String nodeId = node.getId();
+		Long versionNumber = node.getVersionNumber();
+		String newFileHandleId = fileHandle2.getId();
+		
+		// Call under test
+		boolean result = nodeDao.updateRevisionFileHandle(nodeId, versionNumber, newFileHandleId);
+		
+		assertTrue(result);
+	}
+	
+	@Test
+	public void testUpdateRevisionFileHandleWithNonExistingNode() {
+		
+		String nodeId = "123";
+		Long versionNumber = 2L;
+		String newFileHandleId = fileHandle2.getId();
+		
+		// Call under test
+		boolean result = nodeDao.updateRevisionFileHandle(nodeId, versionNumber, newFileHandleId);
+		
+		assertFalse(result);
+	}
+	
+	@Test
+	public void testUpdateRevisionFileHandleWithNonExistingRevision() {
+		
+		Node node = NodeTestUtils.createNew("Node", creatorUserGroupId);
+		node.setNodeType(EntityType.file);
+		node.setFileHandleId(fileHandle.getId());
+		node = nodeDao.createNewNode(node);
+		
+		toDelete.add(node.getId());
+		
+		String nodeId = node.getId();
+		Long versionNumber = node.getVersionNumber() + 1;
+		String newFileHandleId = fileHandle2.getId();
+		
+		// Call under test
+		boolean result = nodeDao.updateRevisionFileHandle(nodeId, versionNumber, newFileHandleId);
+		
+		assertFalse(result);
 	}
 }
