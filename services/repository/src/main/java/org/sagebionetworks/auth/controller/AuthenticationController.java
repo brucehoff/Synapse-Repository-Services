@@ -52,15 +52,15 @@ import org.springframework.web.util.UriComponentsBuilder;
  * <p>
  * Authentication to Synapse services requires an access token passed in the HTTP Authorization
  * header, as per the <a href="https://tools.ietf.org/html/rfc6750#section-2.1">HTTP bearer authorization</a> standard.
- * The access token has a set of 'scopes' and each service requiring authorization lists the scopes which the 
- * access token must include in order to use that service.
+ * The access token incorporates a set of 'scopes' and the documentation for each service requiring 
+ * authorization lists the scopes which the access token must include in order to use that service.
  * <p/>
  * <p>
  * Synapse currently supports four modes of obtaining an access token:
  * </p>
  * <ul>
  * <li>Present username and password</li>
- * <li>Authenticate via a whitelisted OAuth 2.0 provider</li>
+ * <li>Authentication via a whitelisted OAuth 2.0 provider</li>
  * <li>Authentication via a registered OAuth 2.0 client</li>
  * <li>Exchange an access token for Personal Access Token</li>
  * </ul>
@@ -69,17 +69,20 @@ import org.springframework.web.util.UriComponentsBuilder;
  * using <a href="${POST.TODO}">POST /TODO</a> service.
  * This method should only be used by Synapse itself.  No other 
  * application should prompt a user for their user name and password.
- * 
  * </p>
  * <p>
- * TODO describe Google login
+ * Synapse allows authentication via a white listed OAuth 2.0 provider.  Currently only Google is supported.
+ * The final step is <a href="${POST.oauth2.session}">POST /oauth2/session</a> which returns an access token
+ * which is included as a Bearer token in the Authorization header of 
+ * subsequent requests as described above.  Only Synapse itself may use this service, as redirection back
+ * from the OAuth2 provider is only allowed to the Synapse web portal.
  * </p>
  * <p>
- * To authenticate with an OAuth access token, use the OAuth 2.0 services,
- * culminating with this request to retrieve an access token:
+ * A registered OAuth 2.0 client can use the OAuth 2.0 services (TODO put a link to the OpenIDConnect controller)
+ * to authenticate, the final step of which is a request to the token endpoint:
  * <a href="${POST.oauth2.token}">POST /oauth2/token</a>
- * which is then included as a Bearer token in the Authorization header of 
- * subsequent requests.  
+ * The returned access token is included as a Bearer token in the Authorization header of 
+ * subsequent requests as described above.
  * </p>
  * <p>
  * A user may freely generate up to 100 Personal access tokens (PATs) with scoped access using 
@@ -91,6 +94,10 @@ import org.springframework.web.util.UriComponentsBuilder;
  * For these reasons, it is critical to treat PATs as sensitive credentials, like passwords. If a user creates more than 100 tokens, then
  * the least-recently used token(s) will be deleted until the user has no more than 100 tokens.
  * </p>
+ * <p>
+ * The returned personal access token is included as a Bearer token in the Authorization header of 
+ * subsequent requests as described above.
+ * </p>
  * 
  */
 @ControllerInfo(displayName = "Authentication Services", path = "auth/v1")
@@ -101,7 +108,6 @@ public class AuthenticationController {
 	@Autowired
 	private AuthenticationService authenticationService;
 
-	// TODO can we finally remove this?
 	@Deprecated
 	@RequiredScope({})
 	@ResponseStatus(HttpStatus.CREATED)

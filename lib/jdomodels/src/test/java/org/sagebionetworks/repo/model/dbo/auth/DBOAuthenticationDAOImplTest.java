@@ -344,10 +344,10 @@ public class DBOAuthenticationDAOImplTest {
 	@Test
 	public void testGetSessionValidatedOn() {
 		// if no validation date, return null
-		assertNull(authDAO.getSessionValidatedOn(999999L));
+		assertNull(authDAO.getAuthenticatedOn(999999L));
 		
 		// check that 'userId's validation date is as expected
-		Date validatedOn = authDAO.getSessionValidatedOn(userId);
+		Date validatedOn = authDAO.getAuthenticatedOn(userId);
 		assertEquals(VALIDATED_ON, validatedOn);
 		
 		

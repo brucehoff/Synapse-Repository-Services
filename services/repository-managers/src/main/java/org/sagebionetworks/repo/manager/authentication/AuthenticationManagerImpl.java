@@ -291,7 +291,7 @@ public class AuthenticationManagerImpl implements AuthenticationManager {
 	 * @param newReceipt
 	 * @return
 	 */
-	private LoginResponse createLoginResponse(Session session, String newReceipt) {
+	private static LoginResponse createLoginResponse(Session session, String newReceipt) {
 		LoginResponse response = new LoginResponse();
 		response.setSessionToken(session.getSessionToken());
 		response.setAcceptsTermsOfUse(session.getAcceptsTermsOfUse());
