@@ -112,6 +112,8 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 			" FROM "+TABLE_SESSION_TOKEN+
 			" WHERE "+COL_SESSION_TOKEN_SESSION_TOKEN+"= ?";
 	
+	// TODO add index for this and any other new query
+	// TODO add uniqueness constraint on session token
 	private static final String SELECT_PRINCIPAL_BY_TOKEN_IF_VALID = 
 			"SELECT "+COL_SESSION_TOKEN_PRINCIPAL_ID+
 			" FROM "+TABLE_SESSION_TOKEN+
