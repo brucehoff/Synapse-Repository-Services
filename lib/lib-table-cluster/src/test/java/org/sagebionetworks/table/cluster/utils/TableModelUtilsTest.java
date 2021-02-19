@@ -534,6 +534,16 @@ public class TableModelUtilsTest {
 	}
 
 	@Test
+	public void testValidateValue_StringList_EmptyJSONList(){
+		ColumnModel cm = TableModelTestUtils.createColumn(123L, "myCol", ColumnType.STRING_LIST);
+		cm.setMaximumSize(54L);
+		cm.setMaximumListLength(2L);
+
+		//method under test
+		assertNull(TableModelUtils.validateValue("[]", cm));
+	}
+
+	@Test
 	public void testValidateValue_IntList_valueListLengthExceeded(){
 		ColumnModel cm = TableModelTestUtils.createColumn(123L, "myCol", ColumnType.STRING_LIST);
 		cm.setMaximumListLength(2L);
@@ -1931,5 +1941,20 @@ public class TableModelUtilsTest {
 		ColumnChange removeTwo = changes.get(1);
 		assertEquals(null, removeTwo.getNewColumnId());
 		assertEquals("2", removeTwo.getOldColumnId());
+	}
+
+	@Test
+	public void testCreateSelectColumn_givenColumnModelWithQuotedName(){
+		ColumnModel cm = new ColumnModel();
+		cm.setName("quoted\"Name\"");
+		cm.setColumnType(ColumnType.DOUBLE);
+		cm.setId("123");
+
+		SelectColumn selectColumn = TableModelUtils.createSelectColumn(cm);
+
+		assertNotNull(selectColumn);
+		assertEquals(cm.getName(), selectColumn.getName());
+		assertEquals(cm.getColumnType(), selectColumn.getColumnType());
+		assertEquals(cm.getId(), selectColumn.getId());
 	}
 }

@@ -1,92 +1,5 @@
 package org.sagebionetworks.repo.model.dbo.dao;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import org.apache.commons.lang3.NotImplementedException;
-import org.sagebionetworks.StackConfigurationSingleton;
-import org.sagebionetworks.ids.IdGenerator;
-import org.sagebionetworks.ids.IdType;
-import org.sagebionetworks.repo.model.DatastoreException;
-import org.sagebionetworks.repo.model.EntityHeader;
-import org.sagebionetworks.repo.model.EntityType;
-import org.sagebionetworks.repo.model.EntityTypeUtils;
-import org.sagebionetworks.repo.model.IdAndAlias;
-import org.sagebionetworks.repo.model.IdAndEtag;
-import org.sagebionetworks.repo.model.InvalidModelException;
-import org.sagebionetworks.repo.model.LimitExceededException;
-import org.sagebionetworks.repo.model.NameConflictException;
-import org.sagebionetworks.repo.model.Node;
-import org.sagebionetworks.repo.model.NodeConstants;
-import org.sagebionetworks.repo.model.NodeDAO;
-import org.sagebionetworks.repo.model.NodeIdAndType;
-import org.sagebionetworks.repo.model.ObjectType;
-import org.sagebionetworks.repo.model.ProjectHeader;
-import org.sagebionetworks.repo.model.ProjectListSortColumn;
-import org.sagebionetworks.repo.model.ProjectListType;
-import org.sagebionetworks.repo.model.Reference;
-import org.sagebionetworks.repo.model.VersionInfo;
-import org.sagebionetworks.repo.model.annotation.v2.Annotations;
-import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2Utils;
-import org.sagebionetworks.repo.model.dbo.DBOBasicDao;
-import org.sagebionetworks.repo.model.dbo.persistence.DBONode;
-import org.sagebionetworks.repo.model.dbo.persistence.DBORevision;
-import org.sagebionetworks.repo.model.dbo.persistence.NodeMapper;
-import org.sagebionetworks.repo.model.entity.Direction;
-import org.sagebionetworks.repo.model.entity.NameIdType;
-import org.sagebionetworks.repo.model.entity.SortBy;
-import org.sagebionetworks.repo.model.entity.query.SortDirection;
-import org.sagebionetworks.repo.model.file.ChildStatsRequest;
-import org.sagebionetworks.repo.model.file.ChildStatsResponse;
-import org.sagebionetworks.repo.model.file.FileHandleAssociateType;
-import org.sagebionetworks.repo.model.file.FileHandleAssociation;
-import org.sagebionetworks.repo.model.jdo.AnnotationUtils;
-import org.sagebionetworks.repo.model.jdo.JDORevisionUtils;
-import org.sagebionetworks.repo.model.jdo.KeyFactory;
-import org.sagebionetworks.repo.model.message.ChangeType;
-import org.sagebionetworks.repo.model.message.MessageToSend;
-import org.sagebionetworks.repo.model.message.TransactionalMessenger;
-import org.sagebionetworks.repo.model.query.QueryTools;
-import org.sagebionetworks.repo.model.schema.BoundObjectType;
-import org.sagebionetworks.repo.model.table.ObjectDataDTO;
-import org.sagebionetworks.repo.model.table.SnapshotRequest;
-import org.sagebionetworks.repo.transactions.MandatoryWriteTransaction;
-import org.sagebionetworks.repo.transactions.NewWriteTransaction;
-import org.sagebionetworks.repo.transactions.WriteTransaction;
-import org.sagebionetworks.repo.web.NotFoundException;
-import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
-import org.sagebionetworks.schema.adapter.org.json.EntityFactory;
-import org.sagebionetworks.util.SerializationUtils;
-import org.sagebionetworks.util.ValidateArgument;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.BadSqlGrammarException;
-import org.springframework.jdbc.core.BatchPreparedStatementSetter;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowCallbackHandler;
-import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-
-import java.io.IOException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_FILES_BUCKET_NAME;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_FILES_CONTENT_MD5;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_FILES_CONTENT_SIZE;
@@ -132,6 +45,96 @@ import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.TABLE_NODE;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.TABLE_PROJECT_STAT;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.TABLE_REVISION;
 
+import java.io.IOException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+import org.apache.commons.lang3.NotImplementedException;
+import org.sagebionetworks.StackConfigurationSingleton;
+import org.sagebionetworks.ids.IdGenerator;
+import org.sagebionetworks.ids.IdType;
+import org.sagebionetworks.repo.model.DatastoreException;
+import org.sagebionetworks.repo.model.EntityHeader;
+import org.sagebionetworks.repo.model.EntityType;
+import org.sagebionetworks.repo.model.EntityTypeUtils;
+import org.sagebionetworks.repo.model.IdAndAlias;
+import org.sagebionetworks.repo.model.IdAndEtag;
+import org.sagebionetworks.repo.model.InvalidModelException;
+import org.sagebionetworks.repo.model.LimitExceededException;
+import org.sagebionetworks.repo.model.NameConflictException;
+import org.sagebionetworks.repo.model.Node;
+import org.sagebionetworks.repo.model.NodeConstants;
+import org.sagebionetworks.repo.model.NodeDAO;
+import org.sagebionetworks.repo.model.NodeIdAndType;
+import org.sagebionetworks.repo.model.ObjectType;
+import org.sagebionetworks.repo.model.ProjectHeader;
+import org.sagebionetworks.repo.model.ProjectListSortColumn;
+import org.sagebionetworks.repo.model.ProjectListType;
+import org.sagebionetworks.repo.model.Reference;
+import org.sagebionetworks.repo.model.VersionInfo;
+import org.sagebionetworks.repo.model.annotation.v2.Annotations;
+import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2Utils;
+import org.sagebionetworks.repo.model.dbo.DBOBasicDao;
+import org.sagebionetworks.repo.model.dbo.DDLUtilsImpl;
+import org.sagebionetworks.repo.model.dbo.persistence.DBONode;
+import org.sagebionetworks.repo.model.dbo.persistence.DBORevision;
+import org.sagebionetworks.repo.model.dbo.persistence.NodeMapper;
+import org.sagebionetworks.repo.model.entity.Direction;
+import org.sagebionetworks.repo.model.entity.NameIdType;
+import org.sagebionetworks.repo.model.entity.SortBy;
+import org.sagebionetworks.repo.model.entity.query.SortDirection;
+import org.sagebionetworks.repo.model.file.ChildStatsRequest;
+import org.sagebionetworks.repo.model.file.ChildStatsResponse;
+import org.sagebionetworks.repo.model.file.FileHandleAssociateType;
+import org.sagebionetworks.repo.model.file.FileHandleAssociation;
+import org.sagebionetworks.repo.model.jdo.AnnotationUtils;
+import org.sagebionetworks.repo.model.jdo.JDORevisionUtils;
+import org.sagebionetworks.repo.model.jdo.KeyFactory;
+import org.sagebionetworks.repo.model.message.ChangeType;
+import org.sagebionetworks.repo.model.message.MessageToSend;
+import org.sagebionetworks.repo.model.message.TransactionalMessenger;
+import org.sagebionetworks.repo.model.query.QueryTools;
+import org.sagebionetworks.repo.model.schema.BoundObjectType;
+import org.sagebionetworks.repo.model.table.ObjectDataDTO;
+import org.sagebionetworks.repo.model.table.SnapshotRequest;
+import org.sagebionetworks.repo.transactions.MandatoryWriteTransaction;
+import org.sagebionetworks.repo.transactions.NewWriteTransaction;
+import org.sagebionetworks.repo.transactions.WriteTransaction;
+import org.sagebionetworks.repo.web.NotFoundException;
+import org.sagebionetworks.schema.adapter.JSONObjectAdapterException;
+import org.sagebionetworks.schema.adapter.org.json.EntityFactory;
+import org.sagebionetworks.util.SerializationUtils;
+import org.sagebionetworks.util.ValidateArgument;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.BadSqlGrammarException;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
+
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
 /**
  * This is a basic implementation of the NodeDAO.
  * 
@@ -140,16 +143,9 @@ import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.TABLE_REVISI
  */
 public class NodeDAOImpl implements NodeDAO, InitializingBean {
 	
-	/**
-	 * MySQL have a default limit on the maximum recursion calls that can be made on a recursive CTE
-	 */
-	private static final int MAX_PATH_RECURSION = 1000;
+	public static final String ENTITY_DEPTH_SQL = DDLUtilsImpl
+			.loadSQLFromClasspath("sql/EntityDepth.sql");
 	
-	/**
-	 * Max path depth for a node hierarchy.
-	 */
-	private static final int MAX_PATH_DEPTH = 100;
-
 	private static final String SQL_CREATE_SNAPSHOT_VERSION = "UPDATE " + TABLE_REVISION + " SET "
 			+ COL_REVISION_COMMENT + " = ?, " + COL_REVISION_LABEL + " = ?, " + COL_REVISION_ACTIVITY_ID + " = ?, "
 			+ COL_REVISION_MODIFIED_BY + " = ?, " + COL_REVISION_MODIFIED_ON + " = ? WHERE " + COL_REVISION_OWNER_NODE
@@ -419,7 +415,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 			+ " AS N WHERE " + COL_NODE_ID + " = ?" + " UNION ALL" + " SELECT N." + COL_NODE_ID + ", N."
 			+ COL_NODE_NAME + ", N." + COL_NODE_TYPE + ", N." + COL_NODE_PARENT_ID + ", PATH.DISTANCE+ 1 FROM "
 			+ TABLE_NODE + " AS N JOIN PATH ON (N." + COL_NODE_ID + " = PATH." + COL_NODE_PARENT_ID + ")" + " WHERE N."
-			+ COL_NODE_ID + " IS NOT NULL AND DISTANCE < "+MAX_PATH_DEPTH+" )" + " SELECT %1s FROM PATH ORDER BY DISTANCE DESC";
+			+ COL_NODE_ID + " IS NOT NULL AND DISTANCE < "+NodeConstants.MAX_PATH_DEPTH_PLUS_ONE+" )" + " SELECT %1s FROM PATH ORDER BY DISTANCE DESC";
 	
 	private static final String SQL_STRING_CONTAINERS_TYPES = String.join(",", "'" + EntityType.project.name() + "'", "'" + EntityType.folder.name() + "'");
 
@@ -697,7 +693,7 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 						+ " UNION" 
 						+ " SELECT N." + COL_NODE_ID + ", C.DISTANCE + 1" 
 						+ " FROM NODES AS C JOIN " + TABLE_NODE + " AS N ON C." + COL_NODE_ID + " = N." + COL_NODE_PARENT_ID
-						+ " AND C.DISTANCE < " + MAX_PATH_RECURSION
+						+ " AND C.DISTANCE < " + NodeConstants.MAX_PATH_DEPTH_PLUS_ONE
 				+ ")"
 				+ " SELECT ID FROM NODES ORDER BY DISTANCE DESC LIMIT ?", Long.class, parentId, limit);
 	}
@@ -1258,8 +1254,8 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 		if(path.isEmpty()) {
 			throw new NotFoundException(CANNOT_FIND_A_NODE_WITH_ID+nodeId);
 		}
-		if(path.size() >= MAX_PATH_DEPTH) {
-			throw new IllegalStateException("Path depth limit of: "+MAX_PATH_DEPTH+" exceeded for: "+nodeId);
+		if(path.size() > NodeConstants.MAX_PATH_DEPTH) {
+			throw new IllegalStateException("Path depth limit of: "+NodeConstants.MAX_PATH_DEPTH+" exceeded for: "+nodeId);
 		}
 	}
 	
@@ -2076,10 +2072,45 @@ public class NodeDAOImpl implements NodeDAO, InitializingBean {
 			throw new NotFoundException("No JSON schema found for 'syn"+nodeId+"'");
 		}
 	}
+	
+	@Override
+	public Integer getEntityPathDepth(String entityId, int maxDepth) {
+		ValidateArgument.required(entityId, "entityId");
+		return jdbcTemplate.queryForObject(ENTITY_DEPTH_SQL, (ResultSet rs, int rowNum) -> {
+			int max = rs.getInt("MAX_DEPTH");
+			if (rs.wasNull()) {
+				throw new NotFoundException("Not found entityId: '" + entityId+"'");
+			}
+			return max;
+		}, KeyFactory.stringToKey(entityId), maxDepth);
+	}
 
 	@Override
 	public Long getEntityIdOfFirstBoundSchema(Long nodeId) {
-		return getEntityIdOfFirstBoundSchema(nodeId, MAX_PATH_DEPTH);
+		return getEntityIdOfFirstBoundSchema(nodeId, NodeConstants.MAX_PATH_DEPTH_PLUS_ONE );
+	}
+
+	@Override
+	public void truncateAll() {
+		/*
+		 * This is a workaround for the MySQL cascade delete limit on hierarchies deeper
+		 * than 15. We find and delete the last 10 nodes based on node IDs (excluding
+		 * bootstrap node), in a loop until no more nodes are found.
+		 */
+		SqlParameterSource listParams = new MapSqlParameterSource("bootstrapIds",
+				NodeConstants.BOOTSTRAP_NODES.getAllBootstrapIds());
+		while (true) {
+			List<Long> idsToDelete = namedParameterJdbcTemplate.queryForList(
+					"SELECT " + COL_NODE_ID + " FROM " + TABLE_NODE + " WHERE " + COL_NODE_ID
+							+ " NOT IN(:bootstrapIds) ORDER BY " + COL_NODE_ID + " DESC LIMIT 10",
+					listParams, Long.class);
+			if (idsToDelete.isEmpty()) {
+				break;
+			}
+			SqlParameterSource deleteParams = new MapSqlParameterSource("toDelete", idsToDelete);
+			namedParameterJdbcTemplate.update("DELETE FROM " + TABLE_NODE + " WHERE " + COL_NODE_ID + " IN(:toDelete)",
+					deleteParams);
+		}
 	}
 
 }

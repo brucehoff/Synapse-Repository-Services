@@ -46,7 +46,6 @@ import org.sagebionetworks.repo.model.auth.AuthorizationStatus;
 import org.sagebionetworks.repo.model.auth.UserEntityPermissions;
 import org.sagebionetworks.repo.model.message.ChangeType;
 import org.sagebionetworks.repo.model.message.TransactionalMessenger;
-import org.sagebionetworks.repo.model.project.ProjectCertificationSetting;
 import org.sagebionetworks.repo.model.project.ProjectSettingsType;
 import org.sagebionetworks.repo.model.project.UploadDestinationListSetting;
 import org.sagebionetworks.repo.model.util.AccessControlListUtil;
@@ -82,8 +81,6 @@ public class EntityPermissionsManagerImplUnitTest {
 	@Mock
 	private RestrictionInformationManager  mockRestrictionInformationManager;
 	@Mock
-	private AuthenticationManager mockAuthenticationManager;
-	@Mock
 	private StackConfiguration mockStackConfiguration;
 	@Mock
 	private ProjectSettingsManager mockProjectSettingsManager;
@@ -95,8 +92,6 @@ public class EntityPermissionsManagerImplUnitTest {
 	private TransactionalMessenger mockTransactionalMessenger;
 	@Mock
 	private ObjectTypeManager mockObjectTypeManager;
-	@Mock
-	private ProjectCertificationSetting mockProjectCertificationSetting;
 	
 	private UserInfo anonymousUser;
 	
@@ -120,10 +115,12 @@ public class EntityPermissionsManagerImplUnitTest {
 		nonCertifiedUserInfo = new UserInfo(false);
 		nonCertifiedUserInfo.setId(765432L);
 		nonCertifiedUserInfo.setGroups(Collections.singleton(9999L));
+		nonCertifiedUserInfo.setAcceptsTermsOfUse(true);
 
 		certifiedUserInfo = new UserInfo(false);
 		certifiedUserInfo.setId(1234567L);
 		certifiedUserInfo.setGroups(Collections.singleton(BOOTSTRAP_PRINCIPAL.CERTIFIED_USERS.getPrincipalId()));
+		certifiedUserInfo.setAcceptsTermsOfUse(true);
 		
 		ReflectionStaticTestUtils.mockAutowire(this, entityPermissionsManager);
 
@@ -181,7 +178,6 @@ public class EntityPermissionsManagerImplUnitTest {
 
 		when(mockAclDAO.canAccess(eq(certifiedUserInfo.getGroups()), eq(benefactorId), eq(ObjectType.ENTITY),
 				any(ACCESS_TYPE.class))).thenReturn(true);
-		when(mockAuthenticationManager.hasUserAcceptedTermsOfUse(certifiedUserInfo.getId())).thenReturn(true);
 
 		restrictionInfoRqst.setObjectId(projectId);
 		when(mockRestrictionInformationManager.
@@ -223,7 +219,6 @@ public class EntityPermissionsManagerImplUnitTest {
 
 		when(mockAclDAO.canAccess(eq(nonCertifiedUserInfo.getGroups()), eq(benefactorId), eq(ObjectType.ENTITY),
 				any(ACCESS_TYPE.class))).thenReturn(true);
-		when(mockAuthenticationManager.hasUserAcceptedTermsOfUse(nonCertifiedUserInfo.getId())).thenReturn(true);
 
 		restrictionInfoRqst.setObjectId(projectId);
 		when(mockRestrictionInformationManager.
@@ -264,7 +259,6 @@ public class EntityPermissionsManagerImplUnitTest {
 
 		when(mockAclDAO.canAccess(eq(certifiedUserInfo.getGroups()), eq(benefactorId), eq(ObjectType.ENTITY),
 				any(ACCESS_TYPE.class))).thenReturn(true);
-		when(mockAuthenticationManager.hasUserAcceptedTermsOfUse(certifiedUserInfo.getId())).thenReturn(true);
 
 		restrictionInfoRqst.setObjectId(projectId);
 		when(mockRestrictionInformationManager.
@@ -290,7 +284,6 @@ public class EntityPermissionsManagerImplUnitTest {
 
 		when(mockAclDAO.canAccess(eq(certifiedUserInfo.getGroups()), eq(benefactorId), eq(ObjectType.ENTITY),
 				any(ACCESS_TYPE.class))).thenReturn(true);
-		when(mockAuthenticationManager.hasUserAcceptedTermsOfUse(certifiedUserInfo.getId())).thenReturn(true);
 		
 		restrictionInfoRqst.setObjectId(folderId);
 		when(mockRestrictionInformationManager.
@@ -332,7 +325,6 @@ public class EntityPermissionsManagerImplUnitTest {
 
 		when(mockAclDAO.canAccess(eq(certifiedUserInfo.getGroups()), eq(benefactorId), eq(ObjectType.ENTITY),
 				any(ACCESS_TYPE.class))).thenReturn(true);
-		when(mockAuthenticationManager.hasUserAcceptedTermsOfUse(certifiedUserInfo.getId())).thenReturn(true);
 
 		// if READ is in the ACL but DOWNLOAD is not in the ACL, then I can't download
 		when(mockAclDAO.canAccess(eq(certifiedUserInfo.getGroups()), eq(benefactorId), 
@@ -377,7 +369,6 @@ public class EntityPermissionsManagerImplUnitTest {
 
 		when(mockAclDAO.canAccess(eq(nonCertifiedUserInfo.getGroups()), eq(benefactorId), eq(ObjectType.ENTITY),
 				any(ACCESS_TYPE.class))).thenReturn(true);
-		when(mockAuthenticationManager.hasUserAcceptedTermsOfUse(nonCertifiedUserInfo.getId())).thenReturn(true);
 
 		restrictionInfoRqst.setObjectId(folderId);
 		when(mockRestrictionInformationManager.
@@ -415,51 +406,6 @@ public class EntityPermissionsManagerImplUnitTest {
 	}
 	
 	@Test
-	public void testGetUserPermissionsForNonCertifiedUserWithRequireCertificationDisabled() {
-		
-		// Mock dependencies.
-		when(mockNodeDao.getNode(folderId)).thenReturn(folder);
-		when(mockNodeDao.getBenefactor(folderId)).thenReturn(benefactorId);
-		when(mockNodeDao.getNodeTypeById(folderId)).thenReturn(EntityType.folder);
-
-		// Simulate full access
-		when(mockAclDAO.canAccess(eq(nonCertifiedUserInfo.getGroups()), eq(benefactorId), eq(ObjectType.ENTITY),
-				any(ACCESS_TYPE.class))).thenReturn(true);
-		
-		when(mockAuthenticationManager.hasUserAcceptedTermsOfUse(nonCertifiedUserInfo.getId())).thenReturn(true);
-		
-		ProjectCertificationSetting projectSetting = new ProjectCertificationSetting();
-		projectSetting.setCertificationRequired(false);
-		
-		when(mockProjectSettingsManager.getProjectSettingForNode(nonCertifiedUserInfo, folderId, ProjectSettingsType.certification,
-				ProjectCertificationSetting.class)).thenReturn(Optional.of(projectSetting));
-		restrictionInfoRqst.setObjectId(folderId);
-		when(mockRestrictionInformationManager.
-				getRestrictionInformation(nonCertifiedUserInfo, restrictionInfoRqst)).
-					thenReturn(noUnmetAccessRqmtResponse);
-
-		// Method under test.
-		UserEntityPermissions uep = entityPermissionsManager.
-				getUserPermissionsForEntity(nonCertifiedUserInfo, folderId);
-		
-		assertTrue(uep.getCanAddChild()); // not certified but the project does not require it!
-		assertTrue(uep.getCanChangePermissions()); 
-		assertTrue(uep.getCanChangeSettings()); 
-		assertTrue(uep.getCanDelete());
-		assertTrue(uep.getCanEdit()); // not certified and not a project but the project does not require it!
-		assertTrue(uep.getCanEnableInheritance());
-		assertFalse(uep.getCanPublicRead());
-		assertTrue(uep.getCanView());
-		assertTrue(uep.getCanDownload());
-		assertTrue(uep.getCanUpload());
-		assertTrue(uep.getCanCertifiedUserAddChild());
-		assertTrue(uep.getCanCertifiedUserEdit());
-		assertFalse(uep.getIsCertifiedUser()); // not certified!
-		assertTrue(uep.getCanModerate());
-		assertFalse(uep.getIsCertificationRequired());
-	}
-	
-	@Test
 	public void testAnonymousCannotDownloadDockerRepo() {
 		// Mock dependencies.
 		when(mockNodeDao.getNodeTypeById(dockerRepoId)).thenReturn(EntityType.dockerrepo);
@@ -476,7 +422,6 @@ public class EntityPermissionsManagerImplUnitTest {
 		when(mockNodeDao.getNodeTypeById(dockerRepoId)).thenReturn(EntityType.dockerrepo);
 		when(mockAclDAO.canAccess(eq(certifiedUserInfo.getGroups()), eq(benefactorId), eq(ObjectType.ENTITY),
 				any(ACCESS_TYPE.class))).thenReturn(true);
-		when(mockAuthenticationManager.hasUserAcceptedTermsOfUse(certifiedUserInfo.getId())).thenReturn(true);
 		restrictionInfoRqst.setObjectId(dockerRepoId);
 		when(mockRestrictionInformationManager.
 				getRestrictionInformation(certifiedUserInfo, restrictionInfoRqst)).
@@ -773,7 +718,7 @@ public class EntityPermissionsManagerImplUnitTest {
 		
 		when(mockNodeDao.getNodeTypeById(nodeId)).thenReturn(EntityType.file);
 		when(mockNodeDao.getBenefactor(nodeId)).thenReturn(benefactorId);
-		when(mockAuthenticationManager.hasUserAcceptedTermsOfUse(userInfo.getId())).thenReturn(acceptedTermsOfUse);
+		userInfo.setAcceptsTermsOfUse(acceptedTermsOfUse);
 		
 		// Call under test
 		AuthorizationStatus status = entityPermissionsManager.hasAccess(nodeId, ACCESS_TYPE.DOWNLOAD, userInfo);
@@ -783,7 +728,6 @@ public class EntityPermissionsManagerImplUnitTest {
 		
 		verify(mockNodeDao).getNodeTypeById(nodeId);
 		verify(mockNodeDao).getBenefactor(nodeId);
-		verify(mockAuthenticationManager).hasUserAcceptedTermsOfUse(userInfo.getId());
 	}
 	
 	@Test
@@ -851,10 +795,10 @@ public class EntityPermissionsManagerImplUnitTest {
 		String benefactorId = nodeId;
 		UserInfo userInfo = certifiedUserInfo;
 		boolean acceptedTermsOfUse = true;
+		userInfo.setAcceptsTermsOfUse(acceptedTermsOfUse);
 		
 		when(mockNodeDao.getNodeTypeById(nodeId)).thenReturn(EntityType.file);
 		when(mockNodeDao.getBenefactor(nodeId)).thenReturn(benefactorId);
-		when(mockAuthenticationManager.hasUserAcceptedTermsOfUse(userInfo.getId())).thenReturn(acceptedTermsOfUse);
 		when(mockObjectTypeManager.getObjectsDataType(nodeId, ObjectType.ENTITY)).thenReturn(dataType);
 		when(mockAclDAO.canAccess(userInfo.getGroups(), benefactorId, ObjectType.ENTITY, ACCESS_TYPE.READ)).thenReturn(true);
 		restrictionInfoRqst.setObjectId(nodeId);
@@ -897,112 +841,6 @@ public class EntityPermissionsManagerImplUnitTest {
 		verify(mockNodeDao).getBenefactor(nodeId);
 		verify(mockObjectTypeManager).getObjectsDataType(nodeId, ObjectType.ENTITY);
 		verify(mockAclDAO).canAccess(userInfo.getGroups(), benefactorId, ObjectType.ENTITY, ACCESS_TYPE.DOWNLOAD);
-	}
-	
-	@Test
-	public void testIsCertificationRequiredWithNoProjectCertificationSetting() {
-		
-		UserInfo userInfo = certifiedUserInfo;
-		
-		when(mockProjectSettingsManager.getProjectSettingForNode(userInfo, entityId, ProjectSettingsType.certification, ProjectCertificationSetting.class))
-			.thenReturn(Optional.empty());
-		
-		// Call under test
-		boolean result = entityPermissionsManager.isCertificationRequired(userInfo, entityId);
-		
-		assertTrue(result);
-		
-	}
-	
-	@Test
-	public void testIsCertificationRequiredWithProjectCertificationSettingEnabled() {
-		
-		UserInfo userInfo = certifiedUserInfo;
-		boolean isCertificationRequired = true;
-		
-		when(mockProjectCertificationSetting.getCertificationRequired()).thenReturn(isCertificationRequired);
-		when(mockProjectSettingsManager.getProjectSettingForNode(userInfo, entityId, ProjectSettingsType.certification, ProjectCertificationSetting.class))
-			.thenReturn(Optional.of(mockProjectCertificationSetting));
-		
-		// Call under test
-		boolean result = entityPermissionsManager.isCertificationRequired(userInfo, entityId);
-		
-		assertTrue(result);
-		verify(mockProjectCertificationSetting).getCertificationRequired();
-		
-	}
-
-	@Test
-	public void testIsCertificationRequiredWithProjectCertificationSettingDisabled() {
-		
-		UserInfo userInfo = certifiedUserInfo;
-		boolean isCertificationRequired = false;
-		
-		when(mockProjectCertificationSetting.getCertificationRequired()).thenReturn(isCertificationRequired);
-		when(mockProjectSettingsManager.getProjectSettingForNode(userInfo, entityId, ProjectSettingsType.certification, ProjectCertificationSetting.class))
-			.thenReturn(Optional.of(mockProjectCertificationSetting));
-		
-		// Call under test
-		boolean result = entityPermissionsManager.isCertificationRequired(userInfo, entityId);
-		
-		assertFalse(result);
-		verify(mockProjectCertificationSetting).getCertificationRequired();
-		
-	}
-	
-	@Test
-	public void testHasCreateAccessWithNonCertifiedUserAndProjectCertificationSettingDisabled() {
-		UserInfo userInfo = nonCertifiedUserInfo;
-		boolean isCertificationRequired = false;
-		boolean hasCreateAccess = true;
-		
-		when(mockNodeDao.getNodeTypeById(folderId)).thenReturn(EntityType.folder);
-		when(mockProjectCertificationSetting.getCertificationRequired()).thenReturn(isCertificationRequired);
-		when(mockProjectSettingsManager.getProjectSettingForNode(userInfo, folderId, ProjectSettingsType.certification, ProjectCertificationSetting.class))
-			.thenReturn(Optional.of(mockProjectCertificationSetting));		
-		when(mockNodeDao.getBenefactor(folderId)).thenReturn(benefactorId);
-		when(mockAclDAO.canAccess(nonCertifiedUserInfo.getGroups(), benefactorId, ObjectType.ENTITY, ACCESS_TYPE.CREATE))
-			.thenReturn(hasCreateAccess);
-		
-		// Method under test
-		boolean result = entityPermissionsManager.hasAccess(folderId, ACCESS_TYPE.CREATE, userInfo).isAuthorized();
-	
-		assertTrue(result);
-	}
-	
-	@Test
-	public void testHasCreateAccessWithNonCertifiedUserAndProjectCertificationSettingEnabled() {
-		UserInfo userInfo = nonCertifiedUserInfo;
-		boolean isCertificationRequired = true;
-		
-		when(mockNodeDao.getNodeTypeById(folderId)).thenReturn(EntityType.folder);
-		when(mockProjectCertificationSetting.getCertificationRequired()).thenReturn(isCertificationRequired);
-		when(mockProjectSettingsManager.getProjectSettingForNode(userInfo, folderId, ProjectSettingsType.certification, ProjectCertificationSetting.class))
-			.thenReturn(Optional.of(mockProjectCertificationSetting));		
-		
-		// Method under test
-		boolean result = entityPermissionsManager.hasAccess(folderId, ACCESS_TYPE.CREATE, userInfo).isAuthorized();
-	
-		assertFalse(result);
-	}
-	
-	@Test
-	public void testHasCreateAccessWithNonCertifiedUserAndProjectCertificationSettingDisabledAndNoAccess() {
-		UserInfo userInfo = nonCertifiedUserInfo;
-		boolean isCertificationRequired = false;
-		boolean hasCreateAccess = false;
-		
-		when(mockNodeDao.getNodeTypeById(folderId)).thenReturn(EntityType.folder);
-		when(mockProjectCertificationSetting.getCertificationRequired()).thenReturn(isCertificationRequired);
-		when(mockProjectSettingsManager.getProjectSettingForNode(userInfo, folderId, ProjectSettingsType.certification, ProjectCertificationSetting.class))
-			.thenReturn(Optional.of(mockProjectCertificationSetting));		
-		when(mockNodeDao.getBenefactor(folderId)).thenReturn(benefactorId);
-		when(mockAclDAO.canAccess(nonCertifiedUserInfo.getGroups(), benefactorId, ObjectType.ENTITY, ACCESS_TYPE.CREATE)).thenReturn(hasCreateAccess);
-		
-		// Method under test
-		boolean result = entityPermissionsManager.hasAccess(folderId, ACCESS_TYPE.CREATE, userInfo).isAuthorized();
-	
-		assertFalse(result);
 	}
 	
 }
