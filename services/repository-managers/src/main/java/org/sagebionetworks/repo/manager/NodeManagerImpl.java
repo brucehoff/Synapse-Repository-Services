@@ -36,8 +36,8 @@ import org.sagebionetworks.repo.model.annotation.v2.Annotations;
 import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2Utils;
 import org.sagebionetworks.repo.model.auth.AuthorizationStatus;
 import org.sagebionetworks.repo.model.bootstrap.EntityBootstrapper;
-import org.sagebionetworks.repo.model.dao.FileHandleDao;
 import org.sagebionetworks.repo.model.dbo.dao.NodeUtils;
+import org.sagebionetworks.repo.model.dbo.file.FileHandleDao;
 import org.sagebionetworks.repo.model.entity.Direction;
 import org.sagebionetworks.repo.model.entity.FileHandleUpdateRequest;
 import org.sagebionetworks.repo.model.entity.NameIdType;
@@ -150,10 +150,6 @@ public class NodeManagerImpl implements NodeManager {
 		if(newNode.getFileHandleId() != null){
 			// To set the file handle on a create the caller must have permission 
 			authorizationManager.canAccessRawFileHandleById(userInfo, newNode.getFileHandleId()).checkAuthorizationOrElseThrow();
-			
-			if (!authorizationManager.canAccess(userInfo, newNode.getParentId(), ObjectType.ENTITY, ACCESS_TYPE.UPLOAD).isAuthorized()) {
-				throw new UnauthorizedException(userInfo.getId().toString()+" is not allowed to upload a file into the chosen folder.");
-			}
 		}
 
 		// check whether the user is allowed to connect to the specified activity
@@ -361,7 +357,7 @@ public class NodeManagerImpl implements NodeManager {
 		authorizationManager.canUserMoveRestrictedEntity(userInfo, parentInDatabase, parentInUpdate).checkAuthorizationOrElseThrow();
 
 		if (!StringUtils.equals(oldNode.getAlias(), updatedNode.getAlias())) {
-			authorizationManager.canChangeSettings(userInfo, oldNode).checkAuthorizationOrElseThrow();
+			authorizationManager.canAccess(userInfo, updatedNode.getId(), ObjectType.ENTITY, ACCESS_TYPE.CHANGE_SETTINGS).checkAuthorizationOrElseThrow();
 		}
 
 		// Validate that the user can assign the file handle if they have it.
@@ -370,9 +366,7 @@ public class NodeManagerImpl implements NodeManager {
 			String currentHandleId = nodeDao.getFileHandleIdForVersion(updatedNode.getId(), null);
 			if(!updatedNode.getFileHandleId().equals(currentHandleId)) {
 				// This is a change so the user must be the creator of the new file handle
-				authorizationManager.canAccessRawFileHandleById(userInfo, updatedNode.getFileHandleId()).checkAuthorizationOrElseThrow();
-				authorizationManager.canAccess(userInfo, updatedNode.getParentId(), ObjectType.ENTITY, ACCESS_TYPE.UPLOAD).checkAuthorizationOrElseThrow();
-			}
+				authorizationManager.canAccessRawFileHandleById(userInfo, updatedNode.getFileHandleId()).checkAuthorizationOrElseThrow();			}
 		}
 		updateNode(userInfo, updatedNode, entityPropertyAnnotations, newVersion, ChangeType.UPDATE, oldNode);
 
@@ -462,7 +456,6 @@ public class NodeManagerImpl implements NodeManager {
 		
 		// Authorization checks
 		authorizationManager.canAccess(userInfo, nodeId, ObjectType.ENTITY, ACCESS_TYPE.UPDATE).checkAuthorizationOrElseThrow();
-		authorizationManager.canAccess(userInfo, nodeId, ObjectType.ENTITY, ACCESS_TYPE.UPLOAD).checkAuthorizationOrElseThrow();
 
 		final String newFileHandleId = updateRequest.getNewFileHandleId();
 		

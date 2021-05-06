@@ -1,18 +1,16 @@
 package org.sagebionetworks.repo.manager.file.scanner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.sagebionetworks.repo.manager.file.scanner.FileHandleAssociationScannerTestUtils.generateMapping;
 import static org.sagebionetworks.repo.manager.file.scanner.BasicFileHandleAssociationScanner.DEFAULT_BATCH_SIZE;
-import static org.sagebionetworks.repo.manager.file.scanner.BasicFileHandleAssociationScanner.DEFAULT_FILE_ID_COLUMN_NAME;
+import static org.sagebionetworks.repo.manager.file.scanner.FileHandleAssociationScannerTestUtils.generateMapping;
 
 import java.io.IOException;
-import java.sql.Blob;
-import java.sql.ResultSet;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -24,22 +22,23 @@ import org.sagebionetworks.repo.model.dbo.DDLUtils;
 import org.sagebionetworks.repo.model.dbo.DMLUtils;
 import org.sagebionetworks.repo.model.dbo.FieldColumn;
 import org.sagebionetworks.repo.model.dbo.TableMapping;
+import org.sagebionetworks.repo.model.file.IdRange;
 import org.sagebionetworks.repo.model.jdo.JDOSecondaryPropertyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(locations = { "classpath:test-context.xml" })
 public class BasicFileHandleAssociationScannerAutowireTest {
 	
 	private static final String TABLE_NAME = "FILE_ASSOCIATION_EXAMPLE";
+	private static final String FILE_ID_COLUMN_NAME = "FILE_HANDLE_ID";
 	private static final String DDL_ID_AND_FILE_HANDLE_ID = "file/ddl_table_with_id_and_file_handle.sql";
-	private static final String DDL_ID_AND_CUSTOM_FILE_HANDLE_ID = "file/ddl_table_with_id_and_custom_file_handle.sql";
 	private static final String DDL_COMPOSITE_ID_AND_FILE_HANDLE_ID = "file/ddl_table_with_composite_id_and_file_handle.sql";
 	private static final String DDL_BLOB_FILE_HANDLE = "file/ddl_table_with_blob_file_handle.sql";
 	
@@ -58,7 +57,7 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 	public void testGetIdRangeWithIdAndFileHandleId() throws IOException {
 		TableMapping<?> tableMapping = generateMapping(TABLE_NAME, DDL_ID_AND_FILE_HANDLE_ID, new FieldColumn[] {
 				new FieldColumn("id", "ID", true).withIsBackupId(true),
-				new FieldColumn("fileHandleId", DEFAULT_FILE_ID_COLUMN_NAME)
+				new FieldColumn("fileHandleId", FILE_ID_COLUMN_NAME).withHasFileHandleRef(true)
 		});
 		
 		testGetIdRange(tableMapping,
@@ -76,7 +75,7 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 		TableMapping<?> tableMapping = generateMapping(TABLE_NAME, DDL_COMPOSITE_ID_AND_FILE_HANDLE_ID, new FieldColumn[] {
 				new FieldColumn("id", "ID", true).withIsBackupId(true),
 				new FieldColumn("version", "VERSION", true),
-				new FieldColumn("fileHandleId", DEFAULT_FILE_ID_COLUMN_NAME)
+				new FieldColumn("fileHandleId", FILE_ID_COLUMN_NAME).withHasFileHandleRef(true)
 		});
 		
 		testGetIdRange(tableMapping,
@@ -93,21 +92,19 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 	public void testScanRangeWithIdAndFileHandleId() throws IOException {
 		TableMapping<?> tableMapping = generateMapping(TABLE_NAME, DDL_ID_AND_FILE_HANDLE_ID, new FieldColumn[] {
 				new FieldColumn("id", "ID", true).withIsBackupId(true),
-				new FieldColumn("fileHandleId", DEFAULT_FILE_ID_COLUMN_NAME)
+				new FieldColumn("fileHandleId", FILE_ID_COLUMN_NAME).withHasFileHandleRef(true)
 		});
 		
-		// Uses the default
-		String fileHandleIdColumn = null;
 		long batchSize = 10;
 		
 		List<ScannedFileHandleAssociation> expected = Arrays.asList(
-				new ScannedFileHandleAssociation("1", 1L),
-				new ScannedFileHandleAssociation("2", 2L),
-				new ScannedFileHandleAssociation("5", 1L),
-				new ScannedFileHandleAssociation("10", 1L)
+				new ScannedFileHandleAssociation(1L, 1L),
+				new ScannedFileHandleAssociation(2L, 2L),
+				new ScannedFileHandleAssociation(5L, 1L),
+				new ScannedFileHandleAssociation(10L, 1L)
 		);
 		
-		testScanRange(tableMapping, fileHandleIdColumn, new IdRange(1, 10), batchSize,
+		testScanRange(tableMapping, new IdRange(1, 10), batchSize,
 			ImmutableList.of(
 				// ID, FILE_HANDLE_ID
 				new Object[] { 1, 1 },
@@ -118,55 +115,23 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 		, expected);
 		
 	}
-	
-	@Test
-	public void testScanRangeWithIdAndCustomFileHandleIdColumn() throws IOException {
-		TableMapping<?> tableMapping = generateMapping(TABLE_NAME, DDL_ID_AND_CUSTOM_FILE_HANDLE_ID, new FieldColumn[] {
-				new FieldColumn("id", "ID", true).withIsBackupId(true),
-				new FieldColumn("fileHandleId", "FILE_ID")
-		});
 		
-		// Uses the default
-		String fileHandleIdColumn = "FILE_ID";
-		long batchSize = 10;
-		
-		List<ScannedFileHandleAssociation> expected = Arrays.asList(
-				new ScannedFileHandleAssociation("1", 1L),
-				new ScannedFileHandleAssociation("2", 2L),
-				new ScannedFileHandleAssociation("5", 1L),
-				new ScannedFileHandleAssociation("10", 1L)
-		);
-		
-		testScanRange(tableMapping, fileHandleIdColumn, new IdRange(1, 10), batchSize,
-			ImmutableList.of(
-				// ID, FILE_HANDLE_ID
-				new Object[] { 1, 1 },
-				new Object[] { 2, 2 },
-				new Object[] { 5, 1 },
-				new Object[] { 10, 1 }
-			)
-		, expected);
-		
-	}
-	
 	@Test
 	public void testScanRangeWithIdAndFileHandleIdAndNullFileHandles() throws IOException {
 		TableMapping<?> tableMapping = generateMapping(TABLE_NAME, DDL_ID_AND_FILE_HANDLE_ID, new FieldColumn[] {
 				new FieldColumn("id", "ID", true).withIsBackupId(true),
-				new FieldColumn("fileHandleId", DEFAULT_FILE_ID_COLUMN_NAME)
+				new FieldColumn("fileHandleId", FILE_ID_COLUMN_NAME).withHasFileHandleRef(true)
 		});
 		
-		// Uses the default
-		String fileHandleIdColumn = null;
 		long batchSize = 10;
 		
 		List<ScannedFileHandleAssociation> expected = Arrays.asList(
-				new ScannedFileHandleAssociation("1", 1L),
-				new ScannedFileHandleAssociation("2", 2L),
-				new ScannedFileHandleAssociation("10", 1L)
+				new ScannedFileHandleAssociation(1L, 1L),
+				new ScannedFileHandleAssociation(2L, 2L),
+				new ScannedFileHandleAssociation(10L, 1L)
 		);
 		
-		testScanRange(tableMapping, fileHandleIdColumn, new IdRange(1, 10), batchSize,
+		testScanRange(tableMapping, new IdRange(1, 10), batchSize,
 			ImmutableList.of(
 				// ID, FILE_HANDLE_ID
 				new Object[] { 1, 1 },
@@ -182,20 +147,18 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 	public void testScanRangeWithIdAndFileHandleIdWithSubRange() throws IOException {
 		TableMapping<?> tableMapping = generateMapping(TABLE_NAME, DDL_ID_AND_FILE_HANDLE_ID, new FieldColumn[] {
 				new FieldColumn("id", "ID", true).withIsBackupId(true),
-				new FieldColumn("fileHandleId", DEFAULT_FILE_ID_COLUMN_NAME)
+				new FieldColumn("fileHandleId", FILE_ID_COLUMN_NAME).withHasFileHandleRef(true)
 		});
 		
-		// Uses the default
-		String fileHandleIdColumn = null;
 		long batchSize = 10;
 		
 		List<ScannedFileHandleAssociation> expected = Arrays.asList(
-				new ScannedFileHandleAssociation("1", 1L),
-				new ScannedFileHandleAssociation("2", 2L),
-				new ScannedFileHandleAssociation("5", 1L)
+				new ScannedFileHandleAssociation(1L, 1L),
+				new ScannedFileHandleAssociation(2L, 2L),
+				new ScannedFileHandleAssociation(5L, 1L)
 		);
 		
-		testScanRange(tableMapping, fileHandleIdColumn, new IdRange(1, 5), batchSize,
+		testScanRange(tableMapping, new IdRange(1, 5), batchSize,
 			ImmutableList.of(
 				// ID, FILE_HANDLE_ID
 				new Object[] { 1, 1 },
@@ -211,24 +174,22 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 	public void testScanRangeWithIdAndFileHandleIdWithMultipleBatches() throws IOException {
 		TableMapping<?> tableMapping = generateMapping(TABLE_NAME, DDL_ID_AND_FILE_HANDLE_ID, new FieldColumn[] {
 				new FieldColumn("id", "ID", true).withIsBackupId(true),
-				new FieldColumn("fileHandleId", DEFAULT_FILE_ID_COLUMN_NAME)
+				new FieldColumn("fileHandleId", FILE_ID_COLUMN_NAME).withHasFileHandleRef(true)
 		});
 		
-		// Uses the default
-		String fileHandleIdColumn = null;
 		long batchSize = 5;
 		
 		List<ScannedFileHandleAssociation> expected = Arrays.asList(
-				new ScannedFileHandleAssociation("1", 1L),
-				new ScannedFileHandleAssociation("2", 2L),
-				new ScannedFileHandleAssociation("3", 2L),
-				new ScannedFileHandleAssociation("4", 3L),
-				new ScannedFileHandleAssociation("5", 1L),
-				new ScannedFileHandleAssociation("6", 5L),
-				new ScannedFileHandleAssociation("10", 1L)
+				new ScannedFileHandleAssociation(1L, 1L),
+				new ScannedFileHandleAssociation(2L, 2L),
+				new ScannedFileHandleAssociation(3L, 2L),
+				new ScannedFileHandleAssociation(4L, 3L),
+				new ScannedFileHandleAssociation(5L, 1L),
+				new ScannedFileHandleAssociation(6L, 5L),
+				new ScannedFileHandleAssociation(10L, 1L)
 		);
 		
-		testScanRange(tableMapping, fileHandleIdColumn, new IdRange(1, 10), batchSize,
+		testScanRange(tableMapping, new IdRange(1, 10), batchSize,
 			ImmutableList.of(
 				// ID, FILE_HANDLE_ID
 				// First batch
@@ -249,22 +210,20 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 	public void testScanRangeWithIdAndFileHandleIdWithMultipleBatchesAndSkipPages() throws IOException {
 		TableMapping<?> tableMapping = generateMapping(TABLE_NAME, DDL_ID_AND_FILE_HANDLE_ID, new FieldColumn[] {
 				new FieldColumn("id", "ID", true).withIsBackupId(true),
-				new FieldColumn("fileHandleId", DEFAULT_FILE_ID_COLUMN_NAME)
+				new FieldColumn("fileHandleId", FILE_ID_COLUMN_NAME).withHasFileHandleRef(true)
 		});
 		
-		// Uses the default
-		String fileHandleIdColumn = null;
 		long batchSize = 2;
 		
 		List<ScannedFileHandleAssociation> expected = Arrays.asList(
-				new ScannedFileHandleAssociation("1", 1L),
-				new ScannedFileHandleAssociation("2", 2L),
-				new ScannedFileHandleAssociation("6", 5L),
-				new ScannedFileHandleAssociation("10", 1L),
-				new ScannedFileHandleAssociation("11", 6L)
+				new ScannedFileHandleAssociation(1L, 1L),
+				new ScannedFileHandleAssociation(2L, 2L),
+				new ScannedFileHandleAssociation(6L, 5L),
+				new ScannedFileHandleAssociation(10L, 1L),
+				new ScannedFileHandleAssociation(11L, 6L)
 		);
 		
-		testScanRange(tableMapping, fileHandleIdColumn, new IdRange(1, 11), batchSize,
+		testScanRange(tableMapping, new IdRange(1, 11), batchSize,
 			ImmutableList.of(
 				// ID, FILE_HANDLE_ID
 				// First batch
@@ -288,24 +247,22 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 		TableMapping<?> tableMapping = generateMapping(TABLE_NAME, DDL_COMPOSITE_ID_AND_FILE_HANDLE_ID, new FieldColumn[] {
 				new FieldColumn("id", "ID", true).withIsBackupId(true),
 				new FieldColumn("version", "VERSION", true),
-				new FieldColumn("fileHandleId", DEFAULT_FILE_ID_COLUMN_NAME)
+				new FieldColumn("fileHandleId", FILE_ID_COLUMN_NAME).withHasFileHandleRef(true)
 		});
 		
-		// Uses the default
-		String fileHandleIdColumn = null;
 		long batchSize = 5;
 		
 		List<ScannedFileHandleAssociation> expected = Arrays.asList(
-				new ScannedFileHandleAssociation("1", 1L),
-				new ScannedFileHandleAssociation("1", 1L),
-				new ScannedFileHandleAssociation("1", 2L),
-				new ScannedFileHandleAssociation("4", 3L),
-				new ScannedFileHandleAssociation("5", 1L),
-				new ScannedFileHandleAssociation("5", 5L),
-				new ScannedFileHandleAssociation("10", 1L)
+				new ScannedFileHandleAssociation(1L, 1L),
+				new ScannedFileHandleAssociation(1L, 1L),
+				new ScannedFileHandleAssociation(1L, 2L),
+				new ScannedFileHandleAssociation(4L, 3L),
+				new ScannedFileHandleAssociation(5L, 1L),
+				new ScannedFileHandleAssociation(5L, 5L),
+				new ScannedFileHandleAssociation(10L, 1L)
 		);
 		
-		testScanRange(tableMapping, fileHandleIdColumn, new IdRange(1, 10), batchSize,
+		testScanRange(tableMapping, new IdRange(1, 10), batchSize,
 			ImmutableList.of(
 				// ID, VERSION, FILE_HANDLE_ID
 				// First batch
@@ -327,24 +284,22 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 		TableMapping<?> tableMapping = generateMapping(TABLE_NAME, DDL_COMPOSITE_ID_AND_FILE_HANDLE_ID, new FieldColumn[] {
 				new FieldColumn("id", "ID", true).withIsBackupId(true),
 				new FieldColumn("version", "VERSION", true),
-				new FieldColumn("fileHandleId", DEFAULT_FILE_ID_COLUMN_NAME)
+				new FieldColumn("fileHandleId", FILE_ID_COLUMN_NAME).withHasFileHandleRef(true)
 		});
 		
-		// Uses the default
-		String fileHandleIdColumn = null;
 		long batchSize = 5;
 		
 		List<ScannedFileHandleAssociation> expected = Arrays.asList(
-				new ScannedFileHandleAssociation("1", 1L),
-				new ScannedFileHandleAssociation("1", 1L),
-				new ScannedFileHandleAssociation("1", 2L),
-				new ScannedFileHandleAssociation("5", 5L),
-				new ScannedFileHandleAssociation("6", 6L),
-				new ScannedFileHandleAssociation("7", 1L),
-				new ScannedFileHandleAssociation("7", 7L)
+				new ScannedFileHandleAssociation(1L, 1L),
+				new ScannedFileHandleAssociation(1L, 1L),
+				new ScannedFileHandleAssociation(1L, 2L),
+				new ScannedFileHandleAssociation(5L, 5L),
+				new ScannedFileHandleAssociation(6L, 6L),
+				new ScannedFileHandleAssociation(7L, 1L),
+				new ScannedFileHandleAssociation(7L, 7L)
 		);
 		
-		testScanRange(tableMapping, fileHandleIdColumn, new IdRange(1, 10), batchSize,
+		testScanRange(tableMapping, new IdRange(1, 10), batchSize,
 			ImmutableList.of(
 				// ID, VERSION, FILE_HANDLE_ID
 				// First batch
@@ -366,36 +321,27 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 	
 	@Test
 	public void testScanRangeWithSerializedEntity() throws IOException {
+
+		String fileHandleIdColumn = "SERIALIZED_ENTITY";
+		
 		TableMapping<?> tableMapping = generateMapping(TABLE_NAME, DDL_BLOB_FILE_HANDLE, new FieldColumn[] {
 				new FieldColumn("id", "ID", true).withIsBackupId(true),
-				new FieldColumn("serializedEntity", "SERIALIZED_ENTITY")
+				new FieldColumn("serializedEntity", fileHandleIdColumn).withHasFileHandleRef(true)
 		});
 		
-		String fileHandleIdColumn = "SERIALIZED_ENTITY";
 		long batchSize = 2;
 		
-		// Emulate a compressed serialized entity that contains the file hanlde references
-		RowMapper<ScannedFileHandleAssociation> rowMapper = (ResultSet rs, int rowNumber) -> {
-			String objectId = rs.getString("ID");
+		// Emulate a compressed serialized entity that contains the file handle references
 
-			List<Long> fileHandleIds = null;
-			
-			Blob blob = rs.getBlob("SERIALIZED_ENTITY");
-			
-			if (!rs.wasNull()) {
-				fileHandleIds = FileHandleHolder.deserialize(blob.getBytes(1, (int) blob.length())).getFileHandleIds();
-			}
-			
-			return new ScannedFileHandleAssociation(objectId).withFileHandleIds(fileHandleIds);
-		};
+		RowMapperSupplier rowMapperSupplier = new SerializedFieldRowMapperSupplier<>(FileHandleHolder::deserialize, FileHandleHolder::getFileHandleIds);
 		
 		List<ScannedFileHandleAssociation> expected = Arrays.asList(
-				new ScannedFileHandleAssociation("1", 1L),
-				new ScannedFileHandleAssociation("2"),
-				new ScannedFileHandleAssociation("3").withFileHandleIds(Arrays.asList(1L, 2L))
+				new ScannedFileHandleAssociation(1L, 1L),
+				new ScannedFileHandleAssociation(2L),
+				new ScannedFileHandleAssociation(3L).withFileHandleIds(ImmutableSet.of(1L, 2L))
 		);
 		
-		testScanRange(tableMapping, fileHandleIdColumn, rowMapper, new IdRange(1, 10), batchSize,
+		testScanRange(tableMapping, rowMapperSupplier, new IdRange(1, 10), batchSize,
 			ImmutableList.of(
 				// ID, SERIALIZED_ENTITY
 				
@@ -415,7 +361,7 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 	private void testGetIdRange(TableMapping<?> tableMapping, List<Object[]> data, IdRange expectedRange) throws IOException {
 		ddlUtils.validateTableExists(tableMapping);
 		
-		FileHandleAssociationScanner scanner = getScannerInstance(tableMapping, DEFAULT_FILE_ID_COLUMN_NAME, DEFAULT_BATCH_SIZE, null);
+		FileHandleAssociationScanner scanner = getScannerInstance(tableMapping, DEFAULT_BATCH_SIZE, BasicFileHandleAssociationScanner::getDefaultRowMapper);
 		
 		// Call under test
 		IdRange range =  scanner.getIdRange();
@@ -431,14 +377,14 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 		assertEquals(expectedRange, range);
 	}
 	
-	private void testScanRange(TableMapping<?> tableMapping, String fileHandleIdColumn, IdRange range, long batchSize, List<Object[]> data, List<ScannedFileHandleAssociation> expected) throws IOException {
-		testScanRange(tableMapping, fileHandleIdColumn, null, range, batchSize, data, expected);
+	private void testScanRange(TableMapping<?> tableMapping, IdRange range, long batchSize, List<Object[]> data, List<ScannedFileHandleAssociation> expected) throws IOException {
+		testScanRange(tableMapping, BasicFileHandleAssociationScanner::getDefaultRowMapper, range, batchSize, data, expected);
 	}
 	
-	private void testScanRange(TableMapping<?> tableMapping, String fileHandleIdColumn, RowMapper<ScannedFileHandleAssociation> rowMapper, IdRange range, long batchSize, List<Object[]> data, List<ScannedFileHandleAssociation> expected) throws IOException {
+	private void testScanRange(TableMapping<?> tableMapping, RowMapperSupplier rowMapperSupplier, IdRange range, long batchSize, List<Object[]> data, List<ScannedFileHandleAssociation> expected) throws IOException {
 		ddlUtils.validateTableExists(tableMapping);
 		
-		FileHandleAssociationScanner scanner = getScannerInstance(tableMapping, fileHandleIdColumn, batchSize, rowMapper);
+		FileHandleAssociationScanner scanner = getScannerInstance(tableMapping, batchSize, rowMapperSupplier);
 		
 		// Call under test
 		List<ScannedFileHandleAssociation> result = StreamSupport.stream(scanner.scanRange(range).spliterator(), false).collect(Collectors.toList());
@@ -472,8 +418,8 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 		jdbcTemplate.update(sqlInsert, params);
 	}	
 	
-	private FileHandleAssociationScanner getScannerInstance(TableMapping<?> tableMapping, String fileHandleIdColumn, long batchSize, RowMapper<ScannedFileHandleAssociation> rowMapper) {
-		return new BasicFileHandleAssociationScanner(jdbcTemplate, tableMapping, fileHandleIdColumn == null ? DEFAULT_FILE_ID_COLUMN_NAME : fileHandleIdColumn, batchSize, rowMapper);
+	private FileHandleAssociationScanner getScannerInstance(TableMapping<?> tableMapping, long batchSize, RowMapperSupplier rowMapperSupplier) {
+		return new BasicFileHandleAssociationScanner(jdbcTemplate, tableMapping, batchSize, rowMapperSupplier);
 	}
 
 	private static final class FileHandleHolder {
@@ -492,8 +438,11 @@ public class BasicFileHandleAssociationScannerAutowireTest {
 			}
 		}
 		
-		public List<Long> getFileHandleIds() {
-			return fileHandleIds;
+		public Set<String> getFileHandleIds() {
+			if (fileHandleIds == null || fileHandleIds.isEmpty()) {
+				return Collections.emptySet();
+			}
+			return fileHandleIds.stream().map(String::valueOf).collect(Collectors.toSet());
 		}
 		
 		public static FileHandleHolder deserialize(byte[] bytes) {

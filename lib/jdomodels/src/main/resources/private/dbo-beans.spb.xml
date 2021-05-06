@@ -21,6 +21,7 @@
 				<bean class="org.sagebionetworks.repo.model.dbo.persistence.DBOGroupMembers" />
 				<bean class="org.sagebionetworks.repo.model.dbo.persistence.DBOCredential" />
 				<bean class="org.sagebionetworks.repo.model.dbo.persistence.DBOSessionToken" />
+				<bean class="org.sagebionetworks.repo.model.dbo.persistence.DBOAuthenticatedOn" />
 				<bean class="org.sagebionetworks.repo.model.dbo.persistence.DBOTermsOfUseAgreement" />
 				<bean class="org.sagebionetworks.repo.model.dbo.principal.DBOPrincipalAlias" />
 				<bean class="org.sagebionetworks.repo.model.dbo.principal.DBONotificationEmail" />
@@ -158,6 +159,8 @@
 				<bean class="org.sagebionetworks.repo.model.dbo.ses.DBOQuarantinedEmail" />
 				<!-- Feature Status -->
 				<bean class="org.sagebionetworks.repo.model.dbo.feature.DBOFeatureStatus" />
+				<!-- Files Scanner Status -->
+				<bean class="org.sagebionetworks.repo.model.dbo.dao.files.DBOFilesScannerStatus" />
 			</list>
 		</property>
 		<!-- MySQL Functions to be created/updated -->
@@ -184,6 +187,7 @@
 		<property name="databaseObjectRegister" >
 			<list>
 				<bean class="org.sagebionetworks.repo.model.dbo.persistence.DBOUserGroup" />
+				<bean class="org.sagebionetworks.repo.model.dbo.persistence.DBOAuthenticatedOn" />
 				<bean class="org.sagebionetworks.repo.model.dbo.principal.DBOPrincipalAlias" />
 				<bean class="org.sagebionetworks.repo.model.dbo.principal.DBONotificationEmail" />
 				<bean class="org.sagebionetworks.repo.model.dbo.persistence.DBOUserProfile" />
@@ -276,7 +280,7 @@
 				
 				<!-- Feature Status -->
 				<bean class="org.sagebionetworks.repo.model.dbo.feature.DBOFeatureStatus" />
-		
+						
 				<bean class="org.sagebionetworks.repo.model.dbo.persistence.DBOChange" /> <!-- THIS MUST ALWAYS BE THE LAST BEAN -->
 			</list>
 		</property>

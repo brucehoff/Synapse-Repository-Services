@@ -159,6 +159,13 @@ import org.sagebionetworks.repo.model.doi.v2.Doi;
 import org.sagebionetworks.repo.model.doi.v2.DoiAssociation;
 import org.sagebionetworks.repo.model.doi.v2.DoiRequest;
 import org.sagebionetworks.repo.model.doi.v2.DoiResponse;
+import org.sagebionetworks.repo.model.download.AddBatchOfFilesToDownloadListRequest;
+import org.sagebionetworks.repo.model.download.AddBatchOfFilesToDownloadListResponse;
+import org.sagebionetworks.repo.model.download.DownloadListQueryRequest;
+import org.sagebionetworks.repo.model.download.DownloadListQueryResponse;
+import org.sagebionetworks.repo.model.download.QueryRequestDetails;
+import org.sagebionetworks.repo.model.download.RemoveBatchOfFilesFromDownloadListRequest;
+import org.sagebionetworks.repo.model.download.RemoveBatchOfFilesFromDownloadListResponse;
 import org.sagebionetworks.repo.model.entity.BindSchemaToEntityRequest;
 import org.sagebionetworks.repo.model.entity.EntityLookupRequest;
 import org.sagebionetworks.repo.model.entity.FileHandleUpdateRequest;
@@ -649,6 +656,8 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	public static final String DOWNLOAD_LIST_REMOVE = DOWNLOAD_LIST+"/remove";
 	public static final String DOWNLOAD_LIST_CLEAR = DOWNLOAD_LIST+"/clear";
 	
+	public static final String DOWNLOAD_LIST_QUERY = DOWNLOAD_LIST+"/query";
+	
 	public static final String DOWNLOAD_ORDER = "/download/order";
 	public static final String DOWNLOAD_ORDER_ID = DOWNLOAD_ORDER+"/{orderId}";
 	public static final String DOWNLOAD_ORDER_HISTORY = DOWNLOAD_ORDER+"/history";
@@ -659,6 +668,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	public static final String SCHEMA_TYPE_CREATE = "/schema/type/create/";
 	public static final String SCHEMA_TYPE_VALIDATION = "/schema/type/validation/";
 	public static final String VIEW_COLUMNS = "/column/view/scope/";
+	
 
 	/**
 	 * Default constructor uses the default repository and file services endpoints.
@@ -1579,7 +1589,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	@Override
 	public void downloadFromFileHandleTemporaryUrl(String fileHandleId,
 			File destinationFile) throws SynapseException {
-		String uri = getFileEndpoint() + getFileHandleTemporaryURI(fileHandleId, true);
+		String uri = getFileEndpoint() + getFileHandleTemporaryURI(fileHandleId, false);
 		downloadFromSynapse(uri, null, destinationFile);
 	}
 
@@ -1859,7 +1869,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	@Override
 	public void downloadWikiAttachment(WikiPageKey key, String fileName,
 			File target) throws SynapseException {
-		String uri = createWikiAttachmentURI(key, fileName, true);
+		String uri = createWikiAttachmentURI(key, fileName, false);
 		downloadFromSynapse(getRepoEndpoint() + uri, null, target);
 	}
 
@@ -1903,7 +1913,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	@Override
 	public void downloadWikiAttachmentPreview(WikiPageKey key, String fileName,
 			File target) throws SynapseException {
-		String uri = createWikiAttachmentPreviewURI(key, fileName, true);
+		String uri = createWikiAttachmentPreviewURI(key, fileName, false);
 		downloadFromSynapse(getRepoEndpoint() + uri, null, target);
 
 	}
@@ -1931,7 +1941,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	@Override
 	public void downloadFromFileEntityCurrentVersion(String fileEntityId,
 			File destinationFile) throws SynapseException {
-		String uri = ENTITY + "/" + fileEntityId + FILE;
+		String uri = ENTITY + "/" + fileEntityId + FILE + QUERY_REDIRECT_PARAMETER + "false";
 		downloadFromSynapse(getRepoEndpoint() + uri, null, destinationFile);
 	}
 
@@ -1940,7 +1950,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	public void downloadFromFileEntityForVersion(String entityId,
 			Long versionNumber, File destinationFile) throws SynapseException {
 		String uri = ENTITY + "/" + entityId + VERSION_INFO + "/"
-				+ versionNumber + FILE;
+				+ versionNumber + FILE + QUERY_REDIRECT_PARAMETER + "false";
 		downloadFromSynapse(getRepoEndpoint() + uri, null, destinationFile);
 	}
 
@@ -1968,7 +1978,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	@Override
 	public void downloadFromFileEntityPreviewCurrentVersion(
 			String fileEntityId, File destinationFile) throws SynapseException {
-		String uri = ENTITY + "/" + fileEntityId + FILE_PREVIEW;
+		String uri = ENTITY + "/" + fileEntityId + FILE_PREVIEW + QUERY_REDIRECT_PARAMETER + "false";
 		downloadFromSynapse(getRepoEndpoint() + uri, null, destinationFile);
 	}
 
@@ -2017,7 +2027,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	public void downloadFromFileEntityPreviewForVersion(String entityId,
 			Long versionNumber, File destinationFile) throws SynapseException {
 		String uri = ENTITY + "/" + entityId + VERSION_INFO + "/"
-				+ versionNumber + FILE_PREVIEW;
+				+ versionNumber + FILE_PREVIEW + QUERY_REDIRECT_PARAMETER + "false";
 		downloadFromSynapse(getRepoEndpoint() + uri, null, destinationFile);
 	}
 
@@ -2270,7 +2280,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 		ValidateArgument.required(key, "key");
 		ValidateArgument.required(version, "version");
 		String uri = createV2WikiURL(key) + ATTACHMENT_HANDLES
-				+ VERSION_PARAMETER + version;
+				+ VERSION_PARAMETER + version + AND_REDIRECT_PARAMETER + "false";
 		return getJSONEntity(getRepoEndpoint(), uri, FileHandleResults.class);
 	}
 
@@ -2279,8 +2289,8 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 			throws ClientProtocolException, FileNotFoundException, IOException,
 			SynapseException {
 		ValidateArgument.required(key, "key");
-		String uri = createV2WikiURL(key) + MARKDOWN_FILE;
-		return downloadZippedFileToString(getRepoEndpoint(), uri);
+		String uri = createV2WikiURL(key) + MARKDOWN_FILE + QUERY_REDIRECT_PARAMETER + "false";
+		return downloadFileToString(getRepoEndpoint(), uri, /*gunzip*/true);
 	}
 
 	@Override
@@ -2291,8 +2301,8 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 		ValidateArgument.required(key, "key");
 		ValidateArgument.required(version, "version");
 		String uri = createV2WikiURL(key) + MARKDOWN_FILE + VERSION_PARAMETER
-				+ version;
-		return downloadZippedFileToString(getRepoEndpoint(), uri);
+				+ version + AND_REDIRECT_PARAMETER + "false";
+		return downloadFileToString(getRepoEndpoint(), uri, /*gunzip*/true);
 	}
 
 	private static String createV2WikiAttachmentURI(WikiPageKey key,
@@ -2332,7 +2342,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	@Override
 	public void downloadV2WikiAttachment(WikiPageKey key, String fileName,
 			File target) throws SynapseException {
-		String uri = createV2WikiAttachmentURI(key, fileName, true);
+		String uri = createV2WikiAttachmentURI(key, fileName, false);
 		downloadFromSynapse(getRepoEndpoint() + uri, null, target);
 	}
 
@@ -2374,7 +2384,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	@Override
 	public void downloadV2WikiAttachmentPreview(WikiPageKey key,
 			String fileName, File target) throws SynapseException {
-		String uri = createV2WikiAttachmentPreviewURI(key, fileName, true);
+		String uri = createV2WikiAttachmentPreviewURI(key, fileName, false);
 		downloadFromSynapse(getRepoEndpoint() + uri, null, target);
 	}
 
@@ -2405,7 +2415,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	@Override
 	public void downloadVersionOfV2WikiAttachmentPreview(WikiPageKey key,
 			String fileName, Long version, File target) throws SynapseException {
-		String uri = createVersionOfV2WikiAttachmentPreviewURI(key, fileName, version, true);
+		String uri = createVersionOfV2WikiAttachmentPreviewURI(key, fileName, version, false);
 		downloadFromSynapse(getRepoEndpoint() + uri, null, target);
 	}
 
@@ -2437,7 +2447,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	@Override
 	public void downloadVersionOfV2WikiAttachment(WikiPageKey key,
 			String fileName, Long version, File target) throws SynapseException {
-		String uri = createVersionOfV2WikiAttachmentURI(key, fileName, version, true);
+		String uri = createVersionOfV2WikiAttachmentURI(key, fileName, version, false);
 		downloadFromSynapse(getRepoEndpoint() + uri, null, target);
 	}
 
@@ -2723,14 +2733,14 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	@Override
 	public String downloadMessage(String messageId) throws SynapseException,
 			MalformedURLException, IOException {
-		String uri = createDownloadMessageURI(messageId, true);
-		return getStringDirect(getRepoEndpoint(), uri);
+		String uri = createDownloadMessageURI(messageId, false);
+		return downloadFileToString(getRepoEndpoint(), uri, /*gunzip*/false);
 	}
 
 	@Override
 	public void downloadMessageToFile(String messageId, File target)
 			throws SynapseException {
-		String uri = createDownloadMessageURI(messageId, true);
+		String uri = createDownloadMessageURI(messageId, false);
 		downloadFromSynapse(getRepoEndpoint() + uri, null, target);
 	}
 
@@ -3256,7 +3266,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	public void downloadFromSubmission(String submissionId,
 			String fileHandleId, File destinationFile) throws SynapseException {
 		String uri = EVALUATION_URI_PATH + "/" + SUBMISSION + "/"
-				+ submissionId + FILE + "/" + fileHandleId;
+				+ submissionId + FILE + "/" + fileHandleId + QUERY_REDIRECT_PARAMETER + "false";
 		super.downloadFromSynapse(
 				getRepoEndpoint() + uri, null, destinationFile);
 	}
@@ -3821,7 +3831,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	public void downloadFromTableFileHandleTemporaryUrl(String tableId,
 			RowReference row, String columnId, File destinationFile)
 			throws SynapseException {
-		String uri = getUriForFileHandle(tableId, row, columnId) + FILE;
+		String uri = getUriForFileHandle(tableId, row, columnId) + FILE + QUERY_REDIRECT_PARAMETER + "false";
 		downloadFromSynapse(getRepoEndpoint() + uri, null, destinationFile);
 	}
 
@@ -3838,7 +3848,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	public void downloadFromTableFileHandlePreviewTemporaryUrl(String tableId,
 			RowReference row, String columnId, File destinationFile)
 			throws SynapseException {
-		String uri = getUriForFileHandle(tableId, row, columnId) + FILE_PREVIEW;
+		String uri = getUriForFileHandle(tableId, row, columnId) + FILE_PREVIEW + QUERY_REDIRECT_PARAMETER + "false";
 		downloadFromSynapse(getRepoEndpoint() + uri, null, destinationFile);
 	}
 
@@ -4144,7 +4154,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	// alternative to getTeamIcon
 	@Override
 	public void downloadTeamIcon(String teamId, File target) throws SynapseException {
-		String uri = createGetTeamIconURI(teamId, true);
+		String uri = createGetTeamIconURI(teamId, false);
 		downloadFromSynapse(getRepoEndpoint() + uri, null, target);
 	}
 
@@ -4967,7 +4977,7 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 	@Override
 	public void downloadFile(FileHandleAssociation fileHandleAssociation, File target)
 			throws SynapseException {
-		String uri = createFileDownloadUri(fileHandleAssociation, true);
+		String uri = createFileDownloadUri(fileHandleAssociation, false);
 		downloadFromSynapse(getFileEndpoint() + uri, null, target);
 	}
 
@@ -5445,6 +5455,13 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 		ValidateArgument.required(submissionId, "submissionId");
 		String url = DATA_ACCESS_SUBMISSION+"/"+submissionId+"/cancellation";
 		return putJSONEntity(getRepoEndpoint(), url, null, org.sagebionetworks.repo.model.dataaccess.SubmissionStatus.class);
+	}
+
+	@Override
+	public void deleteDataAccessSubmission(String submissionId) throws SynapseException {
+		ValidateArgument.required(submissionId, "submissionId");
+		String url = DATA_ACCESS_SUBMISSION+"/"+submissionId;
+		deleteUri(getRepoEndpoint(), url);
 	}
 
 	@Override
@@ -5936,4 +5953,37 @@ public class SynapseClientImpl extends BaseClientImpl implements SynapseClient {
 		
 	}
 
+	@Override
+	public AddBatchOfFilesToDownloadListResponse addFilesToDownloadList(AddBatchOfFilesToDownloadListRequest request) throws SynapseException {
+		ValidateArgument.required(request, "request");
+		String url = "/download/list/add";
+		return postJSONEntity(getRepoEndpoint(), url, request, AddBatchOfFilesToDownloadListResponse.class);
+	}
+	
+	@Override
+	public RemoveBatchOfFilesFromDownloadListResponse removeFilesFromDownloadList(RemoveBatchOfFilesFromDownloadListRequest request) throws SynapseException {
+		ValidateArgument.required(request, "request");
+		String url = "/download/list/remove";
+		return postJSONEntity(getRepoEndpoint(), url, request, RemoveBatchOfFilesFromDownloadListResponse.class);
+	}
+	
+	@Override
+	public void clearUsersDownloadList() throws SynapseException {
+		String uri = "/download/list";
+		deleteUri(getRepoEndpoint(), uri);
+	}
+	
+	@Override
+	public String startDownloadListQuery(DownloadListQueryRequest request) throws SynapseException {
+		ValidateArgument.required(request, "request");
+		return startAsynchJob(AsynchJobType.QueryDownloadList, request);
+	}
+
+	@Override
+	public DownloadListQueryResponse getDownloadListQueryResult(String asyncJobToken)
+			throws SynapseException, SynapseResultNotReadyException {
+		ValidateArgument.required(asyncJobToken, "asyncJobToken");
+		String url = DOWNLOAD_LIST_QUERY + ASYNC_GET + asyncJobToken;
+		return (DownloadListQueryResponse) getAsynchJobResponse(url, DownloadListQueryResponse.class, getRepoEndpoint());
+	}
 }

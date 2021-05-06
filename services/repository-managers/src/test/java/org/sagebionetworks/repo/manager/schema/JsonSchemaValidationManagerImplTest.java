@@ -541,6 +541,217 @@ public class JsonSchemaValidationManagerImplTest {
 		assertFalse(result.getIsValid());
 		assertEquals("#: only 1 subschema matches out of 2", result.getValidationErrorMessage());
 	}
+	
+	@Test
+	public void testHasMinAndMax() throws Exception {
+		JsonSchema schema = loadSchemaFromClasspath("schemas/HasMinMax.json");
+		assertNotNull(schema.getProperties());
+		assertEquals(3, schema.getProperties().size());
+
+		// All valid
+		JsonSubject subject = setupSubject();
+		subject.toJson().put("lessThanOrEqualsToTen", 9);
+		subject.toJson().put("greaterThanOrEqualToTwenty", 21);
+		subject.toJson().put("betweenThirtyAndForty", 34);
+
+		// call under test
+		ValidationResults result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertTrue(result.getIsValid());
+
+		// over max
+		subject = setupSubject();
+		subject.toJson().put("lessThanOrEqualsToTen", 11);
+
+		// call under test
+		result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertFalse(result.getIsValid());
+		assertEquals("11 is not less or equal to 10", result.getValidationErrorMessage());
+		
+		// under min
+		subject = setupSubject();
+		subject.toJson().put("greaterThanOrEqualToTwenty", 19);
+
+		// call under test
+		result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertFalse(result.getIsValid());
+		assertEquals("19 is not greater or equal to 20", result.getValidationErrorMessage());
+		
+		// over forty
+		subject = setupSubject();
+		subject.toJson().put("betweenThirtyAndForty", 41);
+
+		// call under test
+		result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertFalse(result.getIsValid());
+		assertEquals("41 is not less or equal to 40", result.getValidationErrorMessage());
+		
+		// under thirty
+		subject = setupSubject();
+		subject.toJson().put("betweenThirtyAndForty", 29);
+
+		// call under test
+		result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertFalse(result.getIsValid());
+		assertEquals("29 is not greater or equal to 30", result.getValidationErrorMessage());
+	}
+	
+	@Test
+	public void testHasNot() throws Exception {
+		JsonSchema schema = loadSchemaFromClasspath("schemas/HasNot.json");
+		assertNotNull(schema.getProperties());
+		assertEquals(2, schema.getProperties().size());
+		
+		// red is primary
+		JsonSubject subject = setupSubject();
+		subject.toJson().put("color", "red");
+		subject.toJson().put("isPrimary", "true");
+
+		// call under test
+		ValidationResults result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertTrue(result.getIsValid());
+		
+		// red is primary
+		subject = setupSubject();
+		subject.toJson().put("color", "red");
+		subject.toJson().put("isPrimary", "false");
+
+		// call under test
+		result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertFalse(result.getIsValid());
+		assertEquals("#: only 1 subschema matches out of 2", result.getValidationErrorMessage());
+		
+		// orange is not primary
+		subject = setupSubject();
+		subject.toJson().put("color", "orange");
+		subject.toJson().put("isPrimary", "true");
+
+		// call under test
+		result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertFalse(result.getIsValid());
+		assertEquals("#: only 1 subschema matches out of 2", result.getValidationErrorMessage());
+		
+		// orange is not primary
+		subject = setupSubject();
+		subject.toJson().put("color", "orange");
+		subject.toJson().put("isPrimary", "false");
+
+		// call under test
+		result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertTrue(result.getIsValid());
+	}
+	
+	/**
+	 * This is a test for PLFM-6701.
+	 */
+	@Test
+	public void testValidateWithBooleanCondition() throws Exception {
+		JsonSchema schema = loadSchemaFromClasspath("schemas/BooleanCondition.json");
+		assertNotNull(schema.getProperties());
+		
+		JsonSubject subject = setupSubject();
+		// when isMultiSpecimen=true then assay is required.
+		subject.toJson().put("isMultiSpecimen", true);
+		subject.toJson().remove("assay");
+		
+		// call under test
+		ValidationResults result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertFalse(result.getIsValid());
+		String stackTrace = buildStackTrack(result.getValidationException());
+		assertTrue(stackTrace.contains("input is invalid against the \"then\" schema"));
+		assertTrue(stackTrace.contains("required key [assay] not found"));
+	}
+	
+	/**
+	 * This is a test for PLFM-6701.
+	 */
+	@Test
+	public void testValidateWithBooleanConditionWithFalse() throws Exception {
+		JsonSchema schema = loadSchemaFromClasspath("schemas/BooleanCondition.json");
+		assertNotNull(schema.getProperties());
+		
+		JsonSubject subject = setupSubject();
+		// when isMultiSpecimen=false then assay is not required.
+		subject.toJson().put("isMultiSpecimen", false);
+		subject.toJson().remove("assay");
+		
+		// call under test
+		ValidationResults result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertTrue(result.getIsValid());
+	}
+	
+	/**
+	 * This is a test for PLFM-6701.
+	 */
+	@Test
+	public void testValidateWithEnumCondition() throws Exception {
+		JsonSchema schema = loadSchemaFromClasspath("schemas/EnumCondition.json");
+		assertNotNull(schema.getProperties());
+		
+		JsonSubject subject = setupSubject();
+		// when other=1,2,or3 then assay is required.
+		subject.toJson().put("other", 3);
+		subject.toJson().remove("assay");
+		
+		// call under test
+		ValidationResults result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertFalse(result.getIsValid());
+		String stackTrace = buildStackTrack(result.getValidationException());
+		assertTrue(stackTrace.contains("input is invalid against the \"then\" schema"));
+		assertTrue(stackTrace.contains("required key [assay] not found"));
+	}
+	
+	@Test
+	public void testValidateWithEnumConditionWithNoMatch() throws Exception {
+		JsonSchema schema = loadSchemaFromClasspath("schemas/EnumCondition.json");
+		assertNotNull(schema.getProperties());
+		
+		JsonSubject subject = setupSubject();
+		// when other=1,2,or3 then assay is required.
+		subject.toJson().put("other", 4);
+		subject.toJson().remove("assay");
+		
+		// call under test
+		ValidationResults result = manager.validate(schema, subject);
+		assertNotNull(result);
+		assertTrue(result.getIsValid());
+	}
+	
+	/**
+	 * Helper to build a stack trace for the given exception.
+	 * @param validationException
+	 * @return
+	 */
+	public String buildStackTrack(ValidationException validationException) {
+		StringBuilder builder = new StringBuilder();
+		buildStackTrackRecursive(builder, validationException);
+		return builder.toString();
+	}
+	
+	/**
+	 * Recursive method to build a stack trace from a ValidationException
+	 * @param builder
+	 * @param validationException
+	 */
+	void buildStackTrackRecursive(StringBuilder builder, ValidationException validationException) {
+		builder.append(validationException.getMessage()).append("\n");
+		if(validationException.getCausingExceptions() != null) {
+			for(ValidationException e: validationException.getCausingExceptions()) {
+				buildStackTrackRecursive(builder, e);
+			}
+		}
+	}
 
 	public JsonSubject setupSubject() {
 		JSONObject jsonObject = new JSONObject();

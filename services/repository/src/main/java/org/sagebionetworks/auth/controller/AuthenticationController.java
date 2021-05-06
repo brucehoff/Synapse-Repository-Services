@@ -66,13 +66,13 @@ import org.springframework.web.util.UriComponentsBuilder;
  * </ul>
  * <p>
  * The username and password are exchanged for an access token 
- * using <a href="${POST.TODO}">POST /TODO</a> service.
+ * using <a href="${POST.login2}">POST /login2</a> service.
  * This method should only be used by Synapse itself.  No other 
  * application should prompt a user for their user name and password.
  * </p>
  * <p>
  * Synapse allows authentication via a white listed OAuth 2.0 provider.  Currently only Google is supported.
- * The final step is <a href="${POST.oauth2.session}">POST /oauth2/session</a> which returns an access token
+ * The final step is <a href="${POST.oauth2.session2}">POST /oauth2/session2</a> which returns an access token
  * which is included as a Bearer token in the Authorization header of 
  * subsequent requests as described above.  Only Synapse itself may use this service, as redirection back
  * from the OAuth2 provider is only allowed to the Synapse web portal.
@@ -117,20 +117,32 @@ public class AuthenticationController {
 			@RequestBody LoginCredentials credentials)
 			throws NotFoundException {
 		LoginRequest request = DeprecatedUtils.createLoginRequest(credentials);
-		LoginResponse loginResponse =  authenticationService.login(request);
+		LoginResponse loginResponse =  authenticationService.loginForSession(request);
 		return DeprecatedUtils.createSession(loginResponse);
 	}
 
-	/**
-	 * Deprecated in favor of ???? TODO ????
-	 */
 	@Deprecated
 	@RequiredScope({})
 	@ResponseStatus(HttpStatus.CREATED)
 	@RequestMapping(value = UrlHelpers.AUTH_LOGIN, method = RequestMethod.POST)
 	public @ResponseBody
-	LoginResponse login(@RequestBody LoginRequest request) throws NotFoundException {
-		return authenticationService.login(request);
+	LoginResponse loginForSessionToken(@RequestBody LoginRequest request) throws NotFoundException {
+		return authenticationService.loginForSession(request);
+	}
+	
+	/**
+	 * Retrieve an access token that will be usable for 24 hours. 
+	 * The user must accept the terms of use before the access token
+	 * can be used.
+	 */
+	@RequiredScope({})
+	@ResponseStatus(HttpStatus.CREATED)
+	@RequestMapping(value = UrlHelpers.AUTH_LOGIN_2, method = RequestMethod.POST)
+	public @ResponseBody
+	LoginResponse login(@RequestBody LoginRequest request,
+			UriComponentsBuilder uriComponentsBuilder
+			) throws NotFoundException {
+		return authenticationService.login(request, EndpointHelper.getEndpoint(uriComponentsBuilder));
 	}
 	
 	// TODO new service like login() but returns an access token
@@ -395,7 +407,7 @@ public class AuthenticationController {
 			UriComponentsBuilder uriComponentsBuilder
 	) {
 		String accessToken = HttpAuthUtil.getBearerTokenFromAuthorizationHeader(authorizationHeader);
-		return authenticationService.createPersonalAccessToken(userId, accessToken, request, OpenIDConnectController.getEndpoint(uriComponentsBuilder));
+		return authenticationService.createPersonalAccessToken(userId, accessToken, request, EndpointHelper.getEndpoint(uriComponentsBuilder));
 	}
 
 	/**

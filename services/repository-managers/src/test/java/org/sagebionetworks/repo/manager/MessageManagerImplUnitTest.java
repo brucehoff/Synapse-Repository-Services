@@ -51,8 +51,8 @@ import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.UserProfile;
 import org.sagebionetworks.repo.model.auth.AuthorizationStatus;
 import org.sagebionetworks.repo.model.auth.PasswordResetSignedToken;
-import org.sagebionetworks.repo.model.dao.FileHandleDao;
 import org.sagebionetworks.repo.model.dao.NotificationEmailDAO;
+import org.sagebionetworks.repo.model.dbo.file.FileHandleDao;
 import org.sagebionetworks.repo.model.dbo.ses.EmailQuarantineDao;
 import org.sagebionetworks.repo.model.file.FileHandle;
 import org.sagebionetworks.repo.model.file.S3FileHandle;
@@ -93,7 +93,7 @@ public class MessageManagerImplUnitTest {
 	@Mock
 	private NodeDAO nodeDAO;
 	@Mock
-	private EntityPermissionsManager entityPermissionsManager;
+	private EntityAclManager entityAclManager;
 	@Mock
 	private SynapseEmailService sesClient;
 	@Mock

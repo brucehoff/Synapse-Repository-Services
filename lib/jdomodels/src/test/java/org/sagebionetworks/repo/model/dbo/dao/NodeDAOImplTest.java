@@ -45,8 +45,8 @@ import org.sagebionetworks.repo.model.annotation.v2.Annotations;
 import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2TestUtils;
 import org.sagebionetworks.repo.model.annotation.v2.AnnotationsV2Utils;
 import org.sagebionetworks.repo.model.annotation.v2.AnnotationsValueType;
-import org.sagebionetworks.repo.model.dao.FileHandleDao;
 import org.sagebionetworks.repo.model.dbo.DBOBasicDao;
+import org.sagebionetworks.repo.model.dbo.file.FileHandleDao;
 import org.sagebionetworks.repo.model.dbo.migration.MigratableTableDAO;
 import org.sagebionetworks.repo.model.dbo.persistence.DBONode;
 import org.sagebionetworks.repo.model.dbo.persistence.DBORevision;
@@ -60,7 +60,7 @@ import org.sagebionetworks.repo.model.file.ChildStatsResponse;
 import org.sagebionetworks.repo.model.file.FileHandleAssociateType;
 import org.sagebionetworks.repo.model.file.FileHandleAssociation;
 import org.sagebionetworks.repo.model.file.S3FileHandle;
-import org.sagebionetworks.repo.model.helper.DoaObjectHelper;
+import org.sagebionetworks.repo.model.helper.DaoObjectHelper;
 import org.sagebionetworks.repo.model.jdo.KeyFactory;
 import org.sagebionetworks.repo.model.jdo.NodeTestUtils;
 import org.sagebionetworks.repo.model.provenance.Activity;
@@ -159,7 +159,7 @@ public class NodeDAOImplTest {
 	private JsonSchemaTestHelper jsonSchemaTestHelper;
 	
 	@Autowired
-	private DoaObjectHelper<Node> nodeDaoHelper;
+	private DaoObjectHelper<Node> nodeDaoHelper;
 
 	// the datasets that must be deleted at the end of each test.
 	List<String> toDelete = new ArrayList<String>();
@@ -913,6 +913,7 @@ public class NodeDAOImplTest {
 		AnnotationsV2TestUtils.putAnnotations(annos,"doubleKey", "23.5", AnnotationsValueType.DOUBLE);
 		AnnotationsV2TestUtils.putAnnotations(annos,"longKey", "1234", AnnotationsValueType.LONG);
 		AnnotationsV2TestUtils.putAnnotations(annos,"dateKey", Long.toString(System.currentTimeMillis()), AnnotationsValueType.TIMESTAMP_MS);
+		AnnotationsV2TestUtils.putAnnotations(annos,"booleanKey", "true", AnnotationsValueType.BOOLEAN);
 		// update the eTag
 		String newETagString = UUID.randomUUID().toString();
 		annos.setEtag(newETagString);
@@ -924,6 +925,7 @@ public class NodeDAOImplTest {
 		assertEquals("one", AnnotationsV2Utils.getSingleValue(copy, "stringOne"));
 		assertEquals("23.5", AnnotationsV2Utils.getSingleValue(copy, "doubleKey"));
 		assertEquals("1234",AnnotationsV2Utils.getSingleValue(copy, "longKey"));
+		assertEquals("true",AnnotationsV2Utils.getSingleValue(copy, "booleanKey"));
 	}
 	
 	@Test
@@ -1570,7 +1572,8 @@ public class NodeDAOImplTest {
 		r.setTargetId(child.getId());
 		r.setTargetVersionNumber(1L);
 		request.add(r);
-		
+
+		// Call under test
 		List<EntityHeader> results = nodeDao.getEntityHeader(request);
 		assertNotNull(results);
 		assertEquals(4, results.size());
@@ -1584,18 +1587,21 @@ public class NodeDAOImplTest {
 		assertEquals(parent.getCreatedOn(), header.getCreatedOn());
 		assertEquals(parent.getModifiedByPrincipalId().toString(), header.getModifiedBy());
 		assertEquals(parent.getModifiedOn(), header.getModifiedOn());
+		assertTrue(header.getIsLatestVersion());
 		
 		header = results.get(2);
 		assertEquals(childId, header.getId());
 		assertEquals("2", header.getVersionLabel());
 		assertEquals(new Long(2), header.getVersionNumber());
 		assertEquals(parentBenefactor, header.getBenefactorId());
-		
+		assertTrue(header.getIsLatestVersion());
+
 		header = results.get(3);
 		assertEquals(childId, header.getId());
 		assertEquals("1", header.getVersionLabel());
 		assertEquals(new Long(1), header.getVersionNumber());
 		assertEquals(parentBenefactor, header.getBenefactorId());
+		assertFalse(header.getIsLatestVersion());
 	}
 	
 	/*

@@ -1,6 +1,7 @@
 package org.sagebionetworks.repo.model.dbo.auth;
 
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_AUTHENTICATED_ON_AUTHENTICATED_ON;
+import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_AUTHENTICATED_ON_ETAG;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_AUTHENTICATED_ON_PRINCIPAL_ID;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_CREDENTIAL_PASS_HASH;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_CREDENTIAL_PRINCIPAL_ID;
@@ -45,7 +46,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.SingleColumnRowMapper;
 
-
 public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 
 	@Autowired
@@ -65,7 +65,7 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 	public static final Long SESSION_EXPIRATION_TIME = 1000 * 60 * 60 * 24L;
 	public static final long HALF_SESSION_EXPIRATION = SESSION_EXPIRATION_TIME/2;
 	
-	public static final String SELECT_AUTHENTICATED_ON_FROM_AUTHENTICATED_ON = 
+	public static final String SELECT_AUTHENTICATED_ON_FOR_PRINCIPAL_ID = 
 			"SELECT "+COL_AUTHENTICATED_ON_AUTHENTICATED_ON+
 			" FROM "+TABLE_AUTHENTICATED_ON+
 			" WHERE "+COL_AUTHENTICATED_ON_PRINCIPAL_ID+" = ?";
@@ -74,28 +74,21 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 			"SELECT COUNT(*)"+
 			" FROM "+TABLE_CREDENTIAL+", "+TABLE_USER_GROUP+
 			" WHERE "+COL_CREDENTIAL_PRINCIPAL_ID+"="+COL_USER_GROUP_ID+
-				" AND "+COL_USER_GROUP_ID+"= ?"+
-				" AND "+COL_CREDENTIAL_PASS_HASH+"=?";
+			" AND "+COL_USER_GROUP_ID+"= ?"+
+			" AND "+COL_CREDENTIAL_PASS_HASH+"=?";
 	
 	private static final String UPDATE_AUTHENTICATED_ON = 
-			"UPDATE "+COL_AUTHENTICATED_ON_AUTHENTICATED_ON+
-			" SET "+TABLE_AUTHENTICATED_ON+"= ?"+
+			"UPDATE "+TABLE_AUTHENTICATED_ON+
+			" SET "+COL_AUTHENTICATED_ON_AUTHENTICATED_ON+"= ?, "+COL_AUTHENTICATED_ON_ETAG+"=UUID()"+
 			" WHERE "+COL_AUTHENTICATED_ON_PRINCIPAL_ID+"= ?";
-
-	// NOTE: Neither in this version, or the prior version, were you selecting by user's name
-	private static final String SELECT_SESSION_TOKEN_BY_USERNAME_IF_VALID = 
-			"SELECT st."+COL_SESSION_TOKEN_SESSION_TOKEN+
-			", tou."+COL_TERMS_OF_USE_AGREEMENT_AGREEMENT+
-			" FROM "+TABLE_SESSION_TOKEN+" st, "+TABLE_TERMS_OF_USE_AGREEMENT+" tou "+TABLE_AUTHENTICATED_ON+" ao "+
-			"WHERE tou."+COL_TERMS_OF_USE_AGREEMENT_PRINCIPAL_ID+"=st."+COL_SESSION_TOKEN_PRINCIPAL_ID+
-			" AND st."+COL_SESSION_TOKEN_PRINCIPAL_ID+"= ? "
-			+ "AND ao."+COL_AUTHENTICATED_ON_PRINCIPAL_ID+"="+"st."+COL_SESSION_TOKEN_PRINCIPAL_ID
-			+ "AND ao."+COL_AUTHENTICATED_ON_AUTHENTICATED_ON+" > ?";
 	
-	private static final String SELECT_AUTHENTICATED_ON_BY_PRINCIPAL_ID = 
-			"SELECT "+COL_AUTHENTICATED_ON_AUTHENTICATED_ON+
-			" FROM "+TABLE_AUTHENTICATED_ON+
-			" WHERE "+COL_AUTHENTICATED_ON_PRINCIPAL_ID+"= ? ";
+	private static final String SELECT_SESSION_TOKEN_BY_PRINCIPAL_ID_IF_VALID = 
+			"SELECT st."+COL_SESSION_TOKEN_SESSION_TOKEN+", tou."+COL_TERMS_OF_USE_AGREEMENT_AGREEMENT+
+			" FROM "+TABLE_SESSION_TOKEN+" st, "+TABLE_TERMS_OF_USE_AGREEMENT+" tou, "+TABLE_AUTHENTICATED_ON+" ao "+
+			" WHERE tou."+COL_TERMS_OF_USE_AGREEMENT_PRINCIPAL_ID+"=st."+COL_SESSION_TOKEN_PRINCIPAL_ID+
+			" AND st."+COL_SESSION_TOKEN_PRINCIPAL_ID+"= ? "+
+			" AND ao."+COL_AUTHENTICATED_ON_PRINCIPAL_ID+"="+"st."+COL_SESSION_TOKEN_PRINCIPAL_ID+
+			" AND ao."+COL_AUTHENTICATED_ON_AUTHENTICATED_ON+" > ?";
 	
 	private static final String NULLIFY_SESSION_TOKEN =
 			"UPDATE "+TABLE_SESSION_TOKEN+
@@ -112,15 +105,12 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 			" FROM "+TABLE_SESSION_TOKEN+
 			" WHERE "+COL_SESSION_TOKEN_SESSION_TOKEN+"= ?";
 	
-	// TODO add index for this and any other new query
-	// TODO add uniqueness constraint on session token
 	private static final String SELECT_PRINCIPAL_BY_TOKEN_IF_VALID = 
-			"SELECT "+COL_SESSION_TOKEN_PRINCIPAL_ID+
-			" FROM "+TABLE_SESSION_TOKEN+
+			"SELECT st."+COL_SESSION_TOKEN_PRINCIPAL_ID+
 			" FROM "+TABLE_SESSION_TOKEN+" st, "+TABLE_AUTHENTICATED_ON+" ao "+
 			" WHERE "+COL_SESSION_TOKEN_SESSION_TOKEN+"= ?"+
+			" AND ao."+COL_AUTHENTICATED_ON_PRINCIPAL_ID+"="+"st."+COL_SESSION_TOKEN_PRINCIPAL_ID+
 			" AND "+COL_AUTHENTICATED_ON_AUTHENTICATED_ON+"> ?";
-			
 	
 	private static final String SELECT_PASSWORD = 
 			"SELECT "+COL_CREDENTIAL_PASS_HASH+
@@ -175,16 +165,16 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 	@WriteTransaction
 	public boolean revalidateSessionTokenIfNeeded(long principalId) {
 		// Determine the last time the token was re-validate.
-		Long lastValidatedOn = jdbcTemplate.queryForObject(SELECT_AUTHENTICATED_ON_FROM_AUTHENTICATED_ON, new SingleColumnRowMapper<Long>(), principalId);
+		Date lastValidatedOn = jdbcTemplate.queryForObject(SELECT_AUTHENTICATED_ON_FOR_PRINCIPAL_ID, new SingleColumnRowMapper<Date>(), principalId);
 		long now = clock.currentTimeMillis();
 		/*
 		 * Only revalidate a token if it is past its half-life.
 		 * See: PLFM-3202 & PLFM-3206
 		 */
-		if(lastValidatedOn + HALF_SESSION_EXPIRATION < now){
+		if(lastValidatedOn.getTime() + HALF_SESSION_EXPIRATION < now){
 			// The session token needs to be revaldiated.
 			userGroupDAO.touch(principalId);
-			jdbcTemplate.update(UPDATE_AUTHENTICATED_ON, clock.currentTimeMillis(),principalId);
+			jdbcTemplate.update(UPDATE_AUTHENTICATED_ON, clock.now(), principalId);
 			return true;
 		}else{
 			// no need to update.
@@ -209,6 +199,7 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 		DBOAuthenticatedOn dboAuthOn = new DBOAuthenticatedOn();
 		dboAuthOn.setPrincipalId(principalId);
 		dboAuthOn.setAuthenticatedOn(new Date());
+		dboAuthOn.setEtag(UUID.randomUUID().toString());
 		basicDAO.createOrUpdate(dboAuthOn);
 		
 		return sessionToken;
@@ -222,9 +213,7 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 	@Override
 	public Date getAuthenticatedOn(long principalId) {
 		try {
-			Long validatedOn = jdbcTemplate.queryForObject(SELECT_AUTHENTICATED_ON_BY_PRINCIPAL_ID, Long.class, principalId);
-			if (validatedOn==null) return null;
-			return new Date(validatedOn);
+			return jdbcTemplate.queryForObject(SELECT_AUTHENTICATED_ON_FOR_PRINCIPAL_ID, Date.class, principalId);
 		} catch (EmptyResultDataAccessException e) {
 			return null;
 		}
@@ -234,8 +223,8 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 	public Session getSessionTokenIfValid(long principalId, Date now) {
 		long time = now.getTime() - SESSION_EXPIRATION_TIME;
 		try {
-			return jdbcTemplate.queryForObject(SELECT_SESSION_TOKEN_BY_USERNAME_IF_VALID, sessionRowMapper,
-					principalId, time);
+			return jdbcTemplate.queryForObject(SELECT_SESSION_TOKEN_BY_PRINCIPAL_ID_IF_VALID, sessionRowMapper,
+					principalId, new Date(time));
 		} catch(EmptyResultDataAccessException e) {
 			return null;
 		}
@@ -261,7 +250,7 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 	@Override
 	public Long getPrincipal(String sessionToken) {
 		try {
-			return jdbcTemplate.queryForObject(SELECT_PRINCIPAL_BY_TOKEN,new SingleColumnRowMapper<Long>(), sessionToken); 
+			return jdbcTemplate.queryForObject(SELECT_PRINCIPAL_BY_TOKEN, Long.class, sessionToken); 
 		} catch (EmptyResultDataAccessException e) {
 			return null;
 		}
@@ -271,7 +260,7 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 	public Long getPrincipalIfValid(String sessionToken) {
 		long time =clock.currentTimeMillis() - SESSION_EXPIRATION_TIME;
 		try {
-			return jdbcTemplate.queryForObject(SELECT_PRINCIPAL_BY_TOKEN_IF_VALID, new SingleColumnRowMapper<Long>(), sessionToken, time); 
+			return jdbcTemplate.queryForObject(SELECT_PRINCIPAL_BY_TOKEN_IF_VALID, Long.class, sessionToken, time); 
 		} catch (EmptyResultDataAccessException e) {
 			return null;
 		}
@@ -289,7 +278,7 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 	@Override
 	public String getPasswordHash(long principalId) {
 		try {
-			return jdbcTemplate.queryForObject(SELECT_PASSWORD, new SingleColumnRowMapper<String>(), principalId);
+			return jdbcTemplate.queryForObject(SELECT_PASSWORD, String.class, principalId);
 		} catch (EmptyResultDataAccessException e) {
 			throw new NotFoundException("User (" + principalId + ") does not exist");
 		}
@@ -305,7 +294,7 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 	@Override
 	public String getSecretKey(long principalId) throws NotFoundException {
 		try {
-			return jdbcTemplate.queryForObject(SELECT_SECRET_KEY, new SingleColumnRowMapper<String>(), principalId);
+			return jdbcTemplate.queryForObject(SELECT_SECRET_KEY, String.class, principalId);
 		} catch (EmptyResultDataAccessException e) {
 			throw new NotFoundException("");
 		}
@@ -328,7 +317,7 @@ public class DBOAuthenticationDAOImpl implements AuthenticationDAO {
 	public boolean hasUserAcceptedToU(long principalId) throws NotFoundException {
 		Boolean acceptance;
 		try {
-			acceptance = jdbcTemplate.queryForObject(SELECT_TOU_ACCEPTANCE, new SingleColumnRowMapper<Boolean>(), principalId);
+			acceptance = jdbcTemplate.queryForObject(SELECT_TOU_ACCEPTANCE, Boolean.class, principalId);
 		} catch (EmptyResultDataAccessException e) {
 			// It's possible now that there is no record. That shouldn't be an
 			// exception, that's a "false, not accepted".

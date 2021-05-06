@@ -334,7 +334,9 @@ public class SqlConstants {
 	public static final String COL_FILES_STORAGE_LOCATION_ID		= "STORAGE_LOCATION_ID";
 	public static final String COL_FILES_ENDPOINT					= "ENDPOINT";
 	public static final String COL_FILES_IS_PREVIEW					= "IS_PREVIEW";
-	public static final String DDL_FILES							= "schema/Files-ddl.sql";
+	public static final String COL_FILES_STATUS						= "STATUS";
+	public static final String COL_FILES_UPDATED_ON					= "UPDATED_ON";
+	public static final String DDL_FILES							= "schema/files/Files-ddl.sql";
 	
 	// multipart upload state
 	public static final String TABLE_MULTIPART_UPLOAD				= "MULTIPART_UPLOAD";
@@ -782,13 +784,13 @@ public class SqlConstants {
 	public static final String TABLE_SESSION_TOKEN             = "SESSION_TOKEN";
 	public static final String COL_SESSION_TOKEN_PRINCIPAL_ID  = "PRINCIPAL_ID";
 	public static final String COL_SESSION_TOKEN_SESSION_TOKEN = "SESSION_TOKEN";
-	
+
 	// AuthenticatedOn
 	public static final String TABLE_AUTHENTICATED_ON					= "AUTHENTICATED_ON";
-	public static final String COL_AUTHENTICATED_ON_PRINCIPAL_ID 		= "PRINCIPAL_ID";
-	public static final String COL_AUTHENTICATED_ON_AUTHENTICATED_ON 	= "AUTHENTICATED_ON";
-	
-	
+	public static final String COL_AUTHENTICATED_ON_PRINCIPAL_ID		= "PRINCIPAL_ID";
+	public static final String COL_AUTHENTICATED_ON_ETAG				= "ETAG";
+	public static final String COL_AUTHENTICATED_ON_AUTHENTICATED_ON	= "AUTHENTICATED_ON";
+	public static final String DDL_AUTHENTICATED_ON = "schema/AuthenticatedOn-ddl.sql";
 	
 	// Terms of use agreement
 	public static final String TABLE_TERMS_OF_USE_AGREEMENT             = "TERMS_OF_USE_AGREEMENT";
@@ -1163,6 +1165,16 @@ public class SqlConstants {
 	public static final String COL_FEATURE_STATUS_ETAG = 								"ETAG";
 	public static final String COL_FEATURE_STATUS_TYPE = 								"FEATURE_TYPE";
 	public static final String COL_FEATURE_STATUS_ENABLED =								"ENABLED";
+	
+	// The file associations scanner status
+	public static final String DDL_FILES_SCANNER_STATUS = 								"schema/files/FilesScannerStatus-ddl.sql";
+	public static final String TABLE_FILES_SCANNER_STATUS = 							"FILES_SCANNER_STATUS";
+	public static final String COL_FILES_SCANNER_STATUS_ID = 							"ID";
+	public static final String COL_FILES_SCANNER_STATUS_STARTED_ON = 					"STARTED_ON";
+	public static final String COL_FILES_SCANNER_STATUS_UPDATED_ON = 					"UPDATED_ON";
+	public static final String COL_FILES_SCANNER_STATUS_JOBS_STARTED_COUNT = 			"JOBS_STARTED_COUNT";
+	public static final String COL_FILES_SCANNER_STATUS_JOBS_COMPLETED_COUNT = 			"JOBS_COMPLETED_COUNT";
+	public static final String COL_FILES_SCANNER_STATUS_SCANNED_ASSOCIATIONS_COUNT = 	"SCANNED_ASSOCIATIONS_COUNT";
 
 	// This seems to be the name of the id column for all tables.
 	public static final String COLUMN_ID		= "id";

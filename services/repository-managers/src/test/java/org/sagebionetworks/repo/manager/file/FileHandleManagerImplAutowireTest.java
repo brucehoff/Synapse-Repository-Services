@@ -38,11 +38,12 @@ import org.sagebionetworks.repo.model.Folder;
 import org.sagebionetworks.repo.model.ObjectType;
 import org.sagebionetworks.repo.model.Project;
 import org.sagebionetworks.repo.model.ResourceAccess;
+import org.sagebionetworks.repo.model.StorageLocationDAO;
 import org.sagebionetworks.repo.model.UnauthorizedException;
 import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.auth.NewUser;
-import org.sagebionetworks.repo.model.dao.FileHandleDao;
 import org.sagebionetworks.repo.model.dao.WikiPageKey;
+import org.sagebionetworks.repo.model.dbo.file.FileHandleDao;
 import org.sagebionetworks.repo.model.file.BatchFileRequest;
 import org.sagebionetworks.repo.model.file.BatchFileResult;
 import org.sagebionetworks.repo.model.file.ExternalUploadDestination;
@@ -131,6 +132,7 @@ public class FileHandleManagerImplAutowireTest {
 		user.setUserName(username);
 		userInfo = userManager.getUserInfo(userManager.createUser(user));
 		userInfo.getGroups().add(BOOTSTRAP_PRINCIPAL.CERTIFIED_USERS.getPrincipalId());
+		userInfo.setAcceptsTermsOfUse(true);
 
 		user = new NewUser();
 		username2 = UUID.randomUUID().toString();
@@ -138,6 +140,7 @@ public class FileHandleManagerImplAutowireTest {
 		user.setUserName(username2);
 		userInfo2 = userManager.getUserInfo(userManager.createUser(user));
 		userInfo2.getGroups().add(BOOTSTRAP_PRINCIPAL.CERTIFIED_USERS.getPrincipalId());
+		userInfo2.setAcceptsTermsOfUse(true);
 		
 		anonymousUserInfo = userManager.getUserInfo(BOOTSTRAP_PRINCIPAL.ANONYMOUS_USER.getPrincipalId());
 		
@@ -535,6 +538,7 @@ public class FileHandleManagerImplAutowireTest {
 		S3FileHandle handle = fileUploadManager.createCompressedFileFromString(userId, createdOn, fileContents);
 		assertNotNull(handle);
 		toDelete.add(handle);
+		assertEquals(StorageLocationDAO.DEFAULT_STORAGE_LOCATION_ID, handle.getStorageLocationId());
 		assertEquals(StackConfigurationSingleton.singleton().getS3Bucket(), handle.getBucketName());
 		assertEquals("compressed.txt.gz", handle.getFileName());
 		assertNotNull(handle.getContentMd5());
@@ -656,7 +660,7 @@ public class FileHandleManagerImplAutowireTest {
 
 	private void addAcl(String projectId, Long principalId) throws Exception {
 		AccessControlList acl = accessControlListDAO.get(projectId, ObjectType.ENTITY);
-		Set<ACCESS_TYPE> accessTypes = Sets.newHashSet(ACCESS_TYPE.READ, ACCESS_TYPE.UPDATE, ACCESS_TYPE.CREATE, ACCESS_TYPE.UPLOAD);
+		Set<ACCESS_TYPE> accessTypes = Sets.newHashSet(ACCESS_TYPE.READ, ACCESS_TYPE.UPDATE, ACCESS_TYPE.CREATE);
 		ResourceAccess ra = new ResourceAccess();
 		ra.setPrincipalId(principalId);
 		ra.setAccessType(accessTypes);

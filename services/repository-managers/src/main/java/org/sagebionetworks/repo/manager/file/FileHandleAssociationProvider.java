@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.sagebionetworks.repo.model.ObjectType;
+import org.sagebionetworks.repo.model.file.FileHandleAssociateType;
 /**
  * FileHandles can be associated with many different object types.  Each object type records FileHandles associations differently.
  * This interface  
@@ -12,6 +13,11 @@ import org.sagebionetworks.repo.model.ObjectType;
  *
  */
 public interface FileHandleAssociationProvider {
+	
+	/**
+	 * @return The type of association this provider supports
+	 */
+	FileHandleAssociateType getAssociateType();
 
 	/**
 	 * Given a set of FileHandleIds and an associatedObjectId, get the sub-set of file handle ids that are directly associated with the given object (excluding the previews).
@@ -20,12 +26,12 @@ public interface FileHandleAssociationProvider {
 	 * @param objectId
 	 * @return The sub-set of file handle ids that are directly associated with the given association.
 	 */
-	public Set<String> getFileHandleIdsDirectlyAssociatedWithObject(List<String> fileHandleIds, String objectId);
+	Set<String> getFileHandleIdsDirectlyAssociatedWithObject(List<String> fileHandleIds, String objectId);
 
 	/**
 	 * Get the ObjectType for this FileHandleAssociationType.
 	 * @return
 	 */
-	public ObjectType getAuthorizationObjectTypeForAssociatedObjectType(); 
+	ObjectType getAuthorizationObjectTypeForAssociatedObjectType();
 
 }

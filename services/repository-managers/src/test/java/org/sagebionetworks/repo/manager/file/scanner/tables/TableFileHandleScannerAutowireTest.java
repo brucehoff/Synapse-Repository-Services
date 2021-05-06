@@ -15,23 +15,20 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.sagebionetworks.ids.IdGenerator;
-import org.sagebionetworks.ids.IdType;
 import org.sagebionetworks.repo.manager.EntityManager;
 import org.sagebionetworks.repo.manager.UserManager;
-import org.sagebionetworks.repo.manager.file.scanner.IdRange;
+import org.sagebionetworks.repo.manager.file.scanner.FileHandleAssociationScannerTestUtils;
 import org.sagebionetworks.repo.manager.file.scanner.ScannedFileHandleAssociation;
 import org.sagebionetworks.repo.manager.table.ColumnModelManager;
 import org.sagebionetworks.repo.manager.table.TableEntityManager;
 import org.sagebionetworks.repo.model.AuthorizationConstants.BOOTSTRAP_PRINCIPAL;
 import org.sagebionetworks.repo.model.DatastoreException;
-import org.sagebionetworks.repo.model.dao.FileHandleDao;
+import org.sagebionetworks.repo.model.UserInfo;
 import org.sagebionetworks.repo.model.dao.table.TableRowTruthDAO;
-import org.sagebionetworks.repo.model.dbo.dao.TestUtils;
 import org.sagebionetworks.repo.model.dbo.dao.table.TableModelTestUtils;
 import org.sagebionetworks.repo.model.dbo.dao.table.TableTransactionDao;
-import org.sagebionetworks.repo.model.UserInfo;
-import org.sagebionetworks.repo.model.file.FileHandle;
+import org.sagebionetworks.repo.model.dbo.file.FileHandleDao;
+import org.sagebionetworks.repo.model.file.IdRange;
 import org.sagebionetworks.repo.model.jdo.KeyFactory;
 import org.sagebionetworks.repo.model.table.ColumnModel;
 import org.sagebionetworks.repo.model.table.ColumnType;
@@ -61,9 +58,6 @@ public class TableFileHandleScannerAutowireTest {
 	private UserManager userManager;
 	
 	@Autowired
-	private IdGenerator idGenerator;
-	
-	@Autowired
 	private FileHandleDao fileHandleDao;
 	
 	@Autowired
@@ -73,13 +67,16 @@ public class TableFileHandleScannerAutowireTest {
 	private TableRowTruthDAO tableTruthDao;
 	
 	@Autowired
+	private FileHandleAssociationScannerTestUtils utils;
+	
+	@Autowired
 	private TableFileHandleScanner scanner;
 	
 	private UserInfo user;
 	
-	private String tableWithNoSchema;
-	private String tableWithNoFiles;
-	private String tableWithFiles;
+	private Long tableWithNoSchema;
+	private Long tableWithNoFiles;
+	private Long tableWithFiles;
 	
 	private List<String> fileHandlesIds;
 	
@@ -94,26 +91,26 @@ public class TableFileHandleScannerAutowireTest {
 		
 		user = userManager.getUserInfo(BOOTSTRAP_PRINCIPAL.THE_ADMIN_USER.getPrincipalId());
 		
-		fileHandlesIds.add(generateFileHandle());
-		fileHandlesIds.add(generateFileHandle());
-		fileHandlesIds.add(generateFileHandle());
+		fileHandlesIds.add(utils.generateFileHandle(user));
+		fileHandlesIds.add(utils.generateFileHandle(user));
+		fileHandlesIds.add(utils.generateFileHandle(user));
 		
 		tableWithNoSchema = generateTable(null);
 		tableWithNoFiles = generateTable(generateSchema(ColumnType.STRING, ColumnType.STRING));
 		tableWithFiles = generateTable(generateSchema(ColumnType.STRING, ColumnType.FILEHANDLEID));
 		
-		addTableData(tableWithNoFiles, 3);
+		addTableData(tableWithNoFiles.toString(), 3);
 
 		// Single row
-		addTableData(tableWithFiles, 1, fileHandlesIds.get(0));
+		addTableData(tableWithFiles.toString(), 1, fileHandlesIds.get(0));
 		
 		// Another batch with the remaining ids
 		String[] remainingIds = fileHandlesIds.subList(1, fileHandlesIds.size()).toArray(new String[fileHandlesIds.size() - 1]);		
 
-		addTableData(tableWithFiles, remainingIds.length, remainingIds);
+		addTableData(tableWithFiles.toString(), remainingIds.length, remainingIds);
 		
 		// No transaction for the first table (e.g. no schema)
-		idRange = new IdRange(KeyFactory.stringToKey(tableWithNoFiles), KeyFactory.stringToKey(tableWithFiles));
+		idRange = new IdRange(tableWithNoFiles, tableWithFiles);
 		
 	}
 	
@@ -121,13 +118,13 @@ public class TableFileHandleScannerAutowireTest {
 	public void after() {
 		tableTruthDao.truncateAllRowData();
 		
-		tableTransactionDao.deleteTable(tableWithNoSchema);
-		tableTransactionDao.deleteTable(tableWithFiles);
-		tableTransactionDao.deleteTable(tableWithNoFiles);
+		tableTransactionDao.deleteTable(tableWithNoSchema.toString());
+		tableTransactionDao.deleteTable(tableWithFiles.toString());
+		tableTransactionDao.deleteTable(tableWithNoFiles.toString());
 		
-		entityManager.deleteEntity(user, tableWithNoSchema);
-		entityManager.deleteEntity(user, tableWithNoFiles);
-		entityManager.deleteEntity(user, tableWithFiles);
+		entityManager.deleteEntity(user, tableWithNoSchema.toString());
+		entityManager.deleteEntity(user, tableWithNoFiles.toString());
+		entityManager.deleteEntity(user, tableWithFiles.toString());
 		
 		fileHandleDao.truncateTable();
 		
@@ -144,7 +141,7 @@ public class TableFileHandleScannerAutowireTest {
 		// No file in the schema, but the first change is the column change (schema)
 		expected.add(new ScannedFileHandleAssociation(tableWithNoFiles));
 		// No file in the schema for this change (row change but no file handles)
-		expected.add(new ScannedFileHandleAssociation(tableWithNoFiles).withFileHandleIds(Collections.emptyList()));
+		expected.add(new ScannedFileHandleAssociation(tableWithNoFiles).withFileHandleIds(Collections.emptySet()));
 		
 		// File in the schema, but the first change is the column change (schema)
 		expected.add(new ScannedFileHandleAssociation(tableWithFiles));
@@ -152,7 +149,7 @@ public class TableFileHandleScannerAutowireTest {
 		expected.add(new ScannedFileHandleAssociation(tableWithFiles, Long.valueOf(fileHandlesIds.get(0))));
 		// The second change has the remaining file handles
 		expected.add(new ScannedFileHandleAssociation(tableWithFiles).withFileHandleIds(
-				fileHandlesIds.subList(1, fileHandlesIds.size()).stream().map(Long::valueOf).collect(Collectors.toList()))
+				fileHandlesIds.subList(1, fileHandlesIds.size()).stream().map(Long::valueOf).collect(Collectors.toSet()))
 		);
 		
 		// Call under test, consume the whole iterable
@@ -189,7 +186,7 @@ public class TableFileHandleScannerAutowireTest {
 		
 	}
 	
-	private String generateTable(List<ColumnModel> model) {
+	private Long generateTable(List<ColumnModel> model) {
 		
 		List<String> columnIds = null;
 		
@@ -207,12 +204,9 @@ public class TableFileHandleScannerAutowireTest {
 			tableManager.setTableSchema(user, columnIds, tableId);
 		}
 		
-		return KeyFactory.stringToKey(tableId).toString();
+		return KeyFactory.stringToKey(tableId);
 	}
 
-	private String generateFileHandle() {
-		FileHandle handle = TestUtils.createS3FileHandle(user.getId().toString(), idGenerator.generateNewId(IdType.FILE_IDS).toString());
-		return fileHandleDao.createFile(handle).getId();
-	}
+	
 	
 }

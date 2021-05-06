@@ -1,41 +1,79 @@
 package org.sagebionetworks.repo.model.dbo.persistence;
 
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_AUTHENTICATED_ON_AUTHENTICATED_ON;
+import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_AUTHENTICATED_ON_ETAG;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_AUTHENTICATED_ON_PRINCIPAL_ID;
-import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.COL_USER_GROUP_ID;
+import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.DDL_AUTHENTICATED_ON;
 import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.TABLE_AUTHENTICATED_ON;
-import static org.sagebionetworks.repo.model.query.jdo.SqlConstants.TABLE_USER_GROUP;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 
-import org.sagebionetworks.repo.model.dbo.AutoTableMapping;
-import org.sagebionetworks.repo.model.dbo.Field;
-import org.sagebionetworks.repo.model.dbo.ForeignKey;
+import org.sagebionetworks.repo.model.dbo.FieldColumn;
 import org.sagebionetworks.repo.model.dbo.MigratableDatabaseObject;
-import org.sagebionetworks.repo.model.dbo.Table;
 import org.sagebionetworks.repo.model.dbo.TableMapping;
 import org.sagebionetworks.repo.model.dbo.migration.BasicMigratableTableTranslation;
 import org.sagebionetworks.repo.model.dbo.migration.MigratableTableTranslation;
 import org.sagebionetworks.repo.model.migration.MigrationType;
 
-@Table(name = TABLE_AUTHENTICATED_ON)
 public class DBOAuthenticatedOn implements MigratableDatabaseObject<DBOAuthenticatedOn, DBOAuthenticatedOn> {
 	
-	private static TableMapping<DBOAuthenticatedOn> tableMapping = AutoTableMapping.create(DBOAuthenticatedOn.class);
+	private static FieldColumn[] FIELDS = new FieldColumn[] {
+			new FieldColumn("principalId", COL_AUTHENTICATED_ON_PRINCIPAL_ID, true).withIsBackupId(true),
+			new FieldColumn("etag", COL_AUTHENTICATED_ON_ETAG).withIsEtag(true),
+			new FieldColumn("authenticatedOn", COL_AUTHENTICATED_ON_AUTHENTICATED_ON)
+	};
 	
-	@Field(name = COL_AUTHENTICATED_ON_PRINCIPAL_ID, primary = true, backupId = true)
-	@ForeignKey(table = TABLE_USER_GROUP, field = COL_USER_GROUP_ID, cascadeDelete = true)
 	private Long principalId;
-	
-	@Field(name = COL_AUTHENTICATED_ON_AUTHENTICATED_ON)
+	private String etag;
 	private Date authenticatedOn;
 
 	@Override
 	public TableMapping<DBOAuthenticatedOn> getTableMapping() {
-		return tableMapping;
+		return new TableMapping<DBOAuthenticatedOn>() {
+
+			@Override
+			public DBOAuthenticatedOn mapRow(ResultSet rs, int rowNum) throws SQLException {
+				DBOAuthenticatedOn dbo = new DBOAuthenticatedOn();
+				dbo.setPrincipalId(rs.getLong(COL_AUTHENTICATED_ON_PRINCIPAL_ID));
+				dbo.setEtag(rs.getString(COL_AUTHENTICATED_ON_ETAG));
+				Timestamp ts = rs.getTimestamp(COL_AUTHENTICATED_ON_AUTHENTICATED_ON);
+				dbo.setAuthenticatedOn(ts==null ? null : new Date(ts.getTime()));
+				return dbo;
+			}
+
+			@Override
+			public String getTableName() {
+				return TABLE_AUTHENTICATED_ON;
+			}
+
+			@Override
+			public String getDDLFileName() {
+				return DDL_AUTHENTICATED_ON;
+			}
+
+			@Override
+			public FieldColumn[] getFieldColumns() {
+				return FIELDS;
+			}
+
+			@Override
+			public Class<? extends DBOAuthenticatedOn> getDBOClass() {
+				return DBOAuthenticatedOn.class;
+			}
+		};
 	}
-	
+	public String getEtag() {
+		return etag;
+	}
+
+	public void setEtag(String etag) {
+		this.etag = etag;
+	}
+
 	public Long getPrincipalId() {
 		return principalId;
 	}
@@ -54,7 +92,7 @@ public class DBOAuthenticatedOn implements MigratableDatabaseObject<DBOAuthentic
 
 	@Override
 	public MigrationType getMigratableTableType() {
-		return MigrationType.SESSION_TOKEN;
+		return MigrationType.AUTHENTICATED_ON;
 	}
 
 	@Override
@@ -82,6 +120,7 @@ public class DBOAuthenticatedOn implements MigratableDatabaseObject<DBOAuthentic
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((authenticatedOn == null) ? 0 : authenticatedOn.hashCode());
+		result = prime * result + ((etag == null) ? 0 : etag.hashCode());
 		result = prime * result + ((principalId == null) ? 0 : principalId.hashCode());
 		return result;
 	}
@@ -100,6 +139,11 @@ public class DBOAuthenticatedOn implements MigratableDatabaseObject<DBOAuthentic
 				return false;
 		} else if (!authenticatedOn.equals(other.authenticatedOn))
 			return false;
+		if (etag == null) {
+			if (other.etag != null)
+				return false;
+		} else if (!etag.equals(other.etag))
+			return false;
 		if (principalId == null) {
 			if (other.principalId != null)
 				return false;
@@ -110,7 +154,8 @@ public class DBOAuthenticatedOn implements MigratableDatabaseObject<DBOAuthentic
 
 	@Override
 	public String toString() {
-		return "DBOAuthenticatedOn [principalId=" + principalId + ", authenticatedOn=" + authenticatedOn + "]";
+		return "DBOAuthenticatedOn [principalId=" + principalId + ", etag=" + etag + ", authenticatedOn="
+				+ authenticatedOn + "]";
 	}
 
 

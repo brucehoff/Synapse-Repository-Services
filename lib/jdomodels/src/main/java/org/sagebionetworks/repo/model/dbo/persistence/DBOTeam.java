@@ -13,15 +13,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-import org.sagebionetworks.repo.model.Team;
 import org.sagebionetworks.repo.model.dbo.FieldColumn;
 import org.sagebionetworks.repo.model.dbo.MigratableDatabaseObject;
 import org.sagebionetworks.repo.model.dbo.TableMapping;
-import org.sagebionetworks.repo.model.dbo.dao.TeamUtils;
 import org.sagebionetworks.repo.model.dbo.migration.BasicMigratableTableTranslation;
 import org.sagebionetworks.repo.model.dbo.migration.MigratableTableTranslation;
 import org.sagebionetworks.repo.model.migration.MigrationType;
-import org.sagebionetworks.util.TemporaryCode;
 
 /**
  * Database Object for a Wiki Page.
@@ -34,7 +31,7 @@ public class DBOTeam implements MigratableDatabaseObject<DBOTeam, DBOTeam> {
 	private static final FieldColumn[] FIELDS = new FieldColumn[] {
 			new FieldColumn("id", COL_TEAM_ID, true).withIsBackupId(true),
 			new FieldColumn("etag", COL_TEAM_ETAG).withIsEtag(true),
-			new FieldColumn("icon", COL_TEAM_ICON),
+			new FieldColumn("icon", COL_TEAM_ICON).withHasFileHandleRef(true),
 			new FieldColumn("properties", COL_TEAM_PROPERTIES) };
 
 	private static final TableMapping<DBOTeam> TABLE_MAPPING = new TableMapping<DBOTeam>() {
